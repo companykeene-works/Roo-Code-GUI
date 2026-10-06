@@ -271,6 +271,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		}, [isEditMode])
 
+		const isStopMode = (isStreaming || isTaskActive || isStopping) && !isEditMode
+
 		// Use custom hook for prompt history navigation
 		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
 			clineMessages,
@@ -1239,7 +1241,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									</StandardTooltip>
 								)}
 								{/* Discrete inline Resume button for paused/resumable tasks */}
-								{onResume && !hasInputContent && !isStreaming && (
+								{onResume && !hasInputContent && !isStreaming && !isStopMode && !isTaskActive && !isStopping && (
 									<StandardTooltip content={t("chat:resumeTask.tooltip")}>
 										<button
 											aria-label={t("chat:resumeTask.title")}
@@ -1262,7 +1264,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								)}
 								{/* Send/Stop button - morphs based on streaming/active state, always visible in edit mode */}
 								{(() => {
-									const isStopMode = (isStreaming || isTaskActive || isStopping) && !isEditMode
 									return (
 										<StandardTooltip
 											content={

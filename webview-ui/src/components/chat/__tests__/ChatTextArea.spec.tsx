@@ -1368,6 +1368,129 @@ describe("ChatTextArea", () => {
 			expect(screen.getByTestId("context-window-size")).toHaveTextContent("1.0m")
 		})
 	})
+
+	describe("Continue vs Stop mutual exclusion & lifecycle invariants", () => {
+		it("renders Continue button when onResume is provided and task is not active/streaming/stopping", () => {
+			const onResume = vi.fn()
+			render(<ChatTextArea {...defaultProps} onResume={onResume} isStreaming={false} isTaskActive={false} isStopping={false} />)
+
+			const resumeBtn = screen.getByRole("button", { name: /resume/i })
+			expect(resumeBtn).toBeInTheDocument()
+			expect(screen.queryByRole("button", { name: /stop/i })).toBeNull()
+
+			fireEvent.click(resumeBtn)
+			expect(onResume).toHaveBeenCalledTimes(1)
+		})
+
+		it("hides Continue button and renders Stop button when isTaskActive is true", () => {
+			const onResume = vi.fn()
+			const onStop = vi.fn()
+			render(
+				<ChatTextArea
+					{...defaultProps}
+					onResume={onResume}
+					onStop={onStop}
+					isTaskActive={true}
+					isStreaming={false}
+					isStopping={false}
+				/>,
+			)
+
+			expect(screen.queryByRole("button", { name: /resume/i })).toBeNull()
+			const stopBtn = screen.getByRole("button", { name: /stop/i })
+			expect(stopBtn).toBeInTheDocument()
+		})
+
+		it("hides Continue button and renders Stop button when isStreaming is true", () => {
+			const onResume = vi.fn()
+			const onStop = vi.fn()
+			render(
+				<ChatTextArea
+					{...defaultProps}
+					onResume={onResume}
+					onStop={onStop}
+					isTaskActive={false}
+					isStreaming={true}
+					isStopping={false}
+				/>,
+			)
+
+			expect(screen.queryByRole("button", { name: /resume/i })).toBeNull()
+			expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument()
+		})
+
+		it("hides Continue button when isStopping is true", () => {
+			const onResume = vi.fn()
+			const onStop = vi.fn()
+			render(
+				<ChatTextArea
+					{...defaultProps}
+					onResume={onResume}
+					onStop={onStop}
+					isTaskActive={false}
+					isStreaming={false}
+					isStopping={true}
+				/>,
+			)
+
+			expect(screen.queryByRole("button", { name: /resume/i })).toBeNull()
+		})
+
+		it("hides Continue button when input has content", () => {
+			const onResume = vi.fn()
+			render(
+				<ChatTextArea
+					{...defaultProps}
+					inputValue="some user text"
+					onResume={onResume}
+					isTaskActive={false}
+					isStreaming={false}
+					isStopping={false}
+				/>,
+			)
+
+			expect(screen.queryByRole("button", { name: /resume/i })).toBeNull()
+		})
+
+		it("guarantees Continue and Stop are NEVER rendered simultaneously", () => {
+			const onResume = vi.fn()
+			const onStop = vi.fn()
+
+			// Test all combinations of isTaskActive, isStreaming, isStopping
+			const states = [
+				{ isTaskActive: true, isStreaming: false, isStopping: false },
+				{ isTaskActive: false, isStreaming: true, isStopping: false },
+				{ isTaskActive: false, isStreaming: false, isStopping: true },
+				{ isTaskActive: true, isStreaming: true, isStopping: false },
+				{ isTaskActive: false, isStreaming: false, isStopping: false },
+			]
+
+			for (const state of states) {
+				const { unmount } = render(
+					<ChatTextArea
+						{...defaultProps}
+						onResume={onResume}
+						onStop={onStop}
+						isTaskActive={state.isTaskActive}
+						isStreaming={state.isStreaming}
+						isStopping={state.isStopping}
+					/>,
+				)
+
+				const continueBtn = screen.queryByRole("button", { name: /resume/i })
+				const stopBtn = screen.queryByRole("button", { name: /stop/i })
+
+				// Invariant: Never both Continue and Stop simultaneously!
+				if (continueBtn) {
+					expect(stopBtn).toBeNull()
+				}
+				if (stopBtn) {
+					expect(continueBtn).toBeNull()
+				}
+				unmount()
+			}
+		})
+	})
 })
 
 

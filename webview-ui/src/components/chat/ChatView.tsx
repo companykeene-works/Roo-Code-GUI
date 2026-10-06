@@ -159,6 +159,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [secondaryButtonText, setSecondaryButtonText] = useState<string | undefined>(undefined)
 	const [_didClickCancel, setDidClickCancel] = useState(false)
 	const [isStopping, setIsStopping] = useState(false)
+	const [isResuming, setIsResuming] = useState(false)
 	const [stopError, setStopError] = useState(false)
 	const stopRequestIdRef = useRef<string | null>(null)
 	const stopAckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -606,7 +607,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}
 							break
 						}
-						case "resume_task":
+						case "resume_task": {
+							if (
+								messageToHandle.isAnswered ||
+								currentTaskItem?.status === "active"
+							) {
+								setClineAsk(undefined)
+								setEnableButtons(false)
+								setPrimaryButtonText(undefined)
+								setSecondaryButtonText(undefined)
+								break
+							}
 							setSendingDisabled(false)
 							setClineAsk("resume_task")
 							setEnableButtons(false)
@@ -614,6 +625,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSecondaryButtonText(undefined)
 							setDidClickCancel(false) // special case where we reset the cancel button state
 							break
+						}
 						case "resume_completed_task":
 							setSendingDisabled(false)
 							setClineAsk("resume_completed_task")
@@ -708,7 +720,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					break
 			}
 		}
-	}, [lastMessage, secondLastMessage, activeAskMessage, approvalMode])
+	}, [lastMessage, secondLastMessage, activeAskMessage, approvalMode, currentTaskItem?.status])
 
 	useEffect(() => {
 		if (messages.length === 0) {
@@ -839,6 +851,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useEffect(() => () => {
 		if (stopAckTimeoutRef.current) clearTimeout(stopAckTimeoutRef.current)
 	}, [])
+
+	useEffect(() => {
+		setIsResuming(false)
+	}, [currentTaskItem?.id, currentTaskItem?.status])
 	const isInterruptedOrStopped = useMemo(() => {
 		return (
 			currentTaskItem?.status === "interrupted" ||
@@ -889,8 +905,77 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		if (clineAsk === "command_output") {
 			return true
 		}
+		if (
+			lastMsg?.ask === "command" &&
+			(lastMsg?.approvalState === "AUTO_APPROVED" ||
+				lastMsg?.text?.includes(COMMAND_OUTPUT_STRING))
+		) {
+			return true
+		}
+		if (currentTaskItem.status === "active") {
+			return true
+		}
 		return false
 	}, [currentTaskItem, isStopping, isStreaming, clineAsk, enableButtons, primaryButtonText, activeAskMessage, modifiedMessages])
+
+	const isExecutionActive = useMemo(() => {
+		if (isStreaming || isStopping || isTaskActive) {
+			return true
+		}
+		if (currentTaskItem?.status === "active") {
+			return true
+		}
+		if (activeAskMessage?.approvalState === "EVALUATING") {
+			return true
+		}
+		if (clineAsk === "command_output") {
+			return true
+		}
+		if (
+			lastMessage?.ask === "command" &&
+			(lastMessage?.approvalState === "AUTO_APPROVED" ||
+				lastMessage?.text?.includes(COMMAND_OUTPUT_STRING))
+		) {
+			return true
+		}
+		return false
+	}, [isStreaming, isStopping, isTaskActive, currentTaskItem?.status, activeAskMessage, clineAsk, lastMessage])
+
+	const canResume = useMemo(() => {
+		// INVARIANT: When any execution is active, or task is actively transitioning/resuming, Continue MUST NEVER be visible.
+		if (isExecutionActive || isResuming) {
+			return false
+		}
+		// Task must not be delegated, awaiting child, completed, or blocked.
+		if (
+			currentTaskItem?.status === "delegated" ||
+			currentTaskItem?.status === "completed" ||
+			currentTaskItem?.status === "blocked" ||
+			currentTaskItem?.awaitingChildId
+		) {
+			return false
+		}
+		// If there is an active ask requiring user decision (e.g. tool approval, command approval, followup),
+		// approval/decision controls take precedence over resume.
+		if (
+			activeAskMessage &&
+			activeAskMessage.ask !== "resume_task" &&
+			(activeAskMessage.approvalState === "USER_DECISION_REQUIRED" ||
+				activeAskMessage.ask === "followup" ||
+				activeAskMessage.ask === "tool" ||
+				activeAskMessage.ask === "command" ||
+				activeAskMessage.ask === "use_mcp_server")
+		) {
+			return false
+		}
+		// Task is resumable if its canonical status is interrupted, or there is an actionable resume_task ask.
+		const isStatusInterrupted = currentTaskItem?.status === "interrupted"
+		const isActionableResumeAsk =
+			(activeAskMessage?.ask === "resume_task" && !activeAskMessage.isAnswered) ||
+			(clineAsk === "resume_task" && (!lastMessage || lastMessage.ask !== "resume_task" || !lastMessage.isAnswered))
+
+		return isStatusInterrupted || isActionableResumeAsk
+	}, [isExecutionActive, isResuming, currentTaskItem?.status, currentTaskItem?.awaitingChildId, activeAskMessage, clineAsk, lastMessage])
 
 	const markFollowUpAsAnswered = useCallback(() => {
 		const lastFollowUpMessage = messagesRef.current.findLast((msg: ClineMessage) => msg.ask === "followup")
@@ -1114,9 +1199,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [inputValue, selectedImages, currentTaskItem?.id])
 
 	const handleResumeTask = useCallback(() => {
+		if (isResuming || isExecutionActive) {
+			return
+		}
+		setIsResuming(true)
 		vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked", taskId: currentTaskItem?.id })
 		setClineAsk(undefined)
-	}, [currentTaskItem?.id])
+	}, [isResuming, isExecutionActive, currentTaskItem?.id])
 
 	// This logic depends on the useEffect[messages] above to set clineAsk,
 	// after which buttons are shown and we then send an askResponse to the
@@ -2330,13 +2419,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
 				onSend={() => handleSendMessage(inputValue, selectedImages)}
-				onResume={
-					(clineAsk === "resume_task" || currentTaskItem?.status === "interrupted") &&
-					currentTaskItem?.status !== "delegated" &&
-					!currentTaskItem?.awaitingChildId
-						? handleResumeTask
-						: undefined
-				}
+				onResume={canResume ? handleResumeTask : undefined}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
 				onHeightChange={() => {

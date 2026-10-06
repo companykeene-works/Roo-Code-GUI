@@ -177,6 +177,11 @@ interface ChatTextAreaProps {
 	selectedImages?: string[]
 	shouldDisableImages?: boolean
 	onResume?: () => void
+	isStreaming?: boolean
+	isTaskActive?: boolean
+	isStopping?: boolean
+	isEditMode?: boolean
+	onStop?: () => void
 }
 
 const mockInputRef = React.createRef<HTMLInputElement>()
@@ -217,6 +222,9 @@ vi.mock("../ChatTextArea", () => {
 					data-sending-disabled={props.sendingDisabled}
 				/>
 				{props.onResume && <button onClick={props.onResume}>Continue</button>}
+				{(props.isStreaming || props.isTaskActive || props.isStopping) && !props.isEditMode && (
+					<button onClick={props.onStop}>Stop</button>
+				)}
 			</div>
 		)
 	})
@@ -1235,6 +1243,162 @@ describe("ChatView - Task Completion & Resumption Button Bar Tests", () => {
 		await waitFor(() => {
 			const continueButtons = queryAllByText("Continue")
 			expect(continueButtons.length).toBe(0)
+		})
+	})
+
+	it("renders ZERO Continue buttons when task is active, even if a historical resume_task exists in messages", async () => {
+		const { queryAllByText } = renderChatView()
+
+		mockPostMessage({
+			currentTaskId: "task-active-with-history",
+			currentTaskItem: {
+				id: "task-active-with-history",
+				status: "active",
+			},
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 3000,
+					text: "Do something",
+				},
+				{
+					type: "ask",
+					ask: "resume_task",
+					ts: Date.now() - 2000,
+					text: "",
+					isAnswered: true,
+				},
+				{
+					type: "say",
+					say: "command_output",
+					ts: Date.now() - 1000,
+					text: "Output running...",
+				},
+			],
+		})
+
+		await waitFor(() => {
+			const continueButtons = queryAllByText("Continue")
+			expect(continueButtons.length).toBe(0)
+		})
+	})
+
+	it("renders ZERO Continue buttons and keeps Stop button active during safety guardrail EVALUATING", async () => {
+		const { queryAllByText } = renderChatView()
+
+		mockPostMessage({
+			currentTaskId: "task-safety-evaluating",
+			currentTaskItem: {
+				id: "task-safety-evaluating",
+				status: "active",
+			},
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 4000,
+					text: "Safety test task",
+				},
+				{
+					type: "ask",
+					ask: "command",
+					ts: Date.now() - 1000,
+					text: "npm test",
+					approvalState: "EVALUATING",
+				},
+			],
+		})
+
+		await waitFor(() => {
+			const continueButtons = queryAllByText("Continue")
+			expect(continueButtons.length).toBe(0)
+			const stopButtons = queryAllByText("Stop")
+			expect(stopButtons.length).toBeGreaterThanOrEqual(1)
+		})
+	})
+
+	it("renders ZERO Continue buttons when command is actively running (command_output)", async () => {
+		const { queryAllByText } = renderChatView()
+
+		mockPostMessage({
+			currentTaskId: "task-command-running",
+			currentTaskItem: {
+				id: "task-command-running",
+				status: "active",
+			},
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 4000,
+					text: "Command execution task",
+				},
+				{
+					type: "ask",
+					ask: "command_output",
+					ts: Date.now() - 1000,
+					text: "Running command with PID...",
+				},
+			],
+		})
+
+		await waitFor(() => {
+			const continueButtons = queryAllByText("Continue")
+			expect(continueButtons.length).toBe(0)
+		})
+	})
+
+	it("renders ZERO Continue buttons when task is streaming", async () => {
+		const { queryAllByText } = renderChatView()
+
+		mockPostMessage({
+			currentTaskId: "task-streaming",
+			currentTaskItem: {
+				id: "task-streaming",
+				status: "active",
+			},
+			clineMessages: [
+				{
+					type: "say",
+					say: "text",
+					ts: Date.now(),
+					text: "Streaming tokens...",
+					partial: true,
+				},
+			],
+		})
+
+		await waitFor(() => {
+			const continueButtons = queryAllByText("Continue")
+			expect(continueButtons.length).toBe(0)
+		})
+	})
+
+	it("renders exactly ONE Continue button and ZERO Stop buttons when task is interrupted and idle", async () => {
+		const { queryAllByText } = renderChatView()
+
+		mockPostMessage({
+			currentTaskId: "task-interrupted-idle",
+			currentTaskItem: {
+				id: "task-interrupted-idle",
+				status: "interrupted",
+			},
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 4000,
+					text: "Interrupted task",
+				},
+			],
+		})
+
+		await waitFor(() => {
+			const continueButtons = queryAllByText("Continue")
+			expect(continueButtons.length).toBe(1)
+			const stopButtons = queryAllByText("Stop")
+			expect(stopButtons.length).toBe(0)
 		})
 	})
 
