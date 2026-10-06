@@ -679,7 +679,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
-		this.initialStatus = initialStatus
+		this.initialStatus = initialStatus ?? historyItem?.status
 		this.historyItem = historyItem
 		if (this.historyItem) {
 			this.historyItem.executionModelId = this.historyItem.executionModelId || this.taskStartModel
@@ -1454,7 +1454,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					? "completed"
 					: this.historyItem?.status === "delegated"
 					? "delegated"
-					: this.currentStatus ?? this.initialStatus
+					: this.currentStatus ?? (this._started ? "active" : this.initialStatus)
 
 			const awaitingChildId = this.historyItem?.awaitingChildId
 			const delegatedToId = this.historyItem?.delegatedToId
@@ -2821,6 +2821,15 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			this._started = true
 			return this.resumeTaskFromHistory({ response: askResponse, text, images })
 		} else {
+			if (askResponse === "yesButtonClicked" || askResponse === "messageResponse") {
+				this.isTaskCompleted = false
+				this.currentStatus = "active"
+				if (this.historyItem) {
+					this.historyItem.status = "active"
+					this.historyItem.needsAttention = false
+					await provider?.updateTaskHistory(this.historyItem)
+				}
+			}
 			this.handleWebviewAskResponse(askResponse, text, images)
 		}
 	}
@@ -2841,6 +2850,13 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 
 		// Reset turn-boundary loop counters and unresolved denial state when user responds or approves
 		if (askResponse === "messageResponse" || askResponse === "yesButtonClicked") {
+			this.isTaskCompleted = false
+			this.currentStatus = "active"
+			if (this.historyItem) {
+				this.historyItem.status = "active"
+				this.historyItem.needsAttention = false
+				void this.providerRef.deref()?.updateTaskHistory(this.historyItem)
+			}
 			this.consecutiveAttemptCompletionCount = 0
 			this.consecutiveIdenticalCompletionCount = 0
 			this.consecutiveReplanCount = 0
@@ -4377,6 +4393,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 					if (this.historyItem) {
 						this.historyItem.status = "active"
 						this.historyItem.needsAttention = false
+						await this.providerRef.deref()?.updateTaskHistory(this.historyItem)
 					}
 					await this.say("user_feedback", text, images)
 					responseText = text
@@ -4385,6 +4402,14 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 					// Task is completed/blocked/idle and user did not submit a continuation message.
 					// Do not make any API requests.
 					return
+				} else {
+					this.isTaskCompleted = false
+					this.currentStatus = "active"
+					if (this.historyItem) {
+						this.historyItem.status = "active"
+						this.historyItem.needsAttention = false
+						await this.providerRef.deref()?.updateTaskHistory(this.historyItem)
+					}
 				}
 			}
 

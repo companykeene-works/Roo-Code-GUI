@@ -522,4 +522,62 @@ describe("Hardened attempt_completion Fallback and Recovery", () => {
 		// Must NOT be falsely marked as success!
 		expect(toolResultBlock.content).toBe("Task was interrupted before this tool call could be completed.")
 	})
+
+	// Scenario 7: resume interrupted task via Continue (yesButtonClicked)
+	it("Scenario 7: resuming interrupted task via yesButtonClicked transitions status to active and clears needsAttention", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "interrupted task test for continue button",
+			startTask: false,
+			historyItem: {
+				id: "hist-interrupted-continue",
+				ts: Date.now() - 10000,
+				task: "interrupted task",
+				status: "interrupted",
+				needsAttention: true,
+				tokensIn: 100,
+				tokensOut: 200,
+				cacheWrites: 0,
+				cacheReads: 0,
+				totalCost: 0.01,
+				size: 500,
+			} as any,
+		})
+
+		vi.spyOn(task as any, "getSavedClineMessages").mockResolvedValue([
+			{ ts: 1, type: "say", say: "task", text: "interrupted task" },
+			{ ts: 2, type: "say", say: "text", text: "Working..." },
+		])
+		vi.spyOn(task as any, "getSavedApiConversationHistory").mockResolvedValue([
+			{
+				role: "user",
+				content: [{ type: "text", text: "interrupted task" }],
+				ts: 1,
+			},
+		])
+		vi.spyOn(task as any, "overwriteClineMessages").mockResolvedValue(undefined)
+
+		vi.spyOn(task, "ask").mockImplementation(async () => {
+			return { response: "yesButtonClicked" }
+		})
+
+		vi.spyOn(task as any, "initiateTaskLoop").mockImplementation(async () => {
+			task.abort = true
+		})
+
+		// Test resumeWithResponse with yesButtonClicked
+		await task.resumeWithResponse("yesButtonClicked")
+
+		expect((task as any).currentStatus).toBe("active")
+		expect(task.historyItem?.status).toBe("active")
+		expect(task.historyItem?.needsAttention).toBe(false)
+		expect(mockProvider.updateTaskHistory).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: "active",
+				needsAttention: false,
+			}),
+		)
+		expect(mockProvider.runningTasks.has(task.taskId)).toBe(true)
+	})
 })
