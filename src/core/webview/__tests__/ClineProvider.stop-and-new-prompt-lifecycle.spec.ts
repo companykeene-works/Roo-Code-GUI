@@ -10,7 +10,7 @@ describe("Stop -> New Prompt Lifecycle & Race Handling", () => {
 			deniedCommands: [],
 			mode: "code",
 		}) as any
-		provider.contextProxy = {
+		;(provider as any).contextProxy = {
 			getValues: vi.fn(() => ({})),
 			getValue: vi.fn(),
 			setValue: vi.fn(),
@@ -72,7 +72,7 @@ describe("Stop -> New Prompt Lifecycle & Race Handling", () => {
 		provider.getCurrentTask = vi.fn(() => dormantShellTask)
 		;(provider as any).hasInFlightCancel = vi.fn(() => false)
 		;(provider as any).waitForCancelTask = vi.fn().mockResolvedValue(undefined)
-		provider.taskHistoryStore = {
+		;(provider as any).taskHistoryStore = {
 			get: vi.fn(() => historyItem),
 			updateTaskHistory: vi.fn(),
 		} as any

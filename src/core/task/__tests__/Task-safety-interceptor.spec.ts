@@ -24,8 +24,14 @@ describe("Task safety interceptor", () => {
 		;(task as any).askResponseImages = undefined
 		;(task as any).workspacePath = "/test/workspace"
 		;(task as any).deniedActionHistory = []
+		;(task as any).taskSupplementalWriteAllows = []
+		;(task as any).authorizationRevision = 0
 		;(task as any).consecutiveReplanCount = 0
 		;(task as any).totalReplanCount = 0
+		;(task as any).userMessageContent = []
+		;(task as any).consecutiveMistakeCountForApplyDiff = new Map()
+		;(task as any).consecutiveMistakeCountForEditFile = new Map()
+		;(task as any).failedDiffHashesForPath = new Map()
 
 		;(task as any).messageQueueService = new MessageQueueService()
 		;(task as any).addToClineMessages = vi.fn(async (msg: any) => {
@@ -843,6 +849,139 @@ describe("Task safety interceptor", () => {
 				apiModelId: "gpt-4o-mini",
 			} as any, true)
 			expect((task as any).requestsSinceLastCompaction).toBe(10)
+		})
+
+		it("correctly extracts multiline scoped write allows without capturing colon", () => {
+			;(task as any).metadata = {
+				task: "You MAY modify ONLY:\n\nlicensing-obfuscation/\n\nDo NOT touch any other directory.",
+			}
+			;(task as any).clineMessages = []
+
+			const result = (task as any).extractExplicitConstraints()
+			expect(result.scopedWriteAllows).toContain("licensing-obfuscation")
+			expect(result.scopedWriteAllows).not.toContain(":")
+			expect(result.scopedWriteAllows).not.toContain("")
+		})
+
+		it("markTaskCompleted correctly marks task as blocked when isBlocked is true", () => {
+			;(task as any).historyItem = {
+				id: "task-test-1",
+				status: "active",
+				needsAttention: true,
+			}
+			task.markTaskCompleted(true)
+
+			expect((task as any).historyItem.status).toBe("blocked")
+			expect((task as any).historyItem.isBlockedOutcome).toBe(true)
+			expect((task as any).historyItem.needsAttention).toBe(false)
+		})
+
+		it("markTaskCompleted marks task as completed when isBlocked is false", () => {
+			;(task as any).historyItem = {
+				id: "task-test-2",
+				status: "active",
+				needsAttention: true,
+			}
+			task.markTaskCompleted(false)
+
+			expect((task as any).historyItem.status).toBe("completed")
+			expect((task as any).historyItem.isBlockedOutcome).toBe(false)
+			expect((task as any).historyItem.needsAttention).toBe(false)
+		})
+
+		it("Phase 2 Audit Fixtures: correctly rejects natural language and accepts true paths", () => {
+			// Case A: Natural-language phrase must not extract filesystem scope
+			;(task as any).metadata = {
+				task: "A successful GUI save may change only the intended fields.",
+			}
+			let result = (task as any).extractExplicitConstraints()
+			expect(result.scopedWriteAllows).toHaveLength(0)
+
+			// Case B: Multiline directive with trailing slash
+			;(task as any).metadata = {
+				task: "You MAY modify ONLY:\n\nlicensing-obfuscation/",
+			}
+			result = (task as any).extractExplicitConstraints()
+			expect(result.scopedWriteAllows).toEqual(["licensing-obfuscation"])
+			expect(result.scopedWriteAllows).not.toContain(":")
+
+			// Case C: Explicit paths directive
+			;(task as any).metadata = {
+				task: "modify only src/foo.ts and src/bar.ts",
+			}
+			result = (task as any).extractExplicitConstraints()
+			expect(result.scopedWriteAllows).toContain("src/foo.ts")
+			expect(result.scopedWriteAllows).toContain("src/bar.ts")
+
+			// Case D: Natural language fields requirement
+			;(task as any).metadata = {
+				task: "change only the fields required by this form",
+			}
+			result = (task as any).extractExplicitConstraints()
+			expect(result.scopedWriteAllows).toHaveLength(0)
+		})
+
+		it("Phase 13 & 15: tool fallthrough bug fix (skill and unknown tools map to generic_tool, not write_to_file)", () => {
+			// skill tool must map to generic_tool with target.toolName === "skill"
+			const skillReq = (task as any).buildApprovalRequest({
+				askType: "tool",
+				text: JSON.stringify({ tool: "skill", skill: "antigravity_guide" }),
+				isProtected: false,
+				askTs: Date.now(),
+			})
+			expect(skillReq.actionType).toBe("generic_tool")
+			expect(skillReq.target.toolName).toBe("skill")
+			expect(skillReq.target.filePath).toBeUndefined()
+
+			// unknown custom tool must map to generic_tool with fail-closed properties, NOT write_to_file
+			const unknownReq = (task as any).buildApprovalRequest({
+				askType: "tool",
+				text: JSON.stringify({ tool: "custom_mcp_bridge", data: "xyz" }),
+				isProtected: false,
+				askTs: Date.now(),
+			})
+			expect(unknownReq.actionType).toBe("generic_tool")
+			expect(unknownReq.target.toolName).toBe("custom_mcp_bridge")
+			expect(unknownReq.target.filePath).toBeUndefined()
+		})
+
+		it("Phase 16 & 17: user approval persists target into supplementalWriteAllows with exact precision", () => {
+			;(task as any).workspacePath = "/test/workspace"
+			;(task as any).taskSupplementalWriteAllows = []
+			;(task as any).authorizationRevision = 0
+			;(task as any).consecutiveIdenticalDenialsCount = 2
+			;(task as any).lastDeniedActionSignature = "file_write:src/foo.ts:rev0"
+			;(task as any).deniedActionHistory = ["file_write:src/foo.ts:rev0"]
+
+			const askMsg = {
+				ts: 100,
+				type: "ask",
+				ask: "tool",
+				text: JSON.stringify({ tool: "writeToFile", path: "src/foo.ts" }),
+				isAnswered: false,
+				approvalState: "USER_DECISION_REQUIRED",
+			}
+			;(task as any).clineMessages = [askMsg]
+
+			// User clicks Approve (yesButtonClicked)
+			task.handleWebviewAskResponse("yesButtonClicked")
+
+			// Checkpoint & approval persistence
+			expect(askMsg.isAnswered).toBe(true)
+			expect(askMsg.approvalState).toBe("AUTO_APPROVED")
+			expect((task as any).taskSupplementalWriteAllows).toContain("src/foo.ts")
+			expect((task as any).taskSupplementalWriteAllows).not.toContain("src/bar.ts")
+
+			// Loop detector reset & signature invalidation
+			expect((task as any).consecutiveIdenticalDenialsCount).toBe(0)
+			expect((task as any).lastDeniedActionSignature).toBeUndefined()
+			expect((task as any).deniedActionHistory).toEqual([])
+			expect((task as any).authorizationRevision).toBe(1)
+
+			// Constraint extraction reflects the approved target
+			const constraints = (task as any).extractExplicitConstraints()
+			expect(constraints.supplementalWriteAllows).toContain("src/foo.ts")
+			expect(constraints.supplementalWriteAllows).not.toContain("src/bar.ts")
 		})
 	})
 })

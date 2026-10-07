@@ -699,7 +699,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					provider.getCurrentTask()
 				if (targetTask) {
 					console.log(
-						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, started=${targetTask._started}`,
+						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, started=${targetTask.isStarted}`,
 					)
 					await targetTask.resumeWithResponse(message.askResponse!, resolved.text, resolved.images)
 				}

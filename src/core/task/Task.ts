@@ -72,6 +72,7 @@ import {
 import { CommandSafetyJudge, SAFETY_EVALUATION_FALLBACK_RESULT } from "../security/CommandSafetyJudge"
 import { ApprovalOrchestrator, isDeferredRetryableCategory } from "../security/ApprovalOrchestrator"
 import { DeferredApprovalRecoveryController } from "../security/DeferredApprovalRecovery"
+import { parseExplicitFilesystemScope, normalizeScopePath } from "../security/scopeParser"
 
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
@@ -177,6 +178,8 @@ export const FIRST_CHUNK_TIMEOUT_MS = 60_000 // 60 seconds base time to first ch
 export const REASONING_FIRST_CHUNK_TIMEOUT_MS = 90_000 // 90 seconds for large prompts / reasoning models (P99 is 87.5s)
 export const MAX_NO_PROGRESS_TIMEOUT_MS = 240_000 // 240 seconds (4 minutes) maximum silence without meaningful progress (guards against infinite no-op spam while accommodating high-latency tool generation on free clusters)
 
+export { TaskStatus }
+
 export interface TaskOptions extends CreateTaskOptions {
 	provider: ClineProvider
 	apiConfiguration: ProviderSettings
@@ -272,6 +275,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private lastDeniedActionSignature?: string
 	private consecutiveIdenticalDenialsCount: number = 0
 	private approvalOrchestrator: ApprovalOrchestrator = new ApprovalOrchestrator()
+	private taskSupplementalWriteAllows: string[] = []
+	private authorizationRevision: number = 0
 	private lastFailedRequestFingerprint?: string
 	private consecutiveIdenticalFailures: number = 0
 
@@ -1545,83 +1550,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		const scopedWriteDenies: string[] = []
 		const scopedWriteAllows: string[] = []
-		const supplementalWriteAllows: string[] = []
+		const supplementalWriteAllows: string[] = [
+			...(this.taskSupplementalWriteAllows || []),
+		]
 		const scopedGitDenies: string[] = []
 		const scopedGitAllows: string[] = []
 		const scopedNoTouch = /(?:nie\s+(?:ruszaj|zmieniaj|modyfikuj)|do\s+not\s+(?:touch|change|modify)|don't\s+(?:touch|change|modify))\s+(?:już\s+)?([^\n,;.]+)/i
 		const scopedPostfixDeny = /([a-z0-9_./\\-]+)\s+(?:już\s+)?nie\s+(?:ruszaj|zmieniaj|modyfikuj)/i
 		const normalizeScope = (scope: string) => scope.trim().replace(/^(backend|frontend)u$/i, "$1")
 
-		const sanitizeScopeCandidate = (scope: string) => {
-			let cleaned = scope
-				.replace(/^[\s*\->•:]+/, "")
-				.replace(/[\(\)].*$/, "")
-				.replace(/[.,:;!]+$/, "")
-				.trim()
-			if (cleaned.length > 4 && cleaned.endsWith("u")) {
-				cleaned = cleaned.slice(0, -1)
-			}
-			return cleaned.replace(/\\/g, "/").replace(/\/+$/, "").trim()
-		}
-		const isValidScopeCandidate = (s: string) =>
-			Boolean(
-				s &&
-				s !== ":" &&
-				!/^[:.,;!\s]+$/.test(s) &&
-				!/^(kodu|code|all\s+files|wszystko|pliki|files|everything\s+else.*)$/i.test(s) &&
-				!s.startsWith("everything else")
-			)
-
-		const extractScopesFromDirective = (text: string, pattern: RegExp): string[] => {
-			const found: string[] = []
-			for (const match of text.matchAll(pattern)) {
-				if (!match[1]) continue
-				const trimmedMatch = match[1].replace(/^[\s*•\-:]+/, "").trim()
-				if (!trimmedMatch) continue
-				const rawSection = trimmedMatch.split(
-					/\n\s*\n|\b(?:do\s+not|nie\s+(?:modyfikuj|commituj|zmieniaj|ruszaj)|zakaz|goals?|instructions?|everything\s+else)\b/i,
-				)[0]
-				const items = rawSection.split(/\n|;|,|\s+and\s+|\s+or\s+|\s+oraz\s+|\s+i\s+/)
-				for (const item of items) {
-					const tokens = item.trim().split(/\s+/)
-					for (const tok of tokens) {
-						const cleaned = sanitizeScopeCandidate(tok)
-						if (isValidScopeCandidate(cleaned) && !found.includes(cleaned)) {
-							if (cleaned.includes("/") || cleaned.includes(".") || /^[a-z0-9_-]+$/i.test(cleaned)) {
-								found.push(cleaned)
-							}
-						}
-					}
-				}
-			}
-			return found
-		}
-
-		// Scoped modify allowances in initial goal
-		const allowPattern =
-			/(?:możesz\s+modyfikować\s+wyłącznie|modyfikuj\s+wyłącznie|you\s+may\s+modify\s+only|modify\s+only|write\s+(?:authorization|access):\s*(?:you\s+may\s+modify\s+only)?|authorized\s+to\s+modify\s+only):?\s*([\s\S]*?)(?=(?:\n\s*\n(?!\s*[-*•\w/])|\b(?:do\s+not|nie\s+(?:modyfikuj|commituj|zmieniaj|ruszaj)|zakaz|goals?|instructions?|everything\s+else)\b|$))/gi
-		const extractedAllows = extractScopesFromDirective(initialGoal, allowPattern)
-		for (const a of extractedAllows) {
+		// Extract scoped write allowances and denials using canonical scope parser
+		const initialParsed = parseExplicitFilesystemScope(initialGoal, { workspacePath: this.workspacePath })
+		for (const a of initialParsed.scopedWriteAllows) {
 			if (!scopedWriteAllows.includes(a)) scopedWriteAllows.push(a)
 		}
-
-		// Scoped modify denials in initial goal
-		const denyPattern =
-			/(?:nie\s+modyfikuj\s*(?:plików\s+w|kodu\s+w)?|do\s+not\s+modify\s*(?:files\s+in|code\s+in)?):?\s*([\s\S]*?)(?=(?:\n\s*\n(?!\s*[-*•\w/])|\b(?:modify\s+only|commit\s+only|change\s+only|modyfikuj\s+wyłącznie|do\s+not\s+stage|do\s+not\s+commit|goals?|instructions?)\b|$))/gi
-		const extractedDenies = extractScopesFromDirective(initialGoal, denyPattern)
-		for (const d of extractedDenies) {
+		for (const d of initialParsed.scopedWriteDenies) {
 			if (!scopedWriteDenies.includes(d)) scopedWriteDenies.push(d)
-		}
-
-		const initialNoTouchMatches = [
-			...initialGoal.matchAll(new RegExp(scopedNoTouch.source, "gi")),
-			...initialGoal.matchAll(new RegExp(scopedPostfixDeny.source, "gi")),
-		]
-		for (const match of initialNoTouchMatches) {
-			if (match[1] && !/^(?:code|files|anything|kodu|plików|niczego)$/i.test(match[1].trim())) {
-				const scope = normalizeScope(match[1])
-				if (!scopedWriteDenies.includes(scope)) scopedWriteDenies.push(scope)
-			}
 		}
 
 		// Scoped commit in initial goal
@@ -1700,14 +1644,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					hasNoModify = true
 				}
 
-				// Check follow-up scoped write allowances/denials
-				const followUpAllows = extractScopesFromDirective(text, allowPattern)
-				for (const a of followUpAllows) {
+				// Check follow-up scoped write allowances/denials with canonical scope parser
+				const followUpParsed = parseExplicitFilesystemScope(text, { workspacePath: this.workspacePath })
+				for (const a of followUpParsed.scopedWriteAllows) {
 					if (!scopedWriteAllows.includes(a)) scopedWriteAllows.push(a)
 					hasNoModify = false
 				}
-				const followUpDenies = extractScopesFromDirective(text, denyPattern)
-				for (const d of followUpDenies) {
+				for (const d of followUpParsed.scopedWriteDenies) {
 					if (!scopedWriteDenies.includes(d)) scopedWriteDenies.push(d)
 				}
 
@@ -1893,15 +1836,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			} catch {}
 
 			const toolName = tool?.tool
-			if (toolName === "newFileCreated") {
+			if (toolName === "newFileCreated" || toolName === "writeToFile" || toolName === "write_to_file") {
 				actionType = "write_to_file"
 				target.filePath = tool.path
 				target.isProtected = isProtected
 				target.isOutsideWorkspace = !!tool.isOutsideWorkspace
-			} else if (toolName === "editedExistingFile" || toolName === "appliedDiff") {
+			} else if (toolName === "editedExistingFile" || toolName === "appliedDiff" || toolName === "replace_file_content") {
 				actionType = "replace_file_content"
 				target.filePath = tool.path
 				target.diff = tool.diff
+				target.isProtected = isProtected
+				target.isOutsideWorkspace = !!tool.isOutsideWorkspace
+			} else if (toolName === "deleteFile" || toolName === "deletedFile" || toolName === "delete_file") {
+				actionType = "delete_file"
+				target.filePath = tool.path
 				target.isProtected = isProtected
 				target.isOutsideWorkspace = !!tool.isOutsideWorkspace
 			} else if (toolName === "readFile") {
@@ -1927,10 +1875,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				target.subtaskMessage = tool.content
 			} else if (toolName === "updateTodoList" || toolName === "update_todo_list") {
 				actionType = "update_todo_list"
-			} else if (toolName === "finishTask") {
+			} else if (toolName === "finishTask" || toolName === "attemptCompletion" || toolName === "attempt_completion") {
 				actionType = "attempt_completion"
+			} else if (toolName === "skill") {
+				actionType = "generic_tool"
+				target.toolName = "skill"
 			} else {
-				actionType = "write_to_file"
+				actionType = "generic_tool"
+				target.toolName = toolName || "unknown"
 				target.filePath = tool?.path
 				target.isProtected = isProtected
 				target.isOutsideWorkspace = !!tool?.isOutsideWorkspace
@@ -2016,18 +1968,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		let targetStr =
 			req.target.command ||
 			req.target.filePath ||
+			req.target.toolName ||
 			req.target.mcpToolName ||
 			req.target.completionSummary ||
 			req.target.completionResult ||
 			""
 
 		// Group all file edit/write operations into a unified file_write category with normalized path
-		if (["write_to_file", "apply_diff", "insert_content", "edit_file", "save_file"].includes(actionType)) {
+		if (["write_to_file", "apply_diff", "insert_content", "edit_file", "save_file", "replace_file_content", "delete_file"].includes(actionType)) {
 			actionType = "file_write"
 			targetStr = targetStr.replace(/\\/g, "/").replace(/^\.?\//, "").toLowerCase().trim()
 		}
 
-		return `${actionType}:${targetStr.trim()}`
+		return `${actionType}:${targetStr.trim()}:rev${this.authorizationRevision}`
 	}
 
 	private computeCompletionFingerprint(req: UnifiedApprovalRequest): string {
@@ -2863,6 +2816,12 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			this.lastCompletionFingerprint = null
 			this.unresolvedDenialState = null
 			this.clearEditFailureState()
+
+			// Reset deterministic denial loop counters and invalidate previous action signatures
+			this.consecutiveIdenticalDenialsCount = 0
+			this.lastDeniedActionSignature = undefined
+			this.deniedActionHistory = []
+			this.authorizationRevision = (this.authorizationRevision || 0) + 1
 		}
 
 		// Create a checkpoint whenever the user sends a message.
@@ -2883,6 +2842,26 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			if (askResponse === "yesButtonClicked") {
 				if (pendingAsk.approvalState === "USER_DECISION_REQUIRED") {
 					pendingAsk.approvalState = "AUTO_APPROVED"
+				}
+
+				// If user explicitly approved a mutating tool, add its target to taskSupplementalWriteAllows
+				if (pendingAsk.ask === "tool" && pendingAsk.text) {
+					try {
+						const tool = JSON.parse(pendingAsk.text)
+						if (tool?.path && typeof tool.path === "string") {
+							const targetPath = tool.path.trim()
+							const isOutside = Boolean(tool.isOutsideWorkspace)
+							if (!isOutside && this.workspacePath) {
+								const normTarget = normalizeScopePath(targetPath, this.workspacePath)
+								if (!this.taskSupplementalWriteAllows) {
+									this.taskSupplementalWriteAllows = []
+								}
+								if (normTarget && !this.taskSupplementalWriteAllows.includes(normTarget)) {
+									this.taskSupplementalWriteAllows.push(normTarget)
+								}
+							}
+						}
+					} catch {}
 				}
 			} else if (askResponse === "noButtonClicked") {
 				if (pendingAsk.approvalState === "USER_DECISION_REQUIRED") {
@@ -4325,7 +4304,8 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 					this.initialStatus === "interrupted" ||
 					this.historyItem?.status === "interrupted" ||
 					Boolean(
-						this.clineMessages.findLast(
+						findLast(
+							this.clineMessages,
 							(m) =>
 								m.say === "api_req_started" &&
 								(() => {
