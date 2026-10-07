@@ -31,6 +31,7 @@ import { RequestPriority, RequestTicket } from "../../api/coordination/types"
 import { safeExtractJson, type SafeJsonExtractResult } from "./SafeJsonExtractor"
 import { safeRateLimitHeaders, safeRetryAfterHeader } from "./rateLimitTelemetry"
 import { extractRetryAfterMsFromTimeline } from "./DeferredApprovalRecovery"
+import { parseExplicitFilesystemScope, isPathInScope, normalizeScopePath } from "./scopeParser"
 
 export interface VerifierHealthState {
 	consecutiveFailures: number
@@ -1026,7 +1027,8 @@ export class ApprovalOrchestrator {
 				return {
 					decision: "MANUAL_APPROVAL",
 					risk: "medium",
-					reason: `Cannot complete task with ${actionableBlocked.length} item(s) marked 'blocked' on the todo list without user approval.`,
+					isBlockedOutcome: true,
+					reason: `Cannot complete task as successful: ${actionableBlocked.length} item(s) are marked 'blocked' on the todo list. Approving will conclude the task with status 'blocked' (uncompleted items).`,
 					taskAligned: false,
 					unresolvedItems: actionableBlocked.map((t) => ({
 						type: "blocked_todo",
@@ -1109,6 +1111,61 @@ export class ApprovalOrchestrator {
 			}
 		}
 
+		// Generic tool handling (skills, known non-mutating helpers, and unknown tools fail-closed)
+		if (actionType === "generic_tool") {
+			const toolName = target.toolName || ""
+			// Skill tool is non-mutating and safe to auto-allow
+			if (toolName === "skill") {
+				return {
+					decision: "ALLOW_AUTO",
+					risk: "safe",
+					reason: "Loading skill instructions into context is non-mutating",
+					taskAligned: true,
+				}
+			}
+			if (
+				toolName === "askFollowupQuestion" ||
+				toolName === "ask_followup_question" ||
+				toolName === "runSlashCommand" ||
+				toolName === "generateImage"
+			) {
+				return {
+					decision: "ALLOW_AUTO",
+					risk: "safe",
+					reason: "Safe internal workflow tool",
+					taskAligned: true,
+				}
+			}
+
+			// Unknown tools: Fail-closed verification
+			if (target.isProtected) {
+				return {
+					decision: "HARD_BLOCK",
+					risk: "critical",
+					reason: "Target file is protected by safety policy.",
+					taskAligned: false,
+					hardBoundaryViolation: true,
+					replanGuidance: "Do not attempt to modify protected files.",
+				}
+			}
+			if (target.isOutsideWorkspace) {
+				return {
+					decision: "HARD_BLOCK",
+					risk: "high",
+					reason: "Target path is outside the active workspace directory.",
+					taskAligned: false,
+					hardBoundaryViolation: true,
+					replanGuidance: "Restrict all operations to current workspace.",
+				}
+			}
+			return {
+				decision: "MANUAL_APPROVAL",
+				risk: "medium",
+				reason: `Unrecognized or custom tool '${toolName || "unknown"}'. Manual approval required to ensure safety.`,
+				taskAligned: false,
+			}
+		}
+
 		// File modifications
 		if (actionType === "write_to_file" || actionType === "replace_file_content" || actionType === "delete_file") {
 			// Hard-block writes to protected files (rules, configs, keys) - System Safety P0 (Non-overridable)
@@ -1139,108 +1196,46 @@ export class ApprovalOrchestrator {
 			const latestInstruction = request.taskContext.latestUserInstruction || ""
 			const substantiveInstruction = request.taskContext.latestSubstantiveInstruction || latestInstruction
 			const activeGoal = request.taskContext.activeGoal || ""
-			const normTarget = (target.filePath || "").replace(/\\/g, "/").toLowerCase()
+			const workspacePath = request.taskContext.workspacePath
+			const normTarget = normalizeScopePath(target.filePath || "", workspacePath)
 
-			// Extract scoped write allowances and denials
+			// Extract scoped write allowances and denials using canonical scope parser
 			const scopedAllows: string[] = [
-				...(request.taskContext.scopedWriteAllows || []).map((s) => s.replace(/\\/g, "/").toLowerCase().trim()),
+				...(request.taskContext.scopedWriteAllows || []).map((s) => normalizeScopePath(s, workspacePath)).filter(Boolean),
 			]
 			const scopedDenies: string[] = [
-				...(request.taskContext.scopedWriteDenies || []).map((s) => s.replace(/\\/g, "/").toLowerCase().trim()),
+				...(request.taskContext.scopedWriteDenies || []).map((s) => normalizeScopePath(s, workspacePath)).filter(Boolean),
 			]
-			const supplementalAllows = (request.taskContext.supplementalWriteAllows || []).map((s) =>
-				s.replace(/\\/g, "/").toLowerCase().trim(),
-			)
+			const supplementalAllows: string[] = [
+				...(request.taskContext.supplementalWriteAllows || []).map((s) => normalizeScopePath(s, workspacePath)).filter(Boolean),
+			]
 			const hasCanonicalScope = request.taskContext.canonicalConstraints !== undefined
 
-			for (const c of hasCanonicalScope ? [] : explicitConstraints) {
-				const allowMatch = c.match(
-					/(?:ALLOWED\s+to\s+modify|możesz\s+modyfikować|modyfikuj\s+wyłącznie|modify\s+only)\s*(.+)/i
-				)
-				if (allowMatch && allowMatch[1]) {
-					const cleanScope = allowMatch[1].replace(/[\(\)].*$/, "").trim().toLowerCase()
-					if (cleanScope && !/^(kodu|code|all\s+files|wszystko)$/i.test(cleanScope)) {
-						scopedAllows.push(cleanScope)
-					}
+			// Parse explicit constraints passed in context if not covered by canonical scope
+			for (const c of hasCanonicalScope && scopedAllows.length > 0 ? [] : explicitConstraints) {
+				const parsedC = parseExplicitFilesystemScope(c, { workspacePath })
+				for (const a of parsedC.scopedWriteAllows) {
+					if (!scopedAllows.includes(a)) scopedAllows.push(a)
 				}
-				const denyMatch = c.match(
-					/(?:DO\s+NOT\s+modify(?:\s+files\s+in|\s+code\s+in)?|nie\s+modyfikuj(?:\s+plików\s+w|\s+kodu\s+w)?)\s*(.+)/i
-				)
-				if (denyMatch && denyMatch[1]) {
-					const cleanScope = denyMatch[1].replace(/[\(\)].*$/, "").trim().toLowerCase()
-					if (cleanScope && !/^(kodu|code|all\s+files|wszystko)$/i.test(cleanScope)) {
-						scopedDenies.push(cleanScope)
-					}
+				for (const d of parsedC.scopedWriteDenies) {
+					if (!scopedDenies.includes(d)) scopedDenies.push(d)
 				}
 			}
 
 			// Also parse prompt text if scopes are not explicitly extracted in explicitConstraints
 			const promptText = `${substantiveInstruction}\n${latestInstruction}\n${activeGoal}`
-
-			const allowSectionRegex =
-				/(?:modify\s+only|you\s+(?:may|can)\s+modify\s+only|commit\s+only|change\s+only|edit\s+only|modyfikuj\s+wyłącznie|zmieniaj\s+tylko|edytuj\s+tylko|commituj\s+tylko|popraw\s+tylko|napraw\s+tylko|fix\s+only|zakres\s+zapisu(?:\s*:\s*|\s+)wyłącznie(?:\s*w)?|authorized\s+to\s+modify\s+only):?([\s\S]*?)(?=(?:\n\s*\n|\b(?:do\s+not|nie\s+(?:modyfikuj|commituj|zmieniaj|ruszaj)|zakaz|goals?|instructions?|uwaga)\b|$))/i
-			const allowSectionMatch = hasCanonicalScope ? null : promptText.match(allowSectionRegex)
-			if (allowSectionMatch && allowSectionMatch[1]) {
-				const lines = allowSectionMatch[1].split(/\n|;|,|\/|\s+and\s+|\s+or\s+|\s+oraz\s+|\s+i\s+/)
-				for (const line of lines) {
-					let cleaned = line
-						.trim()
-						.replace(/^[\s*\->•]+/, "")
-						.replace(/[\(\)].*$/, "")
-						.replace(/[.,:;!]+$/, "")
-						.trim()
-						.toLowerCase()
-					if (cleaned.length > 4 && cleaned.endsWith("u")) {
-						cleaned = cleaned.slice(0, -1)
-					}
-					if (
-						cleaned &&
-						!/^(kodu|code|all\s+files|wszystko|pliki|files)$/i.test(cleaned) &&
-						!scopedAllows.includes(cleaned)
-					) {
-						scopedAllows.push(cleaned)
-					}
+			if (!hasCanonicalScope || (scopedAllows.length === 0 && scopedDenies.length === 0)) {
+				const parsedPrompt = parseExplicitFilesystemScope(promptText, { workspacePath })
+				for (const a of parsedPrompt.scopedWriteAllows) {
+					if (!scopedAllows.includes(a)) scopedAllows.push(a)
 				}
-			}
-
-			const denySectionRegex =
-				/(?:do\s+not\s+(?:modify|commit|touch|edit)\s*(?:files\s+in|code\s+in)?|nie\s+(?:modyfikuj|commituj|ruszaj|zmieniaj)\s*(?:plików\s+w|kodu\s+w)?|zakaz\s+modyfikacji):?([\s\S]*?)(?=(?:\n\s*\n|\b(?:modify\s+only|commit\s+only|change\s+only|modyfikuj\s+wyłącznie|zmieniaj\s+tylko|edytuj\s+tylko|commituj\s+tylko|popraw\s+tylko|napraw\s+tylko|fix\s+only|ale\s+popraw|zamiast\s+tego|goals?|instructions?|uwaga)\b|$))/i
-			const denySectionMatch = hasCanonicalScope ? null : promptText.match(denySectionRegex)
-			if (denySectionMatch && denySectionMatch[1]) {
-				const lines = denySectionMatch[1].split(/\n|;|,|\/|\s+and\s+|\s+or\s+|\s+oraz\s+|\s+i\s+/)
-				for (const line of lines) {
-					let cleaned = line
-						.trim()
-						.replace(/^[\s*\->•]+/, "")
-						.replace(/[\(\)].*$/, "")
-						.replace(/[.,:;!]+$/, "")
-						.trim()
-						.toLowerCase()
-					if (cleaned.length > 4 && cleaned.endsWith("u")) {
-						cleaned = cleaned.slice(0, -1)
-					}
-					if (
-						cleaned &&
-						!/^(kodu|code|all\s+files|wszystko|pliki|files)$/i.test(cleaned) &&
-						!scopedDenies.includes(cleaned)
-					) {
-						scopedDenies.push(cleaned)
-					}
+				for (const d of parsedPrompt.scopedWriteDenies) {
+					if (!scopedDenies.includes(d)) scopedDenies.push(d)
 				}
-			}
-
-			// Helper to check scope match
-			const isScopeMatch = (filePath: string, scopePattern: string) => {
-				const clean = scopePattern
-					.replace(/^\.?\//, "")
-					.replace(/\/$/, "")
-					.replace(/[.,:;!]+$/, "")
-					.trim()
-				return Boolean(clean && (filePath === clean || filePath.startsWith(`${clean}/`) || filePath.endsWith(`/${clean}`) || filePath.includes(`/${clean}/`)))
 			}
 
 			// 1. Check scoped denials
-			const forbiddenScope = scopedDenies.find((d) => isScopeMatch(normTarget, d))
+			const forbiddenScope = scopedDenies.find((d) => isPathInScope(normTarget, [d], { workspacePath }))
 			if (forbiddenScope) {
 				return {
 					decision: "DENY_AND_REPLAN",
@@ -1253,18 +1248,20 @@ export class ApprovalOrchestrator {
 					replanGuidance: `Do not modify files in forbidden scope '${forbiddenScope}'. Only work within authorized scopes.`,
 				}
 			}
-			const supplementalAllow = supplementalAllows.find((a) => isScopeMatch(normTarget, a))
-			if (supplementalAllow) {
+
+			// 2. Check supplemental allows (e.g. user approved specific target)
+			const matchingSupplemental = supplementalAllows.find((a) => isPathInScope(normTarget, [a], { workspacePath }))
+			if (matchingSupplemental) {
 				return {
 					decision: "ALLOW_AUTO",
 					risk: "low",
-					reason: `File modification matches an additional user-authorized scope '${supplementalAllow}'.`,
+					reason: `File modification matches an additional user-authorized scope '${matchingSupplemental}'.`,
 					taskAligned: true,
 				}
 			}
 
-			// 2. Check scoped allowances
-			const matchingAllowScope = scopedAllows.find((a) => isScopeMatch(normTarget, a))
+			// 3. Check explicitly authorized scopes
+			const matchingAllowScope = scopedAllows.find((a) => isPathInScope(normTarget, [a], { workspacePath }))
 			if (matchingAllowScope) {
 				return {
 					decision: "ALLOW_AUTO",
@@ -1274,7 +1271,7 @@ export class ApprovalOrchestrator {
 				}
 			}
 
-			// 3. If explicit scoped allows exist but this target does NOT match any of them
+			// 4. If explicit scoped allows exist but this target does NOT match any of them
 			if (scopedAllows.length > 0) {
 				return {
 					decision: "DENY_AND_REPLAN",
@@ -1480,9 +1477,16 @@ export class ApprovalOrchestrator {
 				}
 
 				// Generic negative commit constraint (blanket ban)
-				const hasNoCommitConstraint = explicitConstraints.some((c) =>
-					/nie\s+commituj|do\s+not\s+commit|don't\s+commit|no\s+commits?/i.test(c)
-				)
+				const hasNoCommitConstraint = explicitConstraints.some((c) => {
+					const trimmed = c.trim()
+					if (/^(?:DO\s+NOT\s+commit\s+changes\s+to|nie\s+commituj\s+zmian\s+w)\b/i.test(trimmed)) {
+						return false
+					}
+					return (
+						/^(?:DO\s+NOT\s+commit|nie\s+commituj|don't\s+commit|no\s+commits?)\s*$/i.test(trimmed) ||
+						(!scopedAllows.length && !scopedDenies.length && /^(?:DO\s+NOT\s+commit|nie\s+commituj|don't\s+commit|no\s+commits?)\b/i.test(trimmed) && !/applies\s+only|tylko\s+do/i.test(trimmed))
+					)
+				})
 				if (hasNoCommitConstraint) {
 					return {
 						decision: "DENY_AND_REPLAN",
@@ -2046,6 +2050,12 @@ export class ApprovalOrchestrator {
 			approvalAttempts: result.approvalAttemptCount || 1,
 			retry: Boolean((result.approvalAttemptCount || 1) > 1),
 			infrastructureFailure: result.infrastructureFailure || false,
+			rawTarget: request.target.filePath || request.target.command,
+			canonicalTarget: request.target.filePath ? normalizeScopePath(request.target.filePath, request.taskContext.workspacePath) : undefined,
+			scopeSource: request.taskContext.scopedWriteAllows?.length ? "explicit_allowlist" : "workspace_default",
+			explicitScopeDetected: Boolean(request.taskContext.scopedWriteAllows?.length || request.taskContext.scopedWriteDenies?.length),
+			canonicalAllowedPaths: request.taskContext.scopedWriteAllows?.map((s) => normalizeScopePath(s, request.taskContext.workspacePath)),
+			canonicalDeniedPaths: request.taskContext.scopedWriteDenies?.map((s) => normalizeScopePath(s, request.taskContext.workspacePath)),
 		}
 
 		DecisionLogStore.getInstance().addEntry(entry, knownSecrets.filter(Boolean) as string[])

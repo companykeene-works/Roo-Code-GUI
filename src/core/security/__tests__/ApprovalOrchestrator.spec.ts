@@ -1248,5 +1248,90 @@ describe("ApprovalOrchestrator", () => {
 			expect(routineWriteRes.decision).toBe("ALLOW_AUTO")
 		})
 	})
+
+	describe("Lifecycle & Autonomy Invariants (BLOCKED != COMPLETED & False Scope Fixes)", () => {
+		const orchestrator = new ApprovalOrchestrator()
+		const defaultState: any = {
+			apiConfiguration: { apiProvider: "anthropic", apiModelId: "claude-3-7-sonnet" },
+			commandSafetyConfig: { enabled: true, provider: "openai", modelId: "gpt-4o-mini", apiKey: "sk-test" },
+			approvalMode: "auto",
+		}
+
+		it("Gate 4b: blocked TODOs yield MANUAL_APPROVAL with isBlockedOutcome: true", async () => {
+			const completionReq: UnifiedApprovalRequest = {
+				id: "req-block-1",
+				taskId: "task-block-1",
+				actionType: "attempt_completion",
+				timestamp: Date.now(),
+				target: {
+					completionResult: "Completed available work.",
+					todoListSnapshot: [
+						{ id: "1", content: "Implement feature A", status: "completed" },
+						{ id: "2", content: "Modify external module B", status: "blocked" },
+					],
+				},
+				taskContext: {
+					latestUserInstruction: "Complete all features",
+					activeGoal: "Complete all features",
+					workspacePath: "/repo",
+					isWithinWorkspace: true,
+				},
+			}
+
+			const res = await orchestrator.evaluate(completionReq, defaultState)
+			expect(res.decision).toBe("MANUAL_APPROVAL")
+			expect(res.isBlockedOutcome).toBe(true)
+			expect(res.reason).toMatch(/marked 'blocked' on the todo list/i)
+			expect(res.reason).toMatch(/status 'blocked'/i)
+			expect(res.unresolvedItems).toHaveLength(1)
+			expect(res.unresolvedItems?.[0].content).toBe("Modify external module B")
+		})
+
+		it("Scoped modify allow with 'You MAY modify ONLY:\n\nlicensing-obfuscation/' allows target without false rejection", async () => {
+			const prompt = "You MAY modify ONLY:\n\nlicensing-obfuscation/\n\nDo NOT touch any other directory."
+			const writeReq: UnifiedApprovalRequest = {
+				id: "req-scope-1",
+				taskId: "task-scope-1",
+				actionType: "write_to_file",
+				timestamp: Date.now(),
+				target: {
+					filePath: "licensing-obfuscation/src/obfuscate.ts",
+				},
+				taskContext: {
+					latestUserInstruction: prompt,
+					activeGoal: prompt,
+					workspacePath: "/repo",
+					isWithinWorkspace: true,
+				},
+			}
+
+			const res = await orchestrator.evaluate(writeReq, defaultState)
+			// Target inside licensing-obfuscation/ must be ALLOW_AUTO, NOT rejected
+			expect(res.decision).toBe("ALLOW_AUTO")
+		})
+
+		it("Scoped commit prohibition 'DO NOT commit changes to security/licensing' does NOT ban commit in velune-website", async () => {
+			const prompt = "Working on velune-website. DO NOT commit changes to security/licensing."
+			const commitReq: UnifiedApprovalRequest = {
+				id: "req-git-1",
+				taskId: "task-git-1",
+				actionType: "execute_command",
+				timestamp: Date.now(),
+				target: {
+					command: "git commit -m 'Update website'",
+				},
+				taskContext: {
+					latestUserInstruction: prompt,
+					activeGoal: prompt,
+					workspacePath: "/repo/velune-website",
+					isWithinWorkspace: true,
+				},
+			}
+
+			const res = await orchestrator.evaluate(commitReq, defaultState)
+			// Must NOT be DENY_AND_REPLAN due to a blanket commit ban
+			expect(res.decision).not.toBe("DENY_AND_REPLAN")
+		})
+	})
 })
 

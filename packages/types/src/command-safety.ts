@@ -320,6 +320,7 @@ export type ApprovalActionType =
 	| "new_task"
 	| "update_todo_list"
 	| "attempt_completion"
+	| "generic_tool"
 
 export type OrchestratorDecision = "ALLOW_AUTO" | "DENY_AND_REPLAN" | "HARD_BLOCK" | "MANUAL_APPROVAL" | "CONTINUE_WORK"
 
@@ -443,6 +444,7 @@ export interface UnifiedApprovalRequest {
 		diff?: string
 		isOutsideWorkspace?: boolean
 		isProtected?: boolean
+		toolName?: string
 		mcpServerName?: string
 		mcpToolName?: string
 		mcpArguments?: Record<string, unknown>
@@ -511,6 +513,7 @@ export interface ApprovalDecisionResult {
 	attemptTimeline?: VerifierAttemptTiming[]
 	approvalPromptBytes?: number
 	approvalPromptApproxTokens?: number
+	isBlockedOutcome?: boolean
 	auditLog: string
 	retryAfterMs?: number
 	inCooldown?: boolean
@@ -552,6 +555,7 @@ export const approvalDecisionResultSchema = z.object({
 		.optional(),
 	missingCriteria: z.array(z.string()).nullable().optional(),
 	infrastructureFailure: z.boolean().nullable().optional(),
+	isBlockedOutcome: z.boolean().optional(),
 })
 
 export interface CompactCompletionContext {
@@ -648,6 +652,12 @@ export interface DecisionLogEntry {
 	infrastructureFailure?: boolean
 	deferredAttempt?: number
 	scheduledDelayMs?: number
+	rawTarget?: string
+	canonicalTarget?: string
+	scopeSource?: string
+	explicitScopeDetected?: boolean
+	canonicalAllowedPaths?: string[]
+	canonicalDeniedPaths?: string[]
 }
 
 
