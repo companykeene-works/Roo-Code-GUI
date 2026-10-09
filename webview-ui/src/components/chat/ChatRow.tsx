@@ -408,6 +408,23 @@ export const ChatRowContent = ({
 				const isUserDecision = message.approvalState === "USER_DECISION_REQUIRED"
 
 				if (isApproved) {
+					const isBlocked =
+						currentTaskItem?.status === "blocked" ||
+						currentTaskItem?.isBlockedOutcome === true ||
+						Boolean(
+							message.text &&
+								/status:\s*BLOCKED|concluded as BLOCKED|item\(s\) marked 'blocked'/i.test(message.text),
+						)
+					if (isBlocked) {
+						return [
+							<span
+								className="codicon codicon-warning"
+								style={{ color: "var(--vscode-notificationsWarningIcon-foreground, #cca700)", marginBottom: "-1.5px" }}></span>,
+							<span style={{ color: "var(--vscode-notificationsWarningIcon-foreground, #cca700)", fontWeight: "bold" }}>
+								{t("chat:taskBlocked", { defaultValue: "Task Concluded (Blocked)" })}
+							</span>,
+						]
+					}
 					return [
 						<span
 							className="codicon codicon-check"
@@ -1505,9 +1522,18 @@ export const ChatRowContent = ({
 						<ErrorRow type="error" message={message.text || t("chat:error")} errorDetails={message.text} />
 					)
 				case "completion_result": {
+					const isBlocked =
+						currentTaskItem?.status === "blocked" ||
+						currentTaskItem?.isBlockedOutcome === true ||
+						Boolean(
+							message.text &&
+								/status:\s*BLOCKED|concluded as BLOCKED|item\(s\) marked 'blocked'/i.test(message.text),
+						)
 					const borderColor =
 						message.approvalState === "AUTO_APPROVED"
-							? "border-emerald-500/40"
+							? isBlocked
+								? "border-amber-500/40"
+								: "border-emerald-500/40"
 							: message.approvalState === "DENIED"
 								? "border-amber-500/40"
 								: "border-blue-500/40"
@@ -1898,12 +1924,18 @@ export const ChatRowContent = ({
 					)
 				case "completion_result":
 					if (message.text) {
+						const isBlocked =
+							currentTaskItem?.status === "blocked" ||
+							currentTaskItem?.isBlockedOutcome === true ||
+							/status:\s*BLOCKED|concluded as BLOCKED|item\(s\) marked 'blocked'/i.test(message.text)
 						const borderColor =
 							message.approvalState === "DENIED"
 								? "border-amber-500/40"
 								: message.approvalState === "EVALUATING"
 									? "border-blue-500/40"
-									: "border-emerald-500/40"
+									: isBlocked
+										? "border-amber-500/40"
+										: "border-emerald-500/40"
 						return (
 							<div className="group">
 								<div style={headerStyle}>

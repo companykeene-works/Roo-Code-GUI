@@ -660,9 +660,10 @@ export class DesktopAgentHost extends EventEmitter {
 			try {
 				const item = this.provider.taskHistoryStore.get?.(taskId)
 				if (item) {
+					const targetStatus = item.status === "blocked" || item.isBlockedOutcome ? "blocked" : "completed"
 					const updated = {
 						...item,
-						status: "completed" as const,
+						status: targetStatus,
 						needsAttention: false,
 						hasUnread: isBackground,
 						lastAssistantMessageTs: Date.now(),
@@ -682,7 +683,9 @@ export class DesktopAgentHost extends EventEmitter {
 				if (fs.existsSync(itemPath)) {
 					const raw = JSON.parse(fs.readFileSync(itemPath, "utf-8"))
 					if (raw) {
-						raw.status = "completed"
+						if (raw.status !== "blocked" && !raw.isBlockedOutcome) {
+							raw.status = "completed"
+						}
 						raw.needsAttention = false
 						raw.hasUnread = isBackground
 						raw.lastAssistantMessageTs = Date.now()
@@ -851,7 +854,7 @@ export class DesktopAgentHost extends EventEmitter {
 				}
 			} else if (item.status === "failed") {
 				status = "failed"
-			} else if (item.status === "completed" || item.status === "cancelled" || item.status === "delegated") {
+			} else if (item.status === "completed" || item.status === "blocked" || item.status === "cancelled" || item.status === "delegated") {
 				status = "completed"
 			} else if (item.status === "interrupted" || item.status === "active" || (item as any).needsAttention === true) {
 				status = "needs_attention"

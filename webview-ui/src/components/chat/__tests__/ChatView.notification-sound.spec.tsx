@@ -742,4 +742,28 @@ describe("ChatView - Sound Debounce", () => {
 			expect(mockPlayFunction).toHaveBeenCalled()
 		})
 	})
+
+	it("does not play celebration sound when completion_result is for a blocked outcome", async () => {
+		mockPlayFunction.mockClear()
+		renderChatView()
+
+		mockPostMessage({
+			soundEnabled: true,
+			messageQueue: [],
+			clineMessages: [
+				{ type: "say", say: "task", ts: Date.now() - 2000, text: "Initial task" },
+				{
+					type: "say",
+					say: "completion_result",
+					ts: Date.now(),
+					text: "Task concluded with status: BLOCKED. 3 item(s) remained blocked and unexecuted.",
+					partial: false,
+					approvalState: "AUTO_APPROVED",
+				},
+			],
+		})
+
+		await new Promise((resolve) => setTimeout(resolve, 100))
+		expect(mockPlayFunction).not.toHaveBeenCalled()
+	})
 })
