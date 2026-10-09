@@ -552,6 +552,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didToolFailInCurrentTurn = false
+	abortRemainingToolCalls = false
 	didCompleteReadingStream = false
 	private _started = false
 	// No streaming parser is required.
@@ -2842,6 +2843,8 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		this.lastDeniedActionSignature = undefined
 		this.deniedActionHistory = []
 		this.authorizationRevision = (this.authorizationRevision || 0) + 1
+		this.toolRepetitionDetector?.reset()
+		this.toolRepetitionDetector?.resetTurnBoundary()
 
 		if (this.historyItem) {
 			this.historyItem.status = "active"
@@ -4711,6 +4714,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		this.userMessageContentReady = false
 		this.didRejectTool = false
 		this.didAlreadyUseTool = false
+		this.abortRemainingToolCalls = false
 		this.assistantMessageSavedToHistory = false
 		this.didToolFailInCurrentTurn = false
 		this.presentAssistantMessageLocked = false
@@ -5064,6 +5068,8 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			if (this.isTaskCompleted) {
 				return true
 			}
+
+			this.toolRepetitionDetector?.resetTurnBoundary()
 
 			const currentItem = stack.pop()!
 			const currentUserContent = currentItem.userContent

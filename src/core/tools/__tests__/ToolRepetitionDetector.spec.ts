@@ -4,7 +4,7 @@ import type { ToolName } from "@roo-code/types"
 
 import type { ToolUse } from "../../../shared/tools"
 
-import { ToolRepetitionDetector } from "../ToolRepetitionDetector"
+import { ToolRepetitionDetector, classifyCommandIntent } from "../ToolRepetitionDetector"
 
 vitest.mock("../../../i18n", () => ({
 	t: vitest.fn((key, options) => {
@@ -569,6 +569,127 @@ describe("ToolRepetitionDetector", () => {
 			const result = detector.check(editTool)
 			expect(result.allowExecution).toBe(false)
 			expect(result.askUser?.messageKey).toBe("mistake_limit_reached")
+		})
+	})
+
+	// ===== Delay Command & Turn Boundary tests =====
+	describe("delay command classification and loop detection", () => {
+		describe("classifyCommandIntent", () => {
+			it("should classify loopback ping idioms as delay commands", () => {
+				expect(classifyCommandIntent("ping -n 46 127.0.0.1 >nul").isDelay).toBe(true)
+				expect(classifyCommandIntent("ping -n 45 127.0.0.1").isDelay).toBe(true)
+				expect(classifyCommandIntent("ping -n 31 localhost >nul").isDelay).toBe(true)
+				expect(classifyCommandIntent("ping ::1").isDelay).toBe(true)
+				expect(classifyCommandIntent("ping 0.0.0.0 >nul").isDelay).toBe(true)
+				expect(classifyCommandIntent("echo wait && ping -n 10 127.0.0.1 >nul").isDelay).toBe(true)
+			})
+
+			it("should classify timeout, sleep, and Start-Sleep as delay commands", () => {
+				expect(classifyCommandIntent("timeout /t 30 /nobreak >nul").isDelay).toBe(true)
+				expect(classifyCommandIntent("timeout 5").isDelay).toBe(true)
+				expect(classifyCommandIntent("sleep 10").isDelay).toBe(true)
+				expect(classifyCommandIntent("/bin/sleep 2").isDelay).toBe(true)
+				expect(classifyCommandIntent("Start-Sleep -Seconds 6").isDelay).toBe(true)
+				expect(classifyCommandIntent("powershell -c \"Start-Sleep -Seconds 5\"").isDelay).toBe(true)
+			})
+
+			it("should NOT classify legitimate network diagnostics as delay commands", () => {
+				expect(classifyCommandIntent("ping google.com").isDelay).toBe(false)
+				expect(classifyCommandIntent("ping 8.8.8.8").isDelay).toBe(false)
+				expect(classifyCommandIntent("ping -c 4 1.1.1.1").isDelay).toBe(false)
+				expect(classifyCommandIntent("ping github.com").isDelay).toBe(false)
+			})
+
+			it("should NOT classify regular shell commands as delay commands", () => {
+				expect(classifyCommandIntent("git status").isDelay).toBe(false)
+				expect(classifyCommandIntent("npm test").isDelay).toBe(false)
+				expect(classifyCommandIntent("findstr \"built_at_commit\" graphify-out\\graph.json").isDelay).toBe(false)
+			})
+		})
+
+		describe("delay command repetition canonicalization", () => {
+			it("should detect loops when model increments ping counts (ping -n 45, 46, 47)", () => {
+				const detector = new ToolRepetitionDetector(3)
+
+				const ping45 = createToolUse("execute_command", "execute_command", { command: "ping -n 45 127.0.0.1 >nul" })
+				const ping46 = createToolUse("execute_command", "execute_command", { command: "ping -n 46 127.0.0.1 >nul" })
+				const ping47 = createToolUse("execute_command", "execute_command", { command: "ping -n 47 127.0.0.1 >nul" })
+				const ping48 = createToolUse("execute_command", "execute_command", { command: "ping -n 48 127.0.0.1 >nul" })
+
+				expect(detector.check(ping45).allowExecution).toBe(true)
+				expect(detector.check(ping46).allowExecution).toBe(true)
+				expect(detector.check(ping47).allowExecution).toBe(true)
+
+				// 4th call (consecutive delay count = 3) hits limit despite different ping count parameter
+				const result = detector.check(ping48)
+				expect(result.allowExecution).toBe(false)
+				expect(result.askUser?.messageKey).toBe("mistake_limit_reached")
+			})
+
+			it("should detect loops when mixing different delay mechanisms", () => {
+				const detector = new ToolRepetitionDetector(3)
+
+				const ping = createToolUse("execute_command", "execute_command", { command: "ping -n 46 127.0.0.1 >nul" })
+				const timeout = createToolUse("execute_command", "execute_command", { command: "timeout /t 30 /nobreak" })
+				const startSleep = createToolUse("execute_command", "execute_command", { command: "Start-Sleep -Seconds 10" })
+				const bashSleep = createToolUse("execute_command", "execute_command", { command: "sleep 15" })
+
+				expect(detector.check(ping).allowExecution).toBe(true)
+				expect(detector.check(timeout).allowExecution).toBe(true)
+				expect(detector.check(startSleep).allowExecution).toBe(true)
+
+				// 4th delay call hits limit because all pure delays share canonical serialization
+				const result = detector.check(bashSleep)
+				expect(result.allowExecution).toBe(false)
+			})
+
+			it("should NOT canonicalize legitimate external pings into wait_delay", () => {
+				const detector = new ToolRepetitionDetector(2)
+
+				const pingGoogle = createToolUse("execute_command", "execute_command", { command: "ping google.com" })
+				const pingCloudflare = createToolUse("execute_command", "execute_command", { command: "ping 1.1.1.1" })
+
+				// Different targets are distinct commands and should not trigger consecutive identical counts
+				expect(detector.check(pingGoogle).allowExecution).toBe(true)
+				expect(detector.check(pingCloudflare).allowExecution).toBe(true)
+				expect(detector.check(pingGoogle).allowExecution).toBe(true)
+			})
+		})
+
+		describe("turn boundaries and same-turn deduplication", () => {
+			it("should detect redundant wait commands in the same turn", () => {
+				const detector = new ToolRepetitionDetector()
+				const pingWait = createToolUse("execute_command", "execute_command", { command: "ping -n 46 127.0.0.1 >nul" })
+
+				// Before any wait executed
+				expect(detector.isRedundantSameTurnWait(pingWait)).toBe(false)
+
+				// Record first wait execution
+				detector.recordWaitExecuted()
+
+				// Subsequent wait in the same turn is redundant
+				expect(detector.isRedundantSameTurnWait(pingWait)).toBe(true)
+
+				// Non-wait command is never redundant
+				const gitCmd = createToolUse("execute_command", "execute_command", { command: "git status" })
+				expect(detector.isRedundantSameTurnWait(gitCmd)).toBe(false)
+
+				// Reset turn boundary clears same-turn redundancy
+				detector.resetTurnBoundary()
+				expect(detector.isRedundantSameTurnWait(pingWait)).toBe(false)
+			})
+
+			it("should track turn suppression for repetition warnings", () => {
+				const detector = new ToolRepetitionDetector()
+
+				expect(detector.isTurnSuppressed()).toBe(false)
+
+				detector.markTurnWarned()
+				expect(detector.isTurnSuppressed()).toBe(true)
+
+				detector.resetTurnBoundary()
+				expect(detector.isTurnSuppressed()).toBe(false)
+			})
 		})
 	})
 })

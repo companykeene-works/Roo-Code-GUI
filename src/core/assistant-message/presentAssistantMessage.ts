@@ -112,10 +112,12 @@ export async function presentAssistantMessage(cline: Task) {
 			// their original name in API history
 			const mcpBlock = block as McpToolUse
 
-			if (cline.didRejectTool) {
+			if (cline.didRejectTool || cline.abortRemainingToolCalls) {
 				// For native protocol, we must send a tool_result for every tool_use to avoid API errors
 				const toolCallId = mcpBlock.id
-				const errorMessage = !mcpBlock.partial
+				const errorMessage = cline.abortRemainingToolCalls
+					? `Skipping MCP tool ${mcpBlock.name} because tool repetition limit was reached in this turn.`
+					: !mcpBlock.partial
 					? `Skipping MCP tool ${mcpBlock.name} due to user rejecting a previous tool.`
 					: `MCP tool ${mcpBlock.name} was interrupted and not executed due to user rejecting a previous tool.`
 
@@ -280,7 +282,7 @@ export async function presentAssistantMessage(cline: Task) {
 			break
 		}
 		case "text": {
-			if (cline.didRejectTool || cline.didAlreadyUseTool) {
+			if (cline.didRejectTool || cline.abortRemainingToolCalls || cline.didAlreadyUseTool) {
 				break
 			}
 
@@ -391,10 +393,12 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
-			if (cline.didRejectTool) {
-				// Ignore any tool content after user has rejected tool once.
+			if (cline.didRejectTool || cline.abortRemainingToolCalls) {
+				// Ignore any tool content after user has rejected tool once or when repetition limit aborted remaining batch.
 				// For native tool calling, we must send a tool_result for every tool_use to avoid API errors
-				const errorMessage = !block.partial
+				const errorMessage = cline.abortRemainingToolCalls
+					? `Skipping tool ${toolDescription()} because tool repetition limit was reached in this turn.`
+					: !block.partial
 					? `Skipping tool ${toolDescription()} due to user rejecting a previous tool.`
 					: `Tool ${toolDescription()} was interrupted and not executed due to user rejecting a previous tool.`
 
@@ -645,14 +649,39 @@ export async function presentAssistantMessage(cline: Task) {
 
 				// If execution is not allowed, notify user and break.
 				if (!repetitionCheck.allowExecution && repetitionCheck.askUser) {
+					if (cline.toolRepetitionDetector.isTurnSuppressed()) {
+						// Repetition was already handled in this turn; suppress duplicate warnings
+						pushToolResult(
+							formatResponse.toolError(
+								`Repetitive tool call suppressed within current turn for ${block.name}.`,
+							),
+						)
+						cline.abortRemainingToolCalls = true
+						break
+					}
+
+					cline.toolRepetitionDetector.markTurnWarned()
+
 					// Handle repetition similar to mistake_limit_reached pattern.
 					const { response, text, images } = await cline.ask(
 						repetitionCheck.askUser.messageKey as ClineAsk,
 						repetitionCheck.askUser.messageDetail.replace("{toolName}", block.name),
 					)
 
-					if (response === "messageResponse") {
+					if (response === "yesButtonClicked") {
+						// User clicked "Proceed Anyways"
+						cline.toolRepetitionDetector.reset()
+						cline.userMessageContent.push({
+							type: "text" as const,
+							text: `User opted to Proceed Anyways after repetition limit was reached for ${block.name}.`,
+						})
+						await cline.say(
+							"user_feedback",
+							`User opted to Proceed Anyways after repetition limit was reached for ${block.name}.`,
+						)
+					} else if (response === "messageResponse") {
 						// Add user feedback to userContent.
+						cline.toolRepetitionDetector.reset()
 						cline.userMessageContent.push(
 							{
 								type: "text" as const,
@@ -671,6 +700,9 @@ export async function presentAssistantMessage(cline: Task) {
 							`Tool call repetition limit reached for ${block.name}. Please try a different approach.`,
 						),
 					)
+
+					// Abort remaining tool calls in this turn's batch so the model can react to feedback
+					cline.abortRemainingToolCalls = true
 					break
 				}
 			}
@@ -762,6 +794,18 @@ export async function presentAssistantMessage(cline: Task) {
 					})
 					break
 				case "execute_command":
+					if (cline.toolRepetitionDetector.isRedundantSameTurnWait(block)) {
+						pushToolResult(
+							formatResponse.toolResult(
+								"Redundant wait skipped: a delay command already executed in this turn. Check process output, active terminals, or observable condition directly instead of repeating delays in the same turn.",
+							),
+						)
+						cline.didAlreadyUseTool = true
+						break
+					}
+					if (cline.toolRepetitionDetector.isDelayCommand(block)) {
+						cline.toolRepetitionDetector.recordWaitExecuted()
+					}
 					await executeCommandTool.handle(cline, block as ToolUse<"execute_command">, {
 						askApproval,
 						handleError,
