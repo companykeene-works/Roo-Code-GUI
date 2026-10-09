@@ -1257,7 +1257,7 @@ describe("ApprovalOrchestrator", () => {
 			approvalMode: "auto",
 		}
 
-		it("Gate 4b: blocked TODOs yield MANUAL_APPROVAL with isBlockedOutcome: true", async () => {
+		it("Gate 4b: blocked TODOs yield ALLOW_AUTO with isBlockedOutcome: true (no useless user approval prompt)", async () => {
 			const completionReq: UnifiedApprovalRequest = {
 				id: "req-block-1",
 				taskId: "task-block-1",
@@ -1279,7 +1279,7 @@ describe("ApprovalOrchestrator", () => {
 			}
 
 			const res = await orchestrator.evaluate(completionReq, defaultState)
-			expect(res.decision).toBe("MANUAL_APPROVAL")
+			expect(res.decision).toBe("ALLOW_AUTO")
 			expect(res.isBlockedOutcome).toBe(true)
 			expect(res.reason).toMatch(/marked 'blocked' on the todo list/i)
 			expect(res.reason).toMatch(/status 'blocked'/i)

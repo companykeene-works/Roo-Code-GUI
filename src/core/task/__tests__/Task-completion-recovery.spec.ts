@@ -580,4 +580,113 @@ describe("Hardened attempt_completion Fallback and Recovery", () => {
 		)
 		expect(mockProvider.runningTasks.has(task.taskId)).toBe(true)
 	})
+
+	// Scenario 8: Concluding task with blocked TODOs sets status: "blocked", isBlockedOutcome: true, needsAttention: false
+	it("Scenario 8: concluding task with blocked items marks task as blocked and needsAttention as false", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "task with blocked items",
+			startTask: false,
+			historyItem: {
+				id: "hist-blocked-conclusion",
+				ts: Date.now() - 5000,
+				task: "task with blocked items",
+				status: "active",
+				needsAttention: true,
+				tokensIn: 100,
+				tokensOut: 200,
+				cacheWrites: 0,
+				cacheReads: 0,
+				totalCost: 0.01,
+				size: 500,
+			} as any,
+		})
+
+		task.todoList = [
+			{ id: "1", content: "Finished step", status: "completed" },
+			{ id: "2", content: "Hard blocked step", status: "blocked" },
+		]
+
+		task.markTaskCompleted(true)
+
+		expect((task as any).currentStatus).toBe("blocked")
+		expect((task as any).lastCompletionIsBlockedOutcome).toBe(true)
+		expect(task.historyItem?.status).toBe("blocked")
+		expect(task.historyItem?.isBlockedOutcome).toBe(true)
+		expect(task.historyItem?.needsAttention).toBe(false)
+	})
+
+	// Scenario 9: Resuming a blocked task via messageResponse clears blocker state and resets loop guards
+	it("Scenario 9: resuming a blocked task via messageResponse clears blocker state", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "resume blocked task test",
+			startTask: false,
+			historyItem: {
+				id: "hist-resume-blocked",
+				ts: Date.now() - 10000,
+				task: "resume blocked task",
+				status: "blocked",
+				isBlockedOutcome: true,
+				needsAttention: false,
+				taskBlockerState: {
+					blockKind: "platform_constraint",
+					blockReason: "blocked step",
+					evidence: "err",
+					requiredUnblockAction: "unblock",
+					blockedAt: Date.now(),
+				},
+				tokensIn: 100,
+				tokensOut: 200,
+				cacheWrites: 0,
+				cacheReads: 0,
+				totalCost: 0.01,
+				size: 500,
+			} as any,
+		})
+
+		expect((task as any).isTaskCompleted).toBe(true)
+		expect((task as any).currentStatus).toBe("blocked")
+
+		task.clearTaskBlockerStateOnResume("naprawiłem blocker, kontynuuj")
+
+		expect((task as any).isTaskCompleted).toBe(false)
+		expect((task as any).currentStatus).toBe("active")
+		expect((task as any).lastCompletionIsBlockedOutcome).toBe(false)
+		expect(task.historyItem?.status).toBe("active")
+		expect(task.historyItem?.isBlockedOutcome).toBe(false)
+		expect(task.historyItem?.needsAttention).toBe(false)
+		expect(task.historyItem?.taskBlockerState).toBeUndefined()
+	})
+
+	// Scenario 10: Denying an actionable tool ask records signature and resets completion loop counters
+	it("Scenario 10: denying an actionable tool ask records signature and prevents immediate prompt loop", async () => {
+		const task = new Task({
+			provider: mockProvider,
+			apiConfiguration: mockApiConfig,
+			task: "deny tool ask test",
+			startTask: false,
+		})
+
+		const askTs = Date.now()
+		const askMsg: any = {
+			ts: askTs,
+			type: "ask",
+			ask: "command",
+			text: "rm -rf /critical",
+			approvalState: "USER_DECISION_REQUIRED",
+			isAnswered: false,
+		}
+		task.clineMessages = [askMsg]
+
+		task.handleWebviewAskResponse("noButtonClicked")
+
+		expect(askMsg.approvalState).toBe("DENIED")
+		expect(askMsg.isAnswered).toBe(true)
+		expect((task as any).userDeniedSignatures.has("command:rm -rf /critical")).toBe(true)
+		expect((task as any).unresolvedDenialState).toBeDefined()
+		expect((task as any).unresolvedDenialState?.reason).toContain("User denied")
+	})
 })

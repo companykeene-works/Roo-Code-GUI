@@ -32,6 +32,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		let newContent = params.content
 
 		if (!relPath) {
+			task.didToolFailInCurrentTurn = true
 			task.consecutiveMistakeCount++
 			task.recordToolError("write_to_file")
 			pushToolResult(await task.sayAndCreateMissingParamError("write_to_file", "path"))
@@ -40,6 +41,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		}
 
 		if (newContent === undefined) {
+			task.didToolFailInCurrentTurn = true
 			task.consecutiveMistakeCount++
 			task.recordToolError("write_to_file")
 			pushToolResult(await task.sayAndCreateMissingParamError("write_to_file", "content"))
@@ -50,6 +52,9 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 
 		if (!accessAllowed) {
+			task.didToolFailInCurrentTurn = true
+			task.consecutiveMistakeCount++
+			task.recordToolError("write_to_file")
 			await task.say("rooignore_error", relPath)
 			pushToolResult(formatResponse.rooIgnoreError(relPath))
 			return
@@ -97,8 +102,6 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		}
 
 		try {
-			task.consecutiveMistakeCount = 0
-
 			const provider = task.providerRef.deref()
 			const state = await provider?.getState()
 			const diagnosticsEnabled = state?.diagnosticsEnabled ?? true
@@ -181,6 +184,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			}
 
 			task.didEditFile = true
+			task.consecutiveMistakeCount = 0
 
 			const message = await task.diffViewProvider.pushToolWriteResult(task, task.cwd, !fileExists)
 
@@ -193,6 +197,9 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 			return
 		} catch (error) {
+			task.didToolFailInCurrentTurn = true
+			task.consecutiveMistakeCount++
+			task.recordToolError("write_to_file")
 			await handleError("writing file", error as Error)
 			await task.diffViewProvider.reset()
 			this.resetPartialState()

@@ -551,7 +551,7 @@ describe("Autonomous Auto-Approve Completion Guard", () => {
 		expect(result.unresolvedItems![0].guidance).toContain("blocked")
 	})
 
-	it("23. Required blocked TODO under standard user instruction MUST NOT complete as ALLOW_AUTO (requires MANUAL_APPROVAL)", async () => {
+	it("23. Required blocked TODO under standard user instruction concludes deterministically as ALLOW_AUTO with isBlockedOutcome: true (no useless approval prompt)", async () => {
 		const request = createCompletionRequest({
 			todoListSnapshot: [
 				{ id: "1", content: "Setup database", status: "completed" },
@@ -561,8 +561,9 @@ describe("Autonomous Auto-Approve Completion Guard", () => {
 		})
 
 		const result = await orchestrator.evaluate(request, mockState)
-		// Invariant: BLOCKED != COMPLETED. Must fail-closed to MANUAL_APPROVAL so task enters WAITING_USER with blocker report
-		expect(result.decision).toBe("MANUAL_APPROVAL")
+		// Invariant: BLOCKED != COMPLETED. Concludes directly as ALLOW_AUTO with isBlockedOutcome: true
+		expect(result.decision).toBe("ALLOW_AUTO")
+		expect(result.isBlockedOutcome).toBe(true)
 		expect(result.taskAligned).toBe(false)
 		expect(result.reason).toContain("blocked")
 		expect(result.unresolvedItems).toBeDefined()
@@ -586,7 +587,7 @@ describe("Autonomous Auto-Approve Completion Guard", () => {
 		expect(result.unresolvedItems!.some((i) => i.content.includes("Implement user authentication"))).toBe(true)
 	})
 
-	it("25. Multiple TODOs: A completed, B completed, C blocked required -> requires MANUAL_APPROVAL", async () => {
+	it("25. Multiple TODOs: A completed, B completed, C blocked required -> ALLOW_AUTO with isBlockedOutcome: true", async () => {
 		const request = createCompletionRequest({
 			todoListSnapshot: [
 				{ id: "1", content: "Task A", status: "completed" },
@@ -597,7 +598,8 @@ describe("Autonomous Auto-Approve Completion Guard", () => {
 		})
 
 		const result = await orchestrator.evaluate(request, mockState)
-		expect(result.decision).toBe("MANUAL_APPROVAL")
+		expect(result.decision).toBe("ALLOW_AUTO")
+		expect(result.isBlockedOutcome).toBe(true)
 		expect(result.unresolvedItems).toBeDefined()
 		expect(result.unresolvedItems!.some((i) => i.content.includes("Task C"))).toBe(true)
 	})

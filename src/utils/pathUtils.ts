@@ -37,62 +37,47 @@ export function findGitRoot(startDir: string): string | null {
  * @returns true if the path is outside all workspace folders, false otherwise
  */
 export function isPathOutsideWorkspace(filePath: string, customWorkspacePath?: string): boolean {
-	const absolutePath = path.resolve(filePath)
+	if (!filePath || !filePath.trim()) {
+		return false
+	}
+
+	const baseDir =
+		customWorkspacePath && customWorkspacePath.trim()
+			? customWorkspacePath.trim()
+			: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd()
+
+	const absolutePath = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(baseDir, filePath)
 	const normAbsolute =
 		process.platform === "win32" ? path.normalize(absolutePath).toLowerCase() : path.normalize(absolutePath)
 
-	if (customWorkspacePath && customWorkspacePath.trim()) {
-		const folderPath = path.normalize(path.resolve(customWorkspacePath))
-		const normFolder = process.platform === "win32" ? folderPath.toLowerCase() : folderPath
-		const isDirect =
-			normAbsolute === normFolder ||
-			normAbsolute.startsWith(normFolder + (normFolder.endsWith(path.sep) ? "" : path.sep))
-		if (isDirect) {
-			return false
-		}
-
-		// Sibling packages in same monorepo / git worktree
-		const repoRoot = findGitRoot(folderPath)
-		if (repoRoot) {
-			const normRepo =
-				process.platform === "win32" ? path.normalize(repoRoot).toLowerCase() : path.normalize(repoRoot)
-			if (
-				normAbsolute === normRepo ||
-				normAbsolute.startsWith(normRepo + (normRepo.endsWith(path.sep) ? "" : path.sep))
-			) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-		return true
-	}
-
-	return !vscode.workspace.workspaceFolders.some((folder) => {
-		const folderPath = path.normalize(folder.uri.fsPath)
-		const normFolder = process.platform === "win32" ? folderPath.toLowerCase() : folderPath
-		const isDirect =
-			normAbsolute === normFolder ||
-			normAbsolute.startsWith(normFolder + (normFolder.endsWith(path.sep) ? "" : path.sep))
-		if (isDirect) {
+	const isInside = (dir: string) => {
+		const normDir = process.platform === "win32" ? path.normalize(dir).toLowerCase() : path.normalize(dir)
+		if (normAbsolute === normDir || normAbsolute.startsWith(normDir + (normDir.endsWith(path.sep) ? "" : path.sep))) {
 			return true
 		}
-
-		const repoRoot = findGitRoot(folderPath)
+		const repoRoot = findGitRoot(normDir)
 		if (repoRoot) {
 			const normRepo =
 				process.platform === "win32" ? path.normalize(repoRoot).toLowerCase() : path.normalize(repoRoot)
-			if (
-				normAbsolute === normRepo ||
-				normAbsolute.startsWith(normRepo + (normRepo.endsWith(path.sep) ? "" : path.sep))
-			) {
+			if (normAbsolute === normRepo || normAbsolute.startsWith(normRepo + (normRepo.endsWith(path.sep) ? "" : path.sep))) {
 				return true
 			}
 		}
-
 		return false
-	})
+	}
+
+	if (customWorkspacePath && customWorkspacePath.trim()) {
+		if (isInside(path.resolve(customWorkspacePath))) {
+			return false
+		}
+	}
+
+	if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+		const foundInWorkspace = vscode.workspace.workspaceFolders.some((folder) => isInside(folder.uri.fsPath))
+		if (foundInWorkspace) {
+			return false
+		}
+	}
+
+	return Boolean(customWorkspacePath?.trim() || (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0))
 }

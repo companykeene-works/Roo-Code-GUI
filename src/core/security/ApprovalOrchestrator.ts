@@ -920,7 +920,13 @@ export class ApprovalOrchestrator {
 						target.unresolvedDenialState.actionType === "replace_file_content" ||
 						target.unresolvedDenialState.actionType === "delete_file")
 
-				if (!isDenialCausedByReadOnly) {
+				const inProgress = (target.todoListSnapshot || []).filter((t) => t.status === "in_progress")
+				const pending = (target.todoListSnapshot || []).filter((t) => t.status === "pending")
+				const blocked = (target.todoListSnapshot || []).filter((t) => t.status === "blocked")
+				const isAccountedForByBlockedTodos =
+					blocked.length > 0 && inProgress.length === 0 && pending.length === 0
+
+				if (!isDenialCausedByReadOnly && !isAccountedForByBlockedTodos) {
 					return {
 						decision: "CONTINUE_WORK",
 						risk: "high",
@@ -1010,9 +1016,9 @@ export class ApprovalOrchestrator {
 			}
 
 			// Gate 4b: Check blocked TODOs (Invariant: BLOCKED != COMPLETED)
-			// Under standard user instruction, blocked items MUST NOT auto-complete as ALLOW_AUTO.
-			// They require user decision / approval (MANUAL_APPROVAL).
-			// Exception (Case 1): Scope changed to read-only/stop/report where mutating items are non-blocking.
+			// When non-waived items are marked 'blocked' on the todo list and all other work is resolved,
+			// conclude the task directly as BLOCKED (ALLOW_AUTO with isBlockedOutcome: true).
+			// Do NOT demand a redundant user approval that merely acknowledges the blocked state.
 			const blocked = (target.todoListSnapshot || []).filter(
 				(t) => t.status === "blocked"
 			)
@@ -1025,15 +1031,15 @@ export class ApprovalOrchestrator {
 
 			if (actionableBlocked.length > 0) {
 				return {
-					decision: "MANUAL_APPROVAL",
-					risk: "medium",
+					decision: "ALLOW_AUTO",
+					risk: "low",
 					isBlockedOutcome: true,
-					reason: `Cannot complete task as successful: ${actionableBlocked.length} item(s) are marked 'blocked' on the todo list. Approving will conclude the task with status 'blocked' (uncompleted items).`,
+					reason: `Task concluded with status 'blocked': ${blocked.length} item(s) are marked 'blocked' on the todo list.`,
 					taskAligned: false,
-					unresolvedItems: actionableBlocked.map((t) => ({
+					unresolvedItems: blocked.map((t) => ({
 						type: "blocked_todo",
 						content: t.content,
-						guidance: "Review blocked item with user or request explicit approval to proceed.",
+						guidance: "Blocked item could not be executed under current constraints or environment.",
 					})),
 				}
 			}

@@ -260,7 +260,12 @@ export class ClineProvider
 				this.emit(RooCodeEventName.TaskCompleted, taskId, tokenUsage, toolUsage)
 				try {
 					const { historyItem } = await this.getTaskWithId(taskId)
-					if (historyItem && historyItem.status !== "completed") {
+					if (
+						historyItem &&
+						historyItem.status !== "completed" &&
+						historyItem.status !== "blocked" &&
+						!historyItem.isBlockedOutcome
+					) {
 						await this.updateTaskHistory({
 							...historyItem,
 							status: "completed",
@@ -2671,7 +2676,7 @@ export class ClineProvider
 	 */
 	async updateTaskHistory(item: HistoryItem, options: { broadcast?: boolean } = {}): Promise<HistoryItem[]> {
 		const { broadcast = true } = options
-		if (item.status === "completed") {
+		if (item.status === "completed" || item.status === "blocked" || item.isBlockedOutcome) {
 			item = { ...item, needsAttention: false }
 		} else if (item.status === "delegated" && item.awaitingChildId) {
 			item = { ...item, needsAttention: false }
@@ -3185,7 +3190,12 @@ export class ClineProvider
 			}
 		}
 
-		if (historyItem && historyItem.status !== "completed") {
+		if (
+			historyItem &&
+			historyItem.status !== "completed" &&
+			historyItem.status !== "blocked" &&
+			!historyItem.isBlockedOutcome
+		) {
 			historyItem.status = "interrupted"
 			historyItem.needsAttention = true
 			if (preStopQueue.length > 0) {

@@ -134,20 +134,36 @@ export async function taskMetadata({
 		lastRelevantMessage?.approvalState !== "EVALUATING" &&
 		(lastRelevantMessage?.type !== "ask" || lastRelevantMessage?.isAnswered === true)
 
+	const hasBlockedCompletionMessage =
+		hasCompletionMessage &&
+		messages.some(
+			(m) =>
+				(m.say === "completion_result" || m.ask === "completion_result") &&
+				m.text &&
+				/concluded as BLOCKED|status:\s*BLOCKED/i.test(m.text),
+		)
+
+	const isBlocked = initialStatus === "blocked" || hasBlockedCompletionMessage
+
 	const isCompleted =
-		initialStatus === "completed" ||
-		hasCompletionMessage ||
-		(hasMessages &&
-			messages.some((m) => m.ask === "resume_completed_task") &&
-			!messages.slice(findLastIndex(messages, (m) => m.ask === "resume_completed_task") + 1).some((m) => m.type === "say" && m.say === "user_feedback"))
+		!isBlocked &&
+		(initialStatus === "completed" ||
+			hasCompletionMessage ||
+			(hasMessages &&
+				messages.some((m) => m.ask === "resume_completed_task") &&
+				!messages
+					.slice(findLastIndex(messages, (m) => m.ask === "resume_completed_task") + 1)
+					.some((m) => m.type === "say" && m.say === "user_feedback")))
 
 	let resolvedStatus = initialStatus
-	if (isCompleted && (!resolvedStatus || resolvedStatus === "active" || resolvedStatus === "interrupted")) {
+	if (isBlocked) {
+		resolvedStatus = "blocked"
+	} else if (isCompleted && (!resolvedStatus || resolvedStatus === "active" || resolvedStatus === "interrupted")) {
 		resolvedStatus = "completed"
 	}
 
 	let needsAttention = false
-	if (!isCompleted) {
+	if (!isCompleted && !isBlocked) {
 		if (resolvedStatus === "interrupted") {
 			needsAttention = true
 		} else if (resolvedStatus === "delegated" && awaitingChildId) {
@@ -215,6 +231,7 @@ export async function taskMetadata({
 		...(executionReasoningEffort !== undefined ? { executionReasoningEffort } : {}),
 		...(typeof apiConfigName === "string" && apiConfigName.length > 0 ? { apiConfigName } : {}),
 		...(resolvedStatus && { status: resolvedStatus }),
+		...(isBlocked ? { isBlockedOutcome: true } : {}),
 		...(awaitingChildId ? { awaitingChildId } : {}),
 		...(delegatedToId ? { delegatedToId } : {}),
 		...(childIds ? { childIds } : {}),

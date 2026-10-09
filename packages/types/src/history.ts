@@ -8,6 +8,27 @@ import { queuedMessageSchema } from "./message.js"
 export const titleSourceSchema = z.enum(["generated_ai", "manual", "fallback"])
 export type TitleSource = z.infer<typeof titleSourceSchema>
 
+export const taskBlockerStateSchema = z.object({
+	blockKind: z.enum([
+		"recoverable",
+		"user_action_required",
+		"hard_blocked",
+		"safety_boundary",
+		"permission_denied",
+		"missing_dependency",
+		"external_resource",
+		"platform_constraint",
+	]),
+	blockReason: z.string(),
+	evidence: z.string().optional(),
+	requiredUnblockAction: z.string().optional(),
+	blockedAt: z.number().optional(),
+})
+export type TaskBlockerState = z.infer<typeof taskBlockerStateSchema>
+
+export const historyItemStatusSchema = z.enum(["active", "completed", "delegated", "cancelled", "failed", "interrupted", "blocked"])
+export type HistoryItemStatus = z.infer<typeof historyItemStatusSchema>
+
 export const historyItemSchema = z.object({
 	id: z.string(),
 	rootTaskId: z.string().optional(),
@@ -27,8 +48,10 @@ export const historyItemSchema = z.object({
 	workspace: z.string().optional(),
 	mode: z.string().optional(),
 	apiConfigName: z.string().optional(), // Provider profile name for sticky profile feature
-	status: z.enum(["active", "completed", "delegated", "cancelled", "failed", "interrupted"]).optional(),
+	status: historyItemStatusSchema.optional(),
 	needsAttention: z.boolean().optional(),
+	taskBlockerState: taskBlockerStateSchema.optional(),
+	isBlockedOutcome: z.boolean().optional(),
 	chatModelId: z.string().optional(),
 	chatProvider: z.string().optional(),
 	chatReasoningEffort: z.string().optional(),

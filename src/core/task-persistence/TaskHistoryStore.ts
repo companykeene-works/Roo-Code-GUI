@@ -233,6 +233,13 @@ export class TaskHistoryStore {
 						...(resolvedSource !== undefined ? { titleSource: resolvedSource } : {}),
 					}
 
+			if (item.status === "active") {
+				if (item.isBlockedOutcome === undefined && existing?.isBlockedOutcome) {
+					merged.isBlockedOutcome = false
+					delete merged.taskBlockerState
+				}
+			}
+
 			if (item.promptQueue !== undefined) {
 				if (item.promptQueue.length === 0) {
 					delete merged.promptQueue
@@ -399,7 +406,7 @@ export class TaskHistoryStore {
 							needsAttention: true,
 						}
 						itemChanged = true
-					} else if (childItem.status === "completed") {
+					} else if (childItem.status === "completed" || childItem.status === "blocked") {
 						// Crash recovery: child completed, but parent handoff was interrupted before finalization.
 						// Reconcile handoff on disk safely without triggering an automatic AI loop.
 						let recoveredSummary = childItem.completionResultSummary

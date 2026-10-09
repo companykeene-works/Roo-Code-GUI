@@ -14,6 +14,10 @@ export const todoItemSchema = z.object({
 	id: z.string(),
 	content: z.string(),
 	status: todoStatusSchema,
+	blockReason: z.string().optional(),
+	blockKind: z.string().optional(),
+	evidence: z.string().optional(),
+	requiredUnblockAction: z.string().optional(),
 })
 
 export type TodoItem = z.infer<typeof todoItemSchema>

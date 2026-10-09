@@ -290,4 +290,44 @@ describe("taskMetadata lifecycle & attention derivation", () => {
 		expect(result.historyItem.status).toBe("completed")
 		expect(result.historyItem.needsAttention).toBe(false)
 	})
+
+	it("marks task as status: 'blocked' and clears needsAttention when completion_result concludes with blocked outcome", async () => {
+		const messages: ClineMessage[] = [
+			{ ts: 1000, type: "say", say: "text", text: "Working on task" },
+			{
+				ts: 2000,
+				type: "say",
+				say: "completion_result",
+				text: "Task concluded with status: BLOCKED. 2 item(s) remained blocked and unexecuted.",
+				approvalState: "AUTO_APPROVED",
+			},
+			{ ts: 3000, type: "ask", ask: "completion_result", text: "", approvalState: "AUTO_APPROVED", isAnswered: true },
+		]
+
+		const result = await taskMetadata({
+			...baseOptions,
+			messages,
+			initialStatus: "active",
+		})
+
+		expect(result.historyItem.status).toBe("blocked")
+		expect(result.historyItem.isBlockedOutcome).toBe(true)
+		expect(result.historyItem.needsAttention).toBe(false)
+	})
+
+	it("preserves status: 'blocked' when initialStatus is blocked", async () => {
+		const messages: ClineMessage[] = [
+			{ ts: 1000, type: "say", say: "text", text: "Previous progress" },
+			{ ts: 2000, type: "ask", ask: "resume_completed_task", text: "Resume?" },
+		]
+
+		const result = await taskMetadata({
+			...baseOptions,
+			messages,
+			initialStatus: "blocked",
+		})
+
+		expect(result.historyItem.status).toBe("blocked")
+		expect(result.historyItem.needsAttention).toBe(false)
+	})
 })

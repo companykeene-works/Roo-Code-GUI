@@ -178,6 +178,14 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			const { response, text, images } = await task.ask("completion_result", "", false)
 
 			if (response === "yesButtonClicked") {
+				const blockedTodos = (task.todoList || []).filter((t) => t.status === "blocked")
+				const isBlockedOutcome = blockedTodos.length > 0 || task.lastCompletionIsBlockedOutcome === true
+
+				if (isBlockedOutcome && completionSayMsg && completionSayMsg.text) {
+					if (!/status:\s*BLOCKED|concluded as BLOCKED/i.test(completionSayMsg.text)) {
+						completionSayMsg.text += `\n\nTask concluded with status: BLOCKED. ${blockedTodos.length} item(s) remained blocked and unexecuted.`
+					}
+				}
 				if (completionSayMsg) {
 					completionSayMsg.approvalState = "AUTO_APPROVED"
 					task.updateClineMessage?.(completionSayMsg)
@@ -188,11 +196,39 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				if (completionAskMsg) {
 					completionAskMsg.approvalState = "AUTO_APPROVED"
 					completionAskMsg.isAnswered = true
+					if (isBlockedOutcome && !completionAskMsg.text) {
+						completionAskMsg.text = `Task concluded with status: BLOCKED. ${blockedTodos.length} item(s) remained blocked and unexecuted.`
+					}
 					task.updateClineMessage?.(completionAskMsg)
 				}
-				task.markTaskCompleted?.()
+
+				if (task.historyItem) {
+					task.historyItem.status = isBlockedOutcome ? "blocked" : "completed"
+					task.historyItem.isBlockedOutcome = isBlockedOutcome
+					task.historyItem.needsAttention = false
+					if (isBlockedOutcome && !task.historyItem.taskBlockerState) {
+						task.historyItem.taskBlockerState = {
+							blockKind: "platform_constraint",
+							blockReason: `Task concluded with ${blockedTodos.length} blocked item(s): ${blockedTodos.map((t) => t.content).join("; ")}`,
+							evidence: result.slice(0, 500),
+							requiredUnblockAction: "Resolve external constraints or permissions before resuming.",
+							blockedAt: Date.now(),
+						}
+					}
+				}
+
+				task.markTaskCompleted?.(isBlockedOutcome)
 				this.emitTaskCompleted(task)
-				pushToolResult(formatResponse.toolResult("Task completed successfully."))
+
+				if (isBlockedOutcome) {
+					pushToolResult(
+						formatResponse.toolResult(
+							`Task concluded with status: BLOCKED. ${blockedTodos.length} item(s) remained blocked and unexecuted.`,
+						),
+					)
+				} else {
+					pushToolResult(formatResponse.toolResult("Task completed successfully."))
+				}
 				await task.flushPendingToolResultsToHistory?.()
 				try {
 					const provider = task.providerRef.deref() as any
@@ -202,10 +238,20 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 						typeof provider.updateTaskHistory === "function"
 					) {
 						const { historyItem } = await provider.getTaskWithId(task.taskId)
-						if (historyItem && historyItem.status !== "completed") {
+						if (historyItem) {
 							await provider.updateTaskHistory({
 								...historyItem,
-								status: "completed",
+								status: isBlockedOutcome ? "blocked" : "completed",
+								isBlockedOutcome,
+								taskBlockerState: isBlockedOutcome
+									? historyItem.taskBlockerState || {
+											blockKind: "platform_constraint",
+											blockReason: `Task concluded with ${blockedTodos.length} blocked item(s): ${blockedTodos.map((t) => t.content).join("; ")}`,
+											evidence: result.slice(0, 500),
+											requiredUnblockAction: "Resolve external constraints or permissions before resuming.",
+											blockedAt: Date.now(),
+									  }
+									: historyItem.taskBlockerState,
 								needsAttention: false,
 							})
 						}

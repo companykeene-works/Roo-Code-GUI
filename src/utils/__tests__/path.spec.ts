@@ -4,6 +4,7 @@ import os from "os"
 import * as path from "path"
 
 import { arePathsEqual, getReadablePath, getWorkspacePath } from "../path"
+import { isPathOutsideWorkspace } from "../pathUtils"
 
 // Mock modules
 
@@ -179,6 +180,29 @@ describe("Path Utilities", () => {
 					? "C:\\Users\\test\\project\\src\\file.txt"
 					: "/Users/test/project/./src/../src/file.txt"
 			expect(getReadablePath(cwd, filePath)).toBe("src/file.txt")
+		})
+	})
+
+	describe("isPathOutsideWorkspace", () => {
+		const workspacePath = process.platform === "win32" ? "C:\\test\\workspace" : "/test/workspace"
+
+		it("should return false for relative paths within customWorkspacePath", () => {
+			expect(isPathOutsideWorkspace("src/index.ts", workspacePath)).toBe(false)
+			expect(isPathOutsideWorkspace("./sub/file.ts", workspacePath)).toBe(false)
+		})
+
+		it("should return false for absolute paths inside customWorkspacePath", () => {
+			const insidePath = path.join(workspacePath, "src", "file.ts")
+			expect(isPathOutsideWorkspace(insidePath, workspacePath)).toBe(false)
+		})
+
+		it("should return true for relative paths traversing outside customWorkspacePath", () => {
+			expect(isPathOutsideWorkspace("../../outside.txt", workspacePath)).toBe(true)
+		})
+
+		it("should return true for absolute paths outside customWorkspacePath and workspace folders", () => {
+			const outsidePath = process.platform === "win32" ? "C:\\completely\\outside.txt" : "/completely/outside.txt"
+			expect(isPathOutsideWorkspace(outsidePath, workspacePath)).toBe(true)
 		})
 	})
 })

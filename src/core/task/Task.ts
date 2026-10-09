@@ -274,6 +274,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public lastCompletionIsBlockedOutcome?: boolean
 	private lastDeniedActionSignature?: string
 	private consecutiveIdenticalDenialsCount: number = 0
+	private userDeniedSignatures: Set<string> = new Set()
 	private approvalOrchestrator: ApprovalOrchestrator = new ApprovalOrchestrator()
 	private taskSupplementalWriteAllows: string[] = []
 	private authorizationRevision: number = 0
@@ -474,10 +475,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const blocked =
 			isBlocked ??
 			(this.lastCompletionIsBlockedOutcome || (this.todoList?.some((t) => t.status === "blocked") ?? false))
+		this.currentStatus = blocked ? "blocked" : "completed"
+		this.lastCompletionIsBlockedOutcome = blocked
 		if (this.historyItem) {
 			this.historyItem.status = blocked ? "blocked" : "completed"
 			this.historyItem.isBlockedOutcome = blocked
 			this.historyItem.needsAttention = false
+			if (!blocked) {
+				this.historyItem.taskBlockerState = undefined
+			}
 		}
 
 		// Clean up any trailing unclosed api_req_started messages from previous sessions
@@ -703,7 +709,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.clineMessages = [...initialClineMessages]
 		}
 
-		if (this.initialStatus === "completed" || this.historyItem?.status === "completed") {
+		if (
+			this.initialStatus === "completed" ||
+			this.historyItem?.status === "completed" ||
+			this.initialStatus === "blocked" ||
+			this.historyItem?.status === "blocked"
+		) {
 			this.isTaskCompleted = true
 		}
 		this.currentStatus = this.initialStatus ?? this.historyItem?.status
@@ -1454,12 +1465,21 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				await this.taskApiConfigReady
 			}
 
-			const currentStatus =
-				this.isTaskCompleted || this.historyItem?.status === "completed"
-					? "completed"
-					: this.historyItem?.status === "delegated"
-					? "delegated"
-					: this.currentStatus ?? (this._started ? "active" : this.initialStatus)
+			const isBlockedState =
+				this.historyItem?.status === "blocked" ||
+				this.historyItem?.isBlockedOutcome === true ||
+				(this.isTaskCompleted &&
+					(this.lastCompletionIsBlockedOutcome === true ||
+						(this.todoList?.some((t) => t.status === "blocked") ?? false))) ||
+				this.currentStatus === "blocked"
+
+			const currentStatus = isBlockedState
+				? "blocked"
+				: this.isTaskCompleted || this.historyItem?.status === "completed"
+				? "completed"
+				: this.historyItem?.status === "delegated"
+				? "delegated"
+				: this.currentStatus ?? (this._started ? "active" : this.initialStatus)
 
 			const awaitingChildId = this.historyItem?.awaitingChildId
 			const delegatedToId = this.historyItem?.delegatedToId
@@ -1486,6 +1506,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				executionProvider: this.taskStartProvider || this.historyItem?.executionProvider || this.apiConfiguration?.apiProvider,
 				executionReasoningEffort: this.taskStartEffort !== undefined ? this.taskStartEffort : this.historyItem?.executionReasoningEffort,
 			})
+
+			if (isBlockedState) {
+				historyItem.status = "blocked"
+				historyItem.isBlockedOutcome = true
+				historyItem.needsAttention = false
+				if (this.historyItem?.taskBlockerState) {
+					historyItem.taskBlockerState = this.historyItem.taskBlockerState
+				}
+			}
 
 			this.historyItem = historyItem
 
@@ -1990,12 +2019,25 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			.sort()
 			.join("|")
 
+		const blockedTodos = (req.target.todoListSnapshot || [])
+			.filter((t: any) => t.status === "blocked")
+			.map((t: any) => `${t.id || ""}:blocked:${(t.content || "").trim()}:${t.blockReason || ""}`)
+			.sort()
+			.join("|")
+
+		const cancelledTodos = (req.target.todoListSnapshot || [])
+			.filter((t: any) => t.status === "cancelled")
+			.map((t: any) => `${t.id || ""}:cancelled:${(t.content || "").trim()}`)
+			.sort()
+			.join("|")
+
 		const constraints = (req.taskContext.explicitConstraints || []).slice().sort().join("|")
 		const denialReason = this.unresolvedDenialState?.reason || ""
 		const activeGoal = req.taskContext.activeGoal || ""
 		const criteria = (req.target.completionCriteria || []).slice().sort().join("|")
+		const rev = this.authorizationRevision || 0
 
-		return `${openTodos}#${constraints}#${denialReason}#${activeGoal}#${criteria}`
+		return `${openTodos}#${blockedTodos}#${cancelledTodos}#${constraints}#${denialReason}#${activeGoal}#${criteria}#rev${rev}`
 	}
 
 	public setLastCompletionResultText(text: string): void {
@@ -2256,7 +2298,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				if (decisionResult.decision === "ALLOW_AUTO") {
 					if (request.actionType === "attempt_completion") {
 						this.consecutiveAttemptCompletionCount = (this.consecutiveAttemptCompletionCount || 0) + 1
-						if (this.consecutiveAttemptCompletionCount > 2) {
+						if (this.consecutiveAttemptCompletionCount > 2 && !decisionResult.isBlockedOutcome) {
 							// Hard loop protection: require explicit manual review if completion is repeatedly attempted
 							decisionResult.decision = "MANUAL_APPROVAL"
 							approval = { decision: "ask" }
@@ -2413,7 +2455,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						decisionResult.isUserConstraintViolation === true ||
 						/nie\s+modyfikuj|do\s+not\s+modify|read-only|nie\s+commituj|do\s+not\s+commit|user\s+constraint/i.test(decisionResult.reason)
 
-					if (isDeterministicDenialLoop || (!isHardConstraintOrBoundary && isThrashing)) {
+					const isUserDeniedAlready = this.userDeniedSignatures?.has(signature)
+
+					if (!isUserDeniedAlready && !isHardConstraintOrBoundary && (isDeterministicDenialLoop || isThrashing)) {
 						approval = { decision: "ask" }
 						if (askMsg) {
 							askMsg.approvalState = "USER_DECISION_REQUIRED"
@@ -2441,8 +2485,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						this.emit(RooCodeEventName.TaskInteractive, this.taskId)
 						const prov = this.providerRef.deref()
 						prov?.postMessageToWebview({ type: "interactionRequired" })
-					} else if (isHardConstraintOrBoundary) {
-						// HARD CONSTRAINT OR BOUNDARY VIOLATION:
+					} else if (isHardConstraintOrBoundary || isUserDeniedAlready) {
+						// HARD CONSTRAINT OR BOUNDARY VIOLATION OR EXPLICIT USER DENIAL:
 						// RUN MUST NEVER BE OFFERED IN AUTO MODE!
 						if (askMsg) {
 							askMsg.approvalState = "DENIED"
@@ -2450,7 +2494,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						}
 						approval = { decision: "deny" }
 
-						let guidance = decisionResult.replanGuidance || "Execute a safe compliant alternative."
+						let guidance = isUserDeniedAlready
+							? `User explicitly denied this action ('${signature}'). Do not attempt it again; explore alternative approaches or replan.`
+							: decisionResult.replanGuidance || "Execute a safe compliant alternative."
 						if (isRepeated || this.consecutiveReplanCount > 1) {
 							const constraintLabel = decisionResult.violatedConstraint || "Explicit user constraint"
 							guidance = `[EXPLICIT CONSTRAINT ENFORCEMENT - ATTEMPT ${this.consecutiveReplanCount}]
@@ -2775,15 +2821,34 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			return this.resumeTaskFromHistory({ response: askResponse, text, images })
 		} else {
 			if (askResponse === "yesButtonClicked" || askResponse === "messageResponse") {
-				this.isTaskCompleted = false
-				this.currentStatus = "active"
-				if (this.historyItem) {
-					this.historyItem.status = "active"
-					this.historyItem.needsAttention = false
-					await provider?.updateTaskHistory(this.historyItem)
-				}
+				this.clearTaskBlockerStateOnResume(text)
 			}
 			this.handleWebviewAskResponse(askResponse, text, images)
+		}
+	}
+
+	public clearTaskBlockerStateOnResume(userText?: string): void {
+		this.isTaskCompleted = false
+		this.currentStatus = "active"
+		this.lastCompletionIsBlockedOutcome = false
+		this.userDeniedSignatures.clear()
+		this.consecutiveAttemptCompletionCount = 0
+		this.consecutiveIdenticalCompletionCount = 0
+		this.consecutiveReplanCount = 0
+		this.lastCompletionFingerprint = null
+		this.unresolvedDenialState = null
+		this.clearEditFailureState()
+		this.consecutiveIdenticalDenialsCount = 0
+		this.lastDeniedActionSignature = undefined
+		this.deniedActionHistory = []
+		this.authorizationRevision = (this.authorizationRevision || 0) + 1
+
+		if (this.historyItem) {
+			this.historyItem.status = "active"
+			this.historyItem.isBlockedOutcome = false
+			this.historyItem.needsAttention = false
+			this.historyItem.taskBlockerState = undefined
+			void this.providerRef.deref()?.updateTaskHistory(this.historyItem)
 		}
 	}
 
@@ -2803,25 +2868,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 
 		// Reset turn-boundary loop counters and unresolved denial state when user responds or approves
 		if (askResponse === "messageResponse" || askResponse === "yesButtonClicked") {
-			this.isTaskCompleted = false
-			this.currentStatus = "active"
-			if (this.historyItem) {
-				this.historyItem.status = "active"
-				this.historyItem.needsAttention = false
-				void this.providerRef.deref()?.updateTaskHistory(this.historyItem)
-			}
-			this.consecutiveAttemptCompletionCount = 0
-			this.consecutiveIdenticalCompletionCount = 0
-			this.consecutiveReplanCount = 0
-			this.lastCompletionFingerprint = null
-			this.unresolvedDenialState = null
-			this.clearEditFailureState()
-
-			// Reset deterministic denial loop counters and invalidate previous action signatures
-			this.consecutiveIdenticalDenialsCount = 0
-			this.lastDeniedActionSignature = undefined
-			this.deniedActionHistory = []
-			this.authorizationRevision = (this.authorizationRevision || 0) + 1
+			this.clearTaskBlockerStateOnResume(text)
 		}
 
 		// Create a checkpoint whenever the user sends a message.
@@ -2866,6 +2913,29 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			} else if (askResponse === "noButtonClicked") {
 				if (pendingAsk.approvalState === "USER_DECISION_REQUIRED") {
 					pendingAsk.approvalState = "DENIED"
+				}
+				// Reset completion loop counters so user denial of completion doesn't re-trip loop guard
+				this.consecutiveAttemptCompletionCount = 0
+				this.consecutiveIdenticalCompletionCount = 0
+				this.lastCompletionFingerprint = null
+
+				// Record user-denied signature for tool or command so agent cannot loop immediately
+				let deniedSig: string | undefined
+				if (pendingAsk.ask === "command" && pendingAsk.text) {
+					deniedSig = `command:${pendingAsk.text.trim()}`
+				} else if (pendingAsk.ask === "tool" && pendingAsk.text) {
+					try {
+						const tool = JSON.parse(pendingAsk.text)
+						deniedSig = `tool:${tool?.tool || ""}:${tool?.path || ""}`
+					} catch {}
+				}
+				if (deniedSig) {
+					this.userDeniedSignatures.add(deniedSig)
+					this.unresolvedDenialState = {
+						actionType: pendingAsk.ask === "command" ? "execute_command" : "tool",
+						reason: "User denied this action.",
+						replanGuidance: "User explicitly denied this action. Do not retry the same action; replan or use an alternative approach.",
+					}
 				}
 			}
 			void this.updateClineMessage(pendingAsk)
@@ -4092,7 +4162,9 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 				void this.updateClineMessage(lastAsk)
 			}
 			const trailingAfterAsk = lastAsk ? this.clineMessages.slice(this.clineMessages.lastIndexOf(lastAsk) + 1) : []
-			const hasTrailingSafetyWarning = trailingAfterAsk.some((m) => m.say === "command_safety_warning")
+			const hasTrailingSafetyWarning = Boolean(
+				lastAsk && !lastAsk.isAnswered && trailingAfterAsk.some((m) => m.say === "command_safety_warning"),
+			)
 			const trailingAllNonSubstantive = trailingAfterAsk.every(
 				(m) =>
 					m.type === "say" &&
@@ -4105,6 +4177,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 
 			const isCompletionRequiringApproval =
 				lastAsk?.ask === "completion_result" &&
+				!lastAsk.isAnswered &&
 				(lastAsk.approvalState === "USER_DECISION_REQUIRED" || hasTrailingSafetyWarning)
 
 			const isOtherActionableAsk =
@@ -4219,13 +4292,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 						await this.providerRef.deref()?.postStateToWebview()
 						return
 					} else {
-						this.isTaskCompleted = false
-						this.currentStatus = "active"
-						if (this.historyItem) {
-							this.historyItem.status = "active"
-							this.historyItem.needsAttention = false
-							await this.providerRef.deref()?.updateTaskHistory(this.historyItem)
-						}
+						this.clearTaskBlockerStateOnResume(text)
 						lastAsk.approvalState = "DENIED"
 						lastAsk.isAnswered = true
 						this.updateClineMessage(lastAsk)
@@ -4240,13 +4307,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 						responseImages = images
 					}
 				} else if (response === "messageResponse") {
-					this.isTaskCompleted = false
-					this.currentStatus = "active"
-					if (this.historyItem) {
-						this.historyItem.status = "active"
-						this.historyItem.needsAttention = false
-						await this.providerRef.deref()?.updateTaskHistory(this.historyItem)
-					}
+					this.clearTaskBlockerStateOnResume(text)
 					await this.say("user_feedback", text, images)
 					responseText = text
 					responseImages = images
@@ -4368,13 +4429,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 				}
 
 				if (response === "messageResponse") {
-					this.isTaskCompleted = false
-					this.currentStatus = "active"
-					if (this.historyItem) {
-						this.historyItem.status = "active"
-						this.historyItem.needsAttention = false
-						await this.providerRef.deref()?.updateTaskHistory(this.historyItem)
-					}
+					this.clearTaskBlockerStateOnResume(text)
 					await this.say("user_feedback", text, images)
 					responseText = text
 					responseImages = images
