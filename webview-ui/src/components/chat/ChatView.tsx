@@ -9,7 +9,7 @@ import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { appendImages } from "@src/utils/imageUtils"
 import { batchConsecutive } from "@src/utils/batchConsecutive"
 
-import type { ClineAsk, ClineSayTool, ClineMessage, ExtensionMessage, AudioType } from "@roo-code/types"
+import type { ClineAsk, ClineSayTool, ClineMessage, ExtensionMessage, AudioType, WebSearchMode } from "@roo-code/types"
 import { isRetiredProvider } from "@roo-code/types"
 
 import { findLast } from "@roo/array"
@@ -148,6 +148,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
+	const [webSearchMode, setWebSearchMode] = useState<WebSearchMode>("auto")
+	const webSearchModeRef = useRef<WebSearchMode>(webSearchMode)
+	useEffect(() => {
+		webSearchModeRef.current = webSearchMode
+	}, [webSearchMode])
 
 	// We need to hold on to the ask because useEffect > lastMessage will always
 	// let us know when an ask comes in and handle it, but by the time
@@ -242,7 +247,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const prevChatKeyRef = useRef<string>(currentChatKey)
 	const isRestoringDraftRef = useRef(false)
-	const inFlightDraftRef = useRef<{ key: string; text: string; images: string[] } | null>(null)
+	const inFlightDraftRef = useRef<{ key: string; text: string; images: string[]; webSearchMode?: WebSearchMode } | null>(null)
 
 	// Restore draft on initial mount
 	useEffect(() => {
@@ -250,6 +255,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		if (restored && !inputValueRef.current) {
 			setInputValue(restored.text || "")
 			setSelectedImages(restored.images || [])
+			if (restored.webSearchMode) {
+				setWebSearchMode(restored.webSearchMode)
+			}
 		}
 	}, [])
 
@@ -260,6 +268,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			saveDraft(cwd || "global", prevChatKeyRef.current, {
 				text: inputValueRef.current,
 				images: selectedImagesRef.current,
+				webSearchMode: webSearchModeRef.current,
 			})
 
 			const restored = loadDraft(cwd || "global", currentChatKey)
@@ -267,9 +276,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			if (restored) {
 				setInputValue(restored.text || "")
 				setSelectedImages(restored.images || [])
+				setWebSearchMode(restored.webSearchMode || "auto")
 			} else {
 				setInputValue("")
 				setSelectedImages([])
+				setWebSearchMode("auto")
 			}
 			prevChatKeyRef.current = currentChatKey
 			const timer = setTimeout(() => {
@@ -285,8 +296,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		scheduleSaveDraft(cwd || "global", currentChatKey, {
 			text: inputValue,
 			images: selectedImages,
+			webSearchMode,
 		})
-	}, [inputValue, selectedImages, currentChatKey, cwd])
+	}, [inputValue, selectedImages, webSearchMode, currentChatKey, cwd])
 
 	// Window blur and beforeunload forced flush
 	useEffect(() => {
@@ -295,6 +307,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			saveDraft(cwd || "global", currentChatKeyRef.current, {
 				text: inputValueRef.current,
 				images: selectedImagesRef.current,
+				webSearchMode: webSearchModeRef.current,
 			})
 		}
 		window.addEventListener("blur", handleFlush)
@@ -1042,6 +1055,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					clineAskRef.current === "command_output" ||
 					(sendingDisabled && !isInterruptedOrStopped)
 
+				const activeWebSearchMode = webSearchModeRef.current
+				const webSearchModeProp =
+					activeWebSearchMode && activeWebSearchMode !== "auto"
+						? { webSearchMode: activeWebSearchMode }
+						: {}
+
 				if (shouldQueue) {
 					try {
 						const queueDecisionSource =
@@ -1058,9 +1077,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							images,
 						)
 						deleteDraft(cwd || "global", currentChatKeyRef.current)
-						vscode.postMessage({ type: "queueMessage", text, images, taskId: currentTaskItem?.id })
+						vscode.postMessage({
+							type: "queueMessage",
+							text,
+							images,
+							taskId: currentTaskItem?.id,
+							...webSearchModeProp,
+						})
 						setInputValue("")
 						setSelectedImages([])
+						setWebSearchMode("auto")
 					} catch (error) {
 						console.error(
 							`Failed to queue message: ${error instanceof Error ? error.message : String(error)}`,
@@ -1078,8 +1104,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						key: currentChatKeyRef.current,
 						text,
 						images,
+						webSearchMode: activeWebSearchMode,
 					}
-					vscode.postMessage({ type: "newTask", text, images })
+					vscode.postMessage({ type: "newTask", text, images, ...webSearchModeProp })
 				} else if (clineAskRef.current) {
 					deleteDraft(cwd || "global", currentChatKeyRef.current)
 					if (clineAskRef.current === "followup") {
@@ -1104,6 +1131,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								text,
 								images,
 								taskId: currentTaskItem?.id,
+								...webSearchModeProp,
 							})
 							break
 						// There is no other case that a textfield should be enabled.
@@ -1117,6 +1145,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						text,
 						images,
 						taskId: currentTaskItem?.id,
+						...webSearchModeProp,
 					})
 				}
 
@@ -1157,6 +1186,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		saveDraft(cwd || "global", currentChatKeyRef.current, {
 			text: inputValueRef.current,
 			images: selectedImagesRef.current,
+			webSearchMode: webSearchModeRef.current,
 		})
 		assignNewProvisionalId()
 		vscode.postMessage({ type: "clearTask" })
@@ -1186,15 +1216,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Handle enqueue button click from textarea
 	const handleEnqueueCurrentMessage = useCallback(() => {
 		const text = inputValue.trim()
+		const activeWebSearchMode = webSearchModeRef.current
+		const webSearchModeProp =
+			activeWebSearchMode && activeWebSearchMode !== "auto"
+				? { webSearchMode: activeWebSearchMode }
+				: {}
 		if (text || selectedImages.length > 0) {
 			vscode.postMessage({
 				type: "queueMessage",
 				text,
 				images: selectedImages,
 				taskId: currentTaskItem?.id,
+				...webSearchModeProp,
 			})
 			setInputValue("")
 			setSelectedImages([])
+			setWebSearchMode("auto")
 		}
 	}, [inputValue, selectedImages, currentTaskItem?.id])
 
@@ -1432,6 +1469,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							saveDraft(cwd || "global", currentChatKeyRef.current, {
 								text: inputValueRef.current,
 								images: selectedImagesRef.current,
+								webSearchMode: webSearchModeRef.current,
 							})
 							assignNewProvisionalId()
 							handleChatReset()
@@ -1454,6 +1492,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							saveDraft(cwd || "global", currentChatKeyRef.current, {
 								text: inputValueRef.current,
 								images: selectedImagesRef.current,
+								webSearchMode: webSearchModeRef.current,
 							})
 							assignNewProvisionalId()
 							handleChatReset()
@@ -2436,6 +2475,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				onStop={handleStopTask}
 				onEnqueueMessage={handleEnqueueCurrentMessage}
 				contextTokens={apiMetrics.contextTokens}
+				webSearchMode={webSearchMode}
+				setWebSearchMode={setWebSearchMode}
 			/>
 
 			{isProfileDisabled && (

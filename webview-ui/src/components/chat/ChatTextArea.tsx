@@ -3,7 +3,7 @@ import { useEvent } from "react-use"
 import DynamicTextArea from "react-textarea-autosize"
 import { VolumeX, WandSparkles, SendHorizontal, X, ListEnd, Square, Loader2 } from "lucide-react"
 
-import { type ExtensionMessage, type Command, getModelContextWindow } from "@roo-code/types"
+import { type ExtensionMessage, type Command, type WebSearchMode, getModelContextWindow } from "@roo-code/types"
 
 import { mentionRegex, mentionRegexGlobal, commandRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { WebviewMessage } from "@roo/WebviewMessage"
@@ -31,6 +31,7 @@ import { ModeSelector } from "./ModeSelector"
 import { ModelSelector } from "./ModelSelector"
 import { ReasoningEffortButton } from "./ReasoningEffortButton"
 import { AutoApproveDropdown } from "./AutoApproveDropdown"
+import { WebSearchButton } from "./WebSearchButton"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { usePromptHistory } from "./hooks/usePromptHistory"
@@ -62,6 +63,8 @@ interface ChatTextAreaProps {
 	onEnqueueMessage?: () => void
 	onResume?: () => void
 	contextTokens?: number
+	webSearchMode?: WebSearchMode
+	setWebSearchMode?: (mode: WebSearchMode) => void
 }
 
 export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
@@ -89,6 +92,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			onEnqueueMessage,
 			onResume,
 			contextTokens = 0,
+			webSearchMode = "auto",
+			setWebSearchMode,
 		},
 		ref,
 	) => {
@@ -1373,6 +1378,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						/>
 						<ReasoningEffortButton disabled={Boolean(selectApiConfigDisabled)} />
 						<AutoApproveDropdown triggerClassName="min-w-[28px] text-ellipsis overflow-hidden shrink-0" />
+						<WebSearchButton
+							mode={webSearchMode}
+							onChange={setWebSearchMode}
+							disabled={Boolean(selectApiConfigDisabled)}
+						/>
 						{!isEditMode && contextWindow > 0 && (
 							<ContextWindowProgress
 								contextWindow={contextWindow}

@@ -66,6 +66,7 @@
 		"notifications": "Notifications",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"webAccess": "Web Access",
 		"slashCommands": "Slash Commands",
 		"prompts": "Prompts",
 		"ui": "UI",
@@ -1086,6 +1087,30 @@
 			"input": "Input",
 			"output": "Output",
 			"cacheReads": "Cache reads"
+		}
+	},
+	"webAccess": {
+		"title": "Web Access",
+		"enable": {
+			"label": "Enable Web Search & Fetch",
+			"description": "Allow Roo to search the web and fetch web pages independently of the model provider."
+		},
+		"provider": {
+			"label": "Search Provider",
+			"description": "Select the search backend to use for web queries."
+		},
+		"apiKey": {
+			"label": "API Key",
+			"placeholder": "Enter API key...",
+			"description": "Stored securely in VS Code SecretStorage and never shared in chat."
+		},
+		"searxngUrl": {
+			"label": "SearXNG URL",
+			"description": "The base URL of your SearXNG instance with JSON format enabled."
+		},
+		"maxResults": {
+			"label": "Max Results",
+			"description": "Number of search results to return (1-20)."
 		}
 	}
 }

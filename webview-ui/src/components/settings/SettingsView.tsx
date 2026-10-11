@@ -76,6 +76,7 @@ import PromptsSettings from "./PromptsSettings"
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { SkillsSettings } from "./SkillsSettings"
 import { UISettings } from "./UISettings"
+import { WebAccessSettings } from "./WebAccessSettings"
 import ModesView from "../modes/ModesView"
 import McpView from "../mcp/McpView"
 import { WorktreesView } from "../worktrees/WorktreesView"
@@ -103,6 +104,7 @@ export const sectionNames = [
 	"notifications",
 	"contextManagement",
 	"terminal",
+	"webAccess",
 	"modes",
 	"mcp",
 	"worktrees",
@@ -155,6 +157,9 @@ export const SECTION_TO_CATEGORY: Record<string, CategoryId> = {
 	safety: "permissions",
 	permissions: "permissions",
 	terminal: "tools",
+	webAccess: "tools",
+	web_access: "tools",
+	web: "tools",
 	mcp: "tools",
 	worktrees: "tools",
 	worktree: "tools",
@@ -209,6 +214,10 @@ export const resolveSectionDomId = (sectionOrAlias?: string): string => {
 			return "section-checkpoints"
 		case "terminal":
 			return "section-terminal"
+		case "webAccess":
+		case "web_access":
+		case "web":
+			return "section-webAccess"
 		case "mcp":
 			return "section-mcp"
 		case "worktrees":
@@ -281,7 +290,7 @@ const CATEGORIES: CategoryDefinition[] = [
 	{
 		id: "tools",
 		icon: Terminal,
-		legacySections: ["terminal", "mcp", "worktrees"],
+		legacySections: ["terminal", "webAccess", "mcp", "worktrees"],
 	},
 	{
 		id: "appearance",
@@ -354,6 +363,11 @@ export const extractComparableSettings = (state?: any) => {
 		debug: state.debug,
 		commandSafetyConfig: state.commandSafetyConfig,
 		approvalMode: state.approvalMode,
+		webSearchEnabled: state.webSearchEnabled,
+		webSearchProvider: state.webSearchProvider,
+		webSearchApiKey: state.webSearchApiKey,
+		webSearchSearxngUrl: state.webSearchSearxngUrl,
+		webSearchMaxResults: state.webSearchMaxResults,
 	}
 }
 
@@ -441,6 +455,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeCurrentCost,
 		maxGitStatusFiles,
 		commandSafetyConfig,
+		webSearchEnabled,
+		webSearchProvider,
+		webSearchApiKey,
+		webSearchSearxngUrl,
+		webSearchMaxResults,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -635,6 +654,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					customSupportPrompts,
 					commandSafetyConfig: cachedState.commandSafetyConfig,
 					approvalMode: cachedState.approvalMode ?? "manual",
+					webSearchEnabled,
+					webSearchProvider,
+					webSearchApiKey,
+					webSearchSearxngUrl,
+					webSearchMaxResults,
 				},
 			})
 
@@ -1191,6 +1215,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 													terminalZshOhMy={terminalZshOhMy}
 													terminalZshP10k={terminalZshP10k}
 													terminalZdotdir={terminalZdotdir}
+													setCachedStateField={setCachedStateField}
+												/>
+											</div>
+											<div
+												id="section-webAccess"
+												className="bg-card border border-border rounded-xl p-5 shadow-xs">
+												<WebAccessSettings
+													webSearchEnabled={webSearchEnabled}
+													webSearchProvider={webSearchProvider}
+													webSearchApiKey={webSearchApiKey}
+													webSearchSearxngUrl={webSearchSearxngUrl}
+													webSearchMaxResults={webSearchMaxResults}
 													setCachedStateField={setCachedStateField}
 												/>
 											</div>

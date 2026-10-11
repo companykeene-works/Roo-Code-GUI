@@ -2,6 +2,7 @@ export interface ChatDraft {
 	text: string
 	images: string[]
 	updatedAt: number
+	webSearchMode?: "off" | "auto" | "required"
 	modelPreference?: {
 		provider?: string
 		modelId?: string
@@ -33,11 +34,12 @@ export function saveDraft(workspace: string, chatKey: string, draft: Partial<Cha
 		text: draft.text ?? "",
 		images: draft.images ?? [],
 		updatedAt: Date.now(),
+		webSearchMode: draft.webSearchMode,
 		modelPreference: draft.modelPreference,
 	}
 
-	// If draft is completely empty and has no model preference, delete it to save space
-	if (!entry.text.trim() && entry.images.length === 0 && !entry.modelPreference) {
+	// If draft is completely empty and has no model preference or web search mode, delete it to save space
+	if (!entry.text.trim() && entry.images.length === 0 && !entry.modelPreference && !entry.webSearchMode) {
 		deleteDraft(workspace, chatKey)
 		return
 	}
@@ -70,6 +72,7 @@ export function loadDraft(workspace: string, chatKey: string): ChatDraft | null 
 				text: typeof parsed.text === "string" ? parsed.text : "",
 				images: Array.isArray(parsed.images) ? parsed.images : [],
 				updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
+				webSearchMode: parsed.webSearchMode,
 				modelPreference: parsed.modelPreference,
 			}
 		}

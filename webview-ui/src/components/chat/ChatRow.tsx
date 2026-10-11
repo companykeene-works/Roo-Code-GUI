@@ -73,6 +73,7 @@ import {
 	Split,
 	ArrowRight,
 	Check,
+	Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PathTooltip } from "../ui/PathTooltip"
@@ -1181,6 +1182,30 @@ export const ChatRowContent = ({
 						)}
 					</>
 				)
+			case "webSearch":
+				return (
+					<div style={headerStyle}>
+						<Globe className="w-4 shrink-0 text-sky-400" aria-label="Web search icon" />
+						<span style={{ fontWeight: "bold" }}>
+							{message.type === "ask" ? "Wants to search the web" : "Searched the web"}
+						</span>
+						<span className="text-xs ml-1" style={{ color: "var(--vscode-descriptionForeground)" }}>
+							"{tool.query}"
+						</span>
+					</div>
+				)
+			case "fetchUrl":
+				return (
+					<div style={headerStyle}>
+						<Globe className="w-4 shrink-0 text-sky-400" aria-label="Fetch URL icon" />
+						<span style={{ fontWeight: "bold" }}>
+							{message.type === "ask" ? "Wants to fetch URL" : "Fetched URL"}
+						</span>
+						<span className="text-xs ml-1 truncate max-w-[300px]" style={{ color: "var(--vscode-descriptionForeground)" }}>
+							{tool.url}
+						</span>
+					</div>
+				)
 			default:
 				return null
 		}
@@ -1735,6 +1760,31 @@ export const ChatRowContent = ({
 											({infoText})
 										</span>
 									)}
+								</div>
+							)
+						}
+						case "webSearch": {
+							const query = (sayTool as any).query || ""
+							const count = (sayTool as any).resultCount
+							return (
+								<div style={headerStyle}>
+									<Globe className="w-4 shrink-0 text-sky-400" aria-label="Web search icon" />
+									<span style={{ fontWeight: "bold" }}>Web search</span>
+									<span className="text-xs ml-1" style={{ color: "var(--vscode-descriptionForeground)" }}>
+										"{query}"{count !== undefined ? ` (${count} results)` : ""}
+									</span>
+								</div>
+							)
+						}
+						case "fetchUrl": {
+							const url = (sayTool as any).url || ""
+							return (
+								<div style={headerStyle}>
+									<Globe className="w-4 shrink-0 text-sky-400" aria-label="Fetch URL icon" />
+									<span style={{ fontWeight: "bold" }}>Fetch URL</span>
+									<span className="text-xs ml-1 truncate max-w-[300px]" style={{ color: "var(--vscode-descriptionForeground)" }}>
+										{url}
+									</span>
 								</div>
 							)
 						}
