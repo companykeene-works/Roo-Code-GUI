@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { RooCodeEventName } from "./events.js"
 import type { RooCodeSettings } from "./global-settings.js"
-import type { ClineMessage, QueuedMessage, TokenUsage } from "./message.js"
+import type { ClineMessage, QueuedMessage, TokenUsage, WebSearchMode } from "./message.js"
 import type { ToolUsage, ToolName } from "./tool.js"
 import type { TodoItem } from "./todo.js"
 
@@ -95,6 +95,7 @@ export interface CreateTaskOptions {
 	/** Whether to start the task loop immediately (default: true).
 	 *  When false, the caller must invoke `task.start()` manually. */
 	startTask?: boolean
+	webSearchMode?: WebSearchMode
 }
 
 export enum TaskStatus {

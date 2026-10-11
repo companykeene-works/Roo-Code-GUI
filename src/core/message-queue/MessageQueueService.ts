@@ -38,7 +38,7 @@ export class MessageQueueService extends EventEmitter<QueueEvents> {
 		return { index, message: this._messages[index] }
 	}
 
-	public addMessage(text: string, images?: string[]): QueuedMessage | undefined {
+	public addMessage(text: string, images?: string[], webSearchMode?: import("@roo-code/types").WebSearchMode): QueuedMessage | undefined {
 		if (!text && !images?.length) {
 			return undefined
 		}
@@ -48,6 +48,7 @@ export class MessageQueueService extends EventEmitter<QueueEvents> {
 			id: uuidv4(),
 			text,
 			images,
+			webSearchMode,
 		}
 
 		this._messages.push(message)

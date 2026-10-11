@@ -5,7 +5,7 @@ import type { ProviderSettings, ProviderSettingsEntry } from "./provider-setting
 import type { HistoryItem } from "./history.js"
 import type { ModeConfig, PromptComponent } from "./mode.js"
 import type { Experiments } from "./experiment.js"
-import type { ClineMessage, QueuedMessage } from "./message.js"
+import type { ClineMessage, QueuedMessage, WebSearchMode } from "./message.js"
 import type { TodoItem } from "./todo.js"
 import type { OrganizationAllowList } from "./organization.js"
 import type { SerializedCustomToolDefinition } from "./custom-tool.js"
@@ -327,6 +327,11 @@ export type ExtensionState = Pick<
 	| "disabledTools"
 	| "openAiModels"
 	| "recentModels"
+	| "webSearchEnabled"
+	| "webSearchProvider"
+	| "webSearchApiKey"
+	| "webSearchSearxngUrl"
+	| "webSearchMaxResults"
 > & {
 	lockApiConfigAcrossModes?: boolean
 	openAiModelInfos?: Record<string, ModelInfo>
@@ -570,6 +575,7 @@ export interface WebviewMessage {
 		| "approvalMode"
 		| "getDecisionLog"
 	text?: string
+	webSearchMode?: WebSearchMode
 	approvalMode?: ApprovalMode
 	taskId?: string
 	editedMessageContent?: string
@@ -759,6 +765,8 @@ export interface ClineSayTool {
 		| "runSlashCommand"
 		| "updateTodoList"
 		| "skill"
+		| "webSearch"
+		| "fetchUrl"
 	path?: string
 	// For readCommandOutput
 	readStart?: number
@@ -782,6 +790,7 @@ export interface ClineSayTool {
 	lineNumber?: number
 	startLine?: number // Starting line for read_file operations (for navigation on click)
 	query?: string
+	url?: string
 	batchFiles?: Array<{
 		path: string
 		lineSnippet: string
@@ -816,6 +825,7 @@ export interface ClineSayTool {
 	description?: string
 	// Properties for skill tool
 	skill?: string
+	resultCount?: number
 }
 
 export interface ClineAskUseMcpServer {

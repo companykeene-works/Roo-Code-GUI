@@ -55,6 +55,17 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			return
 		}
 
+		// Enforce required web search if webSearchMode was set to "required" for this turn
+		if (task.currentTurnWebSearchMode === "required" && task.successfulWebSearchesInCurrentTurn < 1) {
+			task.consecutiveMistakeCount++
+			task.recordToolError("attempt_completion")
+			const errorMsg =
+				"Web search is REQUIRED for this request. You must perform at least one relevant web_search before completing the turn."
+			await task.say("error", errorMsg)
+			pushToolResult(formatResponse.toolError(errorMsg))
+			return
+		}
+
 		const preventCompletionWithOpenTodos = vscode.workspace
 			.getConfiguration(Package.name)
 			.get<boolean>("preventCompletionWithOpenTodos", false)

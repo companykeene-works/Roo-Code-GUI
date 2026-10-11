@@ -107,3 +107,15 @@ export interface GenerateImageParams {
 	path: string
 	image?: string
 }
+
+export interface WebSearchParams {
+	query: string
+	max_results?: number
+	allowed_domains?: string[]
+	excluded_domains?: string[]
+}
+
+export interface FetchUrlParams {
+	url: string
+	max_chars?: number
+}

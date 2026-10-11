@@ -58,6 +58,10 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"allowed_domains",
+	"excluded_domains",
+	"max_results",
+	"max_chars",
 	// read_file parameters (native protocol)
 	"operations", // search_and_replace parameter for multiple operations
 	"patch", // apply_patch parameter
@@ -116,6 +120,8 @@ export type NativeToolArgs = {
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	web_search: import("@roo-code/types").WebSearchParams
+	fetch_url: import("@roo-code/types").FetchUrlParams
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -258,6 +264,17 @@ export interface GenerateImageToolUse extends ToolUse<"generate_image"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
 }
 
+export interface WebSearchToolUse extends ToolUse<"web_search"> {
+	name: "web_search"
+	params: Partial<
+		Pick<Record<ToolParamName, string>, "query" | "allowed_domains" | "excluded_domains" | "max_results">>
+}
+
+export interface FetchUrlToolUse extends ToolUse<"fetch_url"> {
+	name: "fetch_url"
+	params: Partial<Pick<Record<ToolParamName, string>, "url" | "max_chars">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -290,12 +307,14 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	skill: "load skill",
 	generate_image: "generate images",
 	custom_tool: "use custom tools",
+	web_search: "search the web",
+	fetch_url: "fetch web page",
 } as const
 
 // Define available tool groups.
 export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
-		tools: ["read_file", "search_files", "list_files", "codebase_search"],
+		tools: ["read_file", "search_files", "list_files", "codebase_search", "web_search", "fetch_url"],
 	},
 	edit: {
 		tools: ["apply_diff", "write_to_file", "generate_image"],

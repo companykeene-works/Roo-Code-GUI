@@ -659,7 +659,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					resolved.text,
 					resolved.images,
 					undefined,
-					{ taskId: message.taskId },
+					{ taskId: message.taskId, webSearchMode: message.webSearchMode },
 					message.taskConfiguration,
 				)
 				// Task created successfully - notify the UI to reset
@@ -701,7 +701,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					console.log(
 						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, started=${targetTask.isStarted}`,
 					)
-					await targetTask.resumeWithResponse(message.askResponse!, resolved.text, resolved.images)
+					await targetTask.resumeWithResponse(
+						message.askResponse!,
+						resolved.text,
+						resolved.images,
+						message.webSearchMode,
+					)
 				}
 			}
 			break
@@ -3150,9 +3155,14 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				console.log(
 					`[queueMessage] task ${targetTask.taskId} is stopped/idle and queue is empty, routing directly to resumeWithResponse`,
 				)
-				await targetTask.resumeWithResponse("messageResponse", resolved.text, resolved.images)
+				await targetTask.resumeWithResponse(
+					"messageResponse",
+					resolved.text,
+					resolved.images,
+					message.webSearchMode,
+				)
 			} else {
-				targetTask?.messageQueueService.addMessage(resolved.text, resolved.images)
+				targetTask?.messageQueueService.addMessage(resolved.text, resolved.images, message.webSearchMode)
 			}
 			break
 		}

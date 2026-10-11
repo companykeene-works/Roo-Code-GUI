@@ -35,6 +35,8 @@ import { generateImageTool } from "../tools/GenerateImageTool"
 import { applyDiffTool as applyDiffToolClass } from "../tools/ApplyDiffTool"
 import { isValidToolName, validateToolUse } from "../tools/validateToolUse"
 import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
+import { webSearchTool } from "../tools/WebSearchTool"
+import { fetchUrlTool } from "../tools/FetchUrlTool"
 
 import { formatResponse } from "../prompts/responses"
 import { sanitizeToolUseId } from "../../utils/tool-id"
@@ -788,6 +790,20 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "search_files":
 					await searchFilesTool.handle(cline, block as ToolUse<"search_files">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+					})
+					break
+				case "web_search":
+					await webSearchTool.handle(cline, block as ToolUse<"web_search">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+					})
+					break
+				case "fetch_url":
+					await fetchUrlTool.handle(cline, block as ToolUse<"fetch_url">, {
 						askApproval,
 						handleError,
 						pushToolResult,

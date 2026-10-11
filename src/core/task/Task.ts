@@ -41,6 +41,7 @@ import {
 	RooCodeEventName,
 	TaskStatus,
 	TodoItem,
+	type WebSearchMode,
 	getApiProtocol,
 	getModelId,
 	setModelId,
@@ -385,9 +386,46 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private askResponse?: ClineAskResponse
 	private askResponseText?: string
 	private askResponseImages?: string[]
+	private askResponseWebSearchMode?: WebSearchMode
+	private _initialWebSearchMode?: WebSearchMode
+	public currentTurnWebSearchMode: WebSearchMode = "auto"
+	public successfulWebSearchesInCurrentTurn: number = 0
 	public lastMessageTs?: number
 	private autoApprovalTimeoutRef?: NodeJS.Timeout
 	private deferredRecoveryController?: DeferredApprovalRecoveryController
+
+	/**
+	 * Resolves turn-level web search mode from explicit input or prompt text heuristics.
+	 */
+	public resolveWebSearchMode(
+		text?: string,
+		explicitMode?: WebSearchMode,
+	): { mode: WebSearchMode; cleanedText?: string } {
+		if (explicitMode === "off") {
+			return { mode: "off", cleanedText: text }
+		}
+
+		let mode: WebSearchMode = explicitMode || "auto"
+		let cleanedText = text
+
+		if (text) {
+			const trimmed = text.trim()
+			// /web slash command prefix
+			if (/^\/web(?:\s+|$)/i.test(trimmed)) {
+				mode = "required"
+				cleanedText = trimmed.replace(/^\/web\s*/i, "")
+			} else if (
+				mode !== "required" &&
+				/\b(?:wyszukaj w internecie|sprawd[zź] online|zr[oó]b research|search the web|look this up online)\b/i.test(
+					trimmed,
+				)
+			) {
+				mode = "required"
+			}
+		}
+
+		return { mode, cleanedText }
+	}
 
 	// Tool Use
 	consecutiveMistakeCount: number = 0
@@ -610,8 +648,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		workspacePath,
 		initialStatus,
 		initialClineMessages,
+		webSearchMode,
 	}: TaskOptions) {
 		super()
+
+		this._initialWebSearchMode = webSearchMode
+		if (webSearchMode) {
+			this.currentTurnWebSearchMode = webSearchMode
+		}
 
 		if (startTask && !task && !images && !historyItem) {
 			throw new Error("Either historyItem or task/images must be provided")
@@ -800,7 +844,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (startTask) {
 			this._started = true
 			if (task || images) {
-				this.startTask(task, images)
+				this.startTask(task, images, webSearchMode)
 			} else if (historyItem) {
 				this.resumeTaskFromHistory()
 			} else {
@@ -2745,7 +2789,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			const message = this.messageQueueService.dequeueMessage()
 
 			if (message) {
-				this.handleWebviewAskResponse("messageResponse", message.text, message.images)
+				this.handleWebviewAskResponse("messageResponse", message.text, message.images, message.webSearchMode)
 			}
 		}
 
@@ -2764,7 +2808,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 				if (shouldDrainQueuedMessageForAsk && !this.messageQueueService.isEmpty()) {
 					const message = this.messageQueueService.dequeueMessage()
 					if (message) {
-						this.handleWebviewAskResponse("messageResponse", message.text, message.images)
+						this.handleWebviewAskResponse("messageResponse", message.text, message.images, message.webSearchMode)
 					}
 				}
 
@@ -2780,10 +2824,16 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			throw new AskIgnoredError("superseded")
 		}
 
-		const result = { response: this.askResponse!, text: this.askResponseText, images: this.askResponseImages }
+		const result = {
+			response: this.askResponse!,
+			text: this.askResponseText,
+			images: this.askResponseImages,
+			webSearchMode: this.askResponseWebSearchMode,
+		}
 		this.askResponse = undefined
 		this.askResponseText = undefined
 		this.askResponseImages = undefined
+		this.askResponseWebSearchMode = undefined
 
 		// Cancel the timeouts if they are still running.
 		timeouts.forEach((timeout) => clearTimeout(timeout))
@@ -2809,6 +2859,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		askResponse: ClineAskResponse,
 		text?: string,
 		images?: string[],
+		webSearchMode?: WebSearchMode,
 	): Promise<void> {
 		if (this.abort || this.abandoned) {
 			return
@@ -2819,12 +2870,12 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		}
 		if (!this._started) {
 			this._started = true
-			return this.resumeTaskFromHistory({ response: askResponse, text, images })
+			return this.resumeTaskFromHistory({ response: askResponse, text, images, webSearchMode })
 		} else {
 			if (askResponse === "yesButtonClicked" || askResponse === "messageResponse") {
 				this.clearTaskBlockerStateOnResume(text)
 			}
-			this.handleWebviewAskResponse(askResponse, text, images)
+			this.handleWebviewAskResponse(askResponse, text, images, webSearchMode)
 		}
 	}
 
@@ -2855,13 +2906,22 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		}
 	}
 
-	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+	handleWebviewAskResponse(
+		askResponse: ClineAskResponse,
+		text?: string,
+		images?: string[],
+		webSearchMode?: WebSearchMode,
+	) {
 		// Clear any pending auto-approval timeout when user responds
 		this.cancelAutoApprovalTimeout()
 
+		const resolved = this.resolveWebSearchMode(text, webSearchMode)
 		this.askResponse = askResponse
-		this.askResponseText = text
+		this.askResponseText = resolved.cleanedText
 		this.askResponseImages = images
+		this.askResponseWebSearchMode = resolved.mode
+		this.currentTurnWebSearchMode = resolved.mode
+		this.successfulWebSearchesInCurrentTurn = 0
 
 		this.idleAsk = undefined
 		this.resumableAsk = undefined
@@ -3236,6 +3296,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		images?: string[],
 		mode?: string,
 		providerProfile?: string,
+		webSearchMode?: WebSearchMode,
 	): Promise<void> {
 		try {
 			text = (text ?? "").trim()
@@ -3263,7 +3324,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 				// Handle the message directly instead of routing through the webview.
 				// This avoids a race condition where the webview's message state hasn't
 				// hydrated yet, causing it to interpret the message as a new task request.
-				this.handleWebviewAskResponse("messageResponse", text, images)
+				this.handleWebviewAskResponse("messageResponse", text, images, webSearchMode)
 			} else {
 				console.error("[Task#submitUserMessage] Provider reference lost")
 			}
@@ -3997,12 +4058,16 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		const { task, images } = this.metadata
 
 		if (task || images) {
-			this.startTask(task ?? undefined, images ?? undefined)
+			this.startTask(task ?? undefined, images ?? undefined, this._initialWebSearchMode)
 		}
 	}
 
-	private async startTask(task?: string, images?: string[]): Promise<void> {
+	private async startTask(task?: string, images?: string[], webSearchMode?: WebSearchMode): Promise<void> {
 		try {
+			const resolved = this.resolveWebSearchMode(task, webSearchMode)
+			task = resolved.cleanedText
+			this.currentTurnWebSearchMode = resolved.mode
+			this.successfulWebSearchesInCurrentTurn = 0
 			// `conversationHistory` (for API) and `clineMessages` (for webview)
 			// need to be in sync.
 			// If the extension process were killed, then on restart the
@@ -4099,8 +4164,15 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		response: ClineAskResponse
 		text?: string
 		images?: string[]
+		webSearchMode?: WebSearchMode
 	}) {
 		try {
+			if (initialResponse) {
+				const resolved = this.resolveWebSearchMode(initialResponse.text, initialResponse.webSearchMode)
+				initialResponse.text = resolved.cleanedText
+				this.currentTurnWebSearchMode = resolved.mode
+				this.successfulWebSearchesInCurrentTurn = 0
+			}
 			const modifiedClineMessages = await this.getSavedClineMessages()
 
 			// Remove any resume messages that may have been added before.
@@ -6767,6 +6839,8 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 						.getConfiguration(Package.name)
 						.get<boolean>("newTaskRequireTodos", false),
 					isStealthModel: modelInfo?.isStealthModel,
+					webSearchEnabled: state?.webSearchEnabled ?? true,
+					webSearchMode: this.currentTurnWebSearchMode,
 				},
 				undefined, // todoList
 				this.api.getModel().id,
@@ -7889,9 +7963,13 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 						if (this.abort || this.abandoned || this.abortReason === "user_cancelled") {
 							return
 						}
-						this.submitUserMessage(queued.text, queued.images).catch((err) =>
-							console.error(`[Task] Failed to submit queued message:`, err),
-						)
+						this.submitUserMessage(
+							queued.text,
+							queued.images,
+							undefined,
+							undefined,
+							queued.webSearchMode,
+						).catch((err) => console.error(`[Task] Failed to submit queued message:`, err))
 					}, 0)
 				}
 			}

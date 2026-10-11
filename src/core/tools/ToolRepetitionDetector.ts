@@ -7,6 +7,8 @@ const DIAGNOSTIC_READ_ONLY_TOOLS = new Set([
 	"list_files",
 	"codebase_search",
 	"search_files",
+	"web_search",
+	"fetch_url",
 ])
 
 export interface CommandIntent {
@@ -236,10 +238,12 @@ export class ToolRepetitionDetector {
 			const command = extractCommandString(toolUse)
 			const intent = classifyCommandIntent(command)
 			if (intent.isDelay) {
-				return stringify({
-					name: "execute_command",
-					intent: "wait_delay",
-				})
+				return (
+					stringify({
+						name: "execute_command",
+						intent: "wait_delay",
+					}) ?? ""
+				)
 			}
 		}
 
@@ -253,6 +257,6 @@ export class ToolRepetitionDetector {
 			toolObject.nativeArgs = toolUse.nativeArgs
 		}
 
-		return stringify(toolObject)
+		return stringify(toolObject) ?? ""
 	}
 }

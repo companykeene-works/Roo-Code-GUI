@@ -90,7 +90,7 @@ ${getSharedToolUseSection()}${toolsCatalog}
 
 	${getToolUseGuidelinesSection()}
 
-${getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
+${getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined, settings)}
 
 ${modesSection}
 ${skillsSection ? `\n${skillsSection}` : ""}

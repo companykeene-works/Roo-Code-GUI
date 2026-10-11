@@ -109,6 +109,13 @@ export const globalSettingsSchema = z.object({
 	openRouterImageApiKey: z.string().optional(),
 	openRouterImageGenerationSelectedModel: z.string().optional(),
 
+	// Web search settings
+	webSearchEnabled: z.boolean().optional(),
+	webSearchProvider: z.enum(["brave", "tavily", "searxng"]).optional(),
+	webSearchApiKey: z.string().optional(),
+	webSearchSearxngUrl: z.string().optional(),
+	webSearchMaxResults: z.number().min(1).max(20).optional(),
+
 	customCondensingPrompt: z.string().optional(),
 
 	autoApprovalEnabled: z.boolean().optional(),
@@ -332,6 +339,7 @@ export const SECRET_STATE_KEYS = [
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
 export const GLOBAL_SECRET_KEYS = [
 	"openRouterImageApiKey", // For image generation
+	"webSearchApiKey", // For web search
 ] as const
 
 // Type for the actual secret storage keys

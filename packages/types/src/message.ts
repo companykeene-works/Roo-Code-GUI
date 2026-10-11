@@ -296,6 +296,9 @@ export const tokenUsageSchema = z.object({
 
 export type TokenUsage = z.infer<typeof tokenUsageSchema>
 
+export const webSearchModeSchema = z.enum(["off", "auto", "required"])
+export type WebSearchMode = z.infer<typeof webSearchModeSchema>
+
 /**
  * QueuedMessage
  */
@@ -305,6 +308,8 @@ export const queuedMessageSchema = z.object({
 	id: z.string(),
 	text: z.string(),
 	images: z.array(z.string()).optional(),
+	webSearchMode: webSearchModeSchema.optional(),
 })
 
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>
+

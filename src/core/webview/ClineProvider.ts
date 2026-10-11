@@ -2663,6 +2663,11 @@ export class ClineProvider
 				(stateValues.recentModels as RecentModel[] | undefined) ??
 				(await this.getGlobalState("recentModels")) ??
 				[],
+			webSearchEnabled: stateValues.webSearchEnabled ?? false,
+			webSearchProvider: stateValues.webSearchProvider ?? "brave",
+			webSearchApiKey: stateValues.webSearchApiKey,
+			webSearchSearxngUrl: stateValues.webSearchSearxngUrl,
+			webSearchMaxResults: stateValues.webSearchMaxResults ?? 5,
 		}
 	}
 

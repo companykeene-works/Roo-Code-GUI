@@ -291,6 +291,12 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("run_slash_command")
 	}
 
+	// Conditionally exclude web_search and fetch_url if web access is not enabled and search is not required
+	if (settings?.webSearchEnabled !== true && settings?.webSearchMode !== "required") {
+		allowedToolNames.delete("web_search")
+		allowedToolNames.delete("fetch_url")
+	}
+
 	// Remove tools that are explicitly disabled via the disabledTools setting
 	if (settings?.disabledTools?.length) {
 		for (const toolName of settings.disabledTools) {
@@ -385,6 +391,11 @@ export function isToolAllowedInMode(
 	// Check if the tool is allowed by the mode's groups
 	// Resolve to canonical name and check that single value
 	const canonicalTool = resolveToolAlias(toolName)
+	if (canonicalTool === "web_search" || canonicalTool === "fetch_url") {
+		if (settings?.webSearchEnabled !== true && settings?.webSearchMode !== "required") {
+			return false
+		}
+	}
 	return isToolAllowedForMode(
 		canonicalTool as ToolName,
 		modeSlug,
