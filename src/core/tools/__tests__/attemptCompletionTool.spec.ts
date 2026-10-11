@@ -686,4 +686,66 @@ describe("attemptCompletionTool", () => {
 			})
 		})
 	})
+
+	describe("web search enforcement", () => {
+		it("should block completion when web search is required but 0 searches performed", async () => {
+			const block: AttemptCompletionToolUse = {
+				type: "tool_use",
+				name: "attempt_completion",
+				params: { result: "Attempting completion without search" },
+				nativeArgs: { result: "Attempting completion without search" },
+				partial: false,
+			}
+
+			mockTask.currentTurnWebSearchMode = "required"
+			mockTask.successfulWebSearchesInCurrentTurn = 0
+
+			const callbacks: AttemptCompletionCallbacks = {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
+				toolDescription: mockToolDescription,
+			}
+
+			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
+
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("attempt_completion")
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("Web search is REQUIRED for this request"),
+			)
+			expect(mockTask.ask).not.toHaveBeenCalled()
+			expect(mockTask.markTaskCompleted).not.toHaveBeenCalled()
+		})
+
+		it("should allow completion when web search is required and at least 1 search was performed", async () => {
+			const block: AttemptCompletionToolUse = {
+				type: "tool_use",
+				name: "attempt_completion",
+				params: { result: "Completed after search" },
+				nativeArgs: { result: "Completed after search" },
+				partial: false,
+			}
+
+			mockTask.currentTurnWebSearchMode = "required"
+			mockTask.successfulWebSearchesInCurrentTurn = 1
+
+			const callbacks: AttemptCompletionCallbacks = {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
+				toolDescription: mockToolDescription,
+			}
+
+			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
+
+			expect(mockTask.recordToolError).not.toHaveBeenCalled()
+			expect(mockTask.ask).toHaveBeenCalledWith(
+				"completion_result",
+				expect.anything(),
+				false,
+			)
+		})
+	})
 })
