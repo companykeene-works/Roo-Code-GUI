@@ -834,6 +834,14 @@ body.light-theme .header-action-btn:hover {
 	transition: opacity 0.15s ease;
 }
 
+#sidebar-projects-list.reorder-mode .sidebar-project-item * {
+	pointer-events: none;
+}
+
+#sidebar-projects-list.reorder-mode .project-drag-handle {
+	pointer-events: auto;
+}
+
 .sidebar-project-item.is-dragging {
 	opacity: 0.35;
 }

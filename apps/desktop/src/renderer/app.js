@@ -910,6 +910,12 @@
 			chats: data.chats || {},
 		}
 
+		if (Array.isArray(data.recentWorkspaces)) {
+			try {
+				localStorage.setItem("roo-desktop-workspaces-order", JSON.stringify(data.recentWorkspaces))
+			} catch {}
+		}
+
 		// Auto-expand current workspace if nothing is expanded
 		if (sidebarData.currentWorkspace && projectExpansions.size === 0) {
 			projectExpansions.add(sidebarData.currentWorkspace)
@@ -1688,7 +1694,7 @@
 		for (let i = 0; i < workspaces.length; i++) {
 			const ws = workspaces[i]
 			const pEl = projectEls[i]
-			if (pEl.getAttribute("data-workspace") !== ws) return false
+			if (pathNormalize(pEl.getAttribute("data-workspace") || "") !== pathNormalize(ws)) return false
 
 			const isExpanded = projectExpansions.has(ws)
 			const chatsListEl = pEl.querySelector(".project-chats-list")
@@ -1894,12 +1900,9 @@
 		}
 	}
 
-	function renderSidebar() {
-		if (!sidebarProjectsListEl) return
-		if (isDraggingProject) return
-
+	function getAuthoritativeWorkspacesList() {
 		const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
-		let workspaces = [...sidebarData.recentWorkspaces]
+		let workspaces = [...(sidebarData.recentWorkspaces || [])]
 
 		// Ensure current workspace is present (append to end if new)
 		if (sidebarData.currentWorkspace && !workspaces.some((w) => pathNormalize(w) === curWsNorm)) {
@@ -1907,7 +1910,7 @@
 		}
 
 		// Also check if there are chats for workspaces not currently in recentWorkspaces
-		for (const wsKey of Object.keys(sidebarData.chats)) {
+		for (const wsKey of Object.keys(sidebarData.chats || {})) {
 			if (wsKey !== "__unassigned__" && !workspaces.some((w) => pathNormalize(w) === pathNormalize(wsKey))) {
 				workspaces.push(wsKey)
 			}
@@ -1935,6 +1938,69 @@
 				}
 			}
 		} catch {}
+
+		// Deduplicate
+		const deduped = []
+		for (const w of workspaces) {
+			if (!deduped.some((existing) => pathNormalize(existing) === pathNormalize(w))) {
+				deduped.push(w)
+			}
+		}
+		return deduped
+	}
+
+	function applyWorkspaceReorder(fromWs, targetWs, pos) {
+		if (!fromWs) return false
+		const currentList = getAuthoritativeWorkspacesList()
+		const fromIndex = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(fromWs))
+		if (fromIndex === -1) return false
+
+		let targetSlot
+		if (!targetWs) {
+			// Dropped into bottom empty area -> move to end
+			targetSlot = currentList.length
+		} else {
+			const targetIndex = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(targetWs))
+			if (targetIndex === -1) return false
+			targetSlot = pos === "after" ? targetIndex + 1 : targetIndex
+		}
+
+		// Guard: No-op if targetSlot is the same position
+		if (targetSlot === fromIndex || targetSlot === fromIndex + 1) {
+			return false
+		}
+
+		// Perform remove + insert
+		const [removed] = currentList.splice(fromIndex, 1)
+		const finalIndex = fromIndex < targetSlot ? targetSlot - 1 : targetSlot
+		currentList.splice(finalIndex, 0, removed)
+
+		// Deduplicate
+		const deduped = []
+		for (const w of currentList) {
+			if (!deduped.some((existing) => pathNormalize(existing) === pathNormalize(w))) {
+				deduped.push(w)
+			}
+		}
+
+		// Update sidebarData & localStorage
+		sidebarData.recentWorkspaces = deduped
+		try {
+			localStorage.setItem("roo-desktop-workspaces-order", JSON.stringify(deduped))
+		} catch {}
+
+		// Send to server to persist to desktop-config.json
+		sendToServer({ type: "reorderWorkspaces", workspaces: deduped })
+
+		return true
+	}
+
+	function renderSidebar() {
+		if (!sidebarProjectsListEl) return
+		if (isDraggingProject) return
+
+		const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
+		const workspaces = getAuthoritativeWorkspacesList()
 
 		if (sidebarProjectsCountEl) {
 			sidebarProjectsCountEl.textContent = String(workspaces.length)
@@ -2188,6 +2254,9 @@
 			})
 			handle.addEventListener("dragend", () => {
 				cleanupDragState()
+				requestAnimationFrame(() => {
+					renderSidebar()
+				})
 			})
 		})
 
@@ -2203,12 +2272,34 @@
 				e.stopPropagation()
 				e.dataTransfer.dropEffect = "move"
 
-				const rect = item.getBoundingClientRect()
+				const headerEl = item.querySelector(".project-header") || item
+				const rect = headerEl.getBoundingClientRect()
 				const midY = rect.top + rect.height / 2
 				const position = e.clientY < midY ? "before" : "after"
 
+				// Check if this position is a no-op relative to the dragged item
+				const currentList = getAuthoritativeWorkspacesList()
+				const fromIdx = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(draggedProjectWs))
+				const targetIdx = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(targetWs))
+				const slot = position === "after" ? targetIdx + 1 : targetIdx
+
+				if (slot === fromIdx || slot === fromIdx + 1) {
+					// Same position as dragged item - no drop indicator
+					item.classList.remove("drop-before", "drop-after")
+					dragOverProjectWs = null
+					dragDropPosition = null
+					return
+				}
+
 				dragOverProjectWs = targetWs
 				dragDropPosition = position
+
+				// Clear indicators from all other items to ensure strict exclusivity
+				sidebarProjectsListEl.querySelectorAll(".sidebar-project-item").forEach((other) => {
+					if (other !== item) {
+						other.classList.remove("drop-before", "drop-after")
+					}
+				})
 
 				if (position === "before") {
 					item.classList.add("drop-before")
@@ -2233,6 +2324,11 @@
 			item.addEventListener("dragleave", (e) => {
 				if (!item.contains(e.relatedTarget)) {
 					item.classList.remove("drop-before", "drop-after")
+					const targetWs = item.getAttribute("data-workspace")
+					if (dragOverProjectWs && targetWs && pathNormalize(dragOverProjectWs) === pathNormalize(targetWs)) {
+						dragOverProjectWs = null
+						dragDropPosition = null
+					}
 				}
 			})
 
@@ -2243,50 +2339,88 @@
 
 				const targetWs = item.getAttribute("data-workspace")
 				const fromWs = draggedProjectWs
-				const pos = dragDropPosition
+
+				// Recalculate position dynamically from drop coordinates if available
+				const headerEl = item.querySelector(".project-header") || item
+				const rect = headerEl.getBoundingClientRect()
+				const midY = rect.top + rect.height / 2
+				const pos = e.clientY < midY ? "before" : "after"
 
 				cleanupDragState()
 
 				if (!targetWs || !fromWs || pathNormalize(fromWs) === pathNormalize(targetWs)) return
 
-				// Calculate new order
-				const currentList = [...workspaces]
-				const fromIndex = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(fromWs))
-				if (fromIndex === -1) return
+				applyWorkspaceReorder(fromWs, targetWs, pos)
 
-				currentList.splice(fromIndex, 1)
-
-				let toIndex = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(targetWs))
-				if (toIndex === -1) {
-					currentList.push(fromWs)
-				} else {
-					if (pos === "after") {
-						toIndex++
-					}
-					currentList.splice(toIndex, 0, fromWs)
-				}
-
-				// Deduplicate
-				const deduped = []
-				for (const w of currentList) {
-					if (!deduped.some((existing) => pathNormalize(existing) === pathNormalize(w))) {
-						deduped.push(w)
-					}
-				}
-
-				// Update sidebarData & localStorage
-				sidebarData.recentWorkspaces = deduped
-				try {
-					localStorage.setItem("roo-desktop-workspaces-order", JSON.stringify(deduped))
-				} catch {}
-
-				// Send to server to persist to desktop-config.json
-				sendToServer({ type: "reorderWorkspaces", workspaces: deduped })
-
-				// Re-render
-				renderSidebar()
+				requestAnimationFrame(() => {
+					renderSidebar()
+				})
 			})
 		})
+
+		// Container-level dragover / drop for empty area below projects
+		if (!sidebarProjectsListEl._dragContainerBound) {
+			sidebarProjectsListEl._dragContainerBound = true
+
+			const onContainerDragOver = (e) => {
+				if (!isDraggingProject || !draggedProjectWs) return
+				if (e.target.closest(".sidebar-project-item")) {
+					return
+				}
+				e.preventDefault()
+				e.dataTransfer.dropEffect = "move"
+
+				const projectItems = Array.from(sidebarProjectsListEl.querySelectorAll(".sidebar-project-item"))
+				if (projectItems.length === 0) return
+
+				const lastItem = projectItems[projectItems.length - 1]
+				const lastWs = lastItem.getAttribute("data-workspace")
+				if (!lastWs) return
+
+				const currentList = getAuthoritativeWorkspacesList()
+				const fromIdx = currentList.findIndex((w) => pathNormalize(w) === pathNormalize(draggedProjectWs))
+
+				if (fromIdx === currentList.length - 1) {
+					lastItem.classList.remove("drop-before", "drop-after")
+					return
+				}
+
+				projectItems.forEach((it) => {
+					if (it !== lastItem) it.classList.remove("drop-before", "drop-after")
+				})
+				lastItem.classList.add("drop-after")
+				lastItem.classList.remove("drop-before")
+				dragOverProjectWs = lastWs
+				dragDropPosition = "after"
+			}
+
+			const onContainerDrop = (e) => {
+				if (!isDraggingProject || !draggedProjectWs) return
+				if (e.target.closest(".sidebar-project-item")) {
+					return
+				}
+				e.preventDefault()
+				e.stopPropagation()
+
+				const fromWs = draggedProjectWs
+				cleanupDragState()
+
+				applyWorkspaceReorder(fromWs, null, "after")
+
+				requestAnimationFrame(() => {
+					renderSidebar()
+				})
+			}
+
+			sidebarProjectsListEl.addEventListener("dragover", onContainerDragOver)
+			sidebarProjectsListEl.addEventListener("drop", onContainerDrop)
+
+			const scrollContainer = sidebarProjectsListEl.closest(".sidebar-scroll-content")
+			if (scrollContainer && scrollContainer !== sidebarProjectsListEl) {
+				scrollContainer.addEventListener("dragover", onContainerDragOver)
+				scrollContainer.addEventListener("drop", onContainerDrop)
+			}
+		}
 	}
 
 	// Webview Loading & Cold Start Resilience with Healthcheck and Exponential Backoff Retry
@@ -2794,7 +2928,7 @@
 				if (msg.workspace?.path) {
 					sidebarData.currentWorkspace = msg.workspace.path
 					if (!sidebarData.recentWorkspaces.some((w) => pathNormalize(w) === pathNormalize(msg.workspace.path))) {
-						sidebarData.recentWorkspaces.unshift(msg.workspace.path)
+						sidebarData.recentWorkspaces.push(msg.workspace.path)
 					}
 					projectExpansions.add(msg.workspace.path)
 					renderSidebar()
