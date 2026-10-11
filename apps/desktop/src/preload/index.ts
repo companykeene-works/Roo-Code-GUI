@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld("__desktopAPI", {
 	isElectron: true,
 	platform: process.platform,
 	selectFolder: () => ipcRenderer.invoke("desktop:select-folder"),
+	createQuickProject: () => ipcRenderer.invoke("desktop:create-quick-project"),
 	showItemInFolder: (filePath: string) => ipcRenderer.invoke("desktop:show-item", filePath),
 	openPath: (filePath: string) => ipcRenderer.invoke("desktop:open-path", filePath),
 	sendToExtension: (message: unknown) => ipcRenderer.send("desktop:message-to-extension", message),

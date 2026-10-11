@@ -10,6 +10,7 @@ import { WebSocketServer, WebSocket } from "ws"
 import { execSync, spawn } from "child_process"
 import { DesktopAgentHost } from "./agent-host.js"
 import { loadDesktopConfig, saveDesktopConfig, canonicalizePath, arePathsEqual, renameProject } from "./config.js"
+import { createQuickProject } from "./quick-project.js"
 import type { DesktopClientMessage, DesktopServerMessage, SidebarData, WorkspaceInfo } from "../shared/types.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -596,6 +597,25 @@ export function createDesktopServer(options: DesktopServerOptions): {
 			res.writeHead(200, { "Content-Type": "application/json" })
 			res.end(JSON.stringify(getSidebarData()))
 			return
+		}
+
+		if (pathname === "/api/quick-project") {
+			if (req.method === "POST") {
+				void (async () => {
+					try {
+						const result = await createQuickProject(agentHost, {
+							broadcast,
+							broadcastSidebarData,
+						})
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify(result))
+					} catch (err: any) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: err?.message || String(err) }))
+					}
+				})()
+				return
+			}
 		}
 
 		if (pathname === "/api/chat/switch") {
@@ -1777,6 +1797,16 @@ window.addEventListener("keydown", function(e) {
 						}
 					} else {
 						safeSend(ws, { type: "error", message: `Folder does not exist: ${clientMsg.path}` })
+					}
+				} else if (clientMsg.type === "createQuickProject") {
+					try {
+						const result = await createQuickProject(agentHost, {
+							broadcast,
+							broadcastSidebarData,
+						})
+						safeSend(ws, { type: "quickProjectCreated", ...result })
+					} catch (err: any) {
+						safeSend(ws, { type: "error", message: err?.message || String(err) })
 					}
 				} else if (clientMsg.type === "readFile") {
 					const rawWs = agentHost.getWorkspace()

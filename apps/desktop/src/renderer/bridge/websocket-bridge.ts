@@ -30,6 +30,7 @@ export class WebSocketBridge implements IDesktopBridge {
 
 	public readonly shell: IShellBridge = {
 		selectFolder: async () => null,
+		createQuickProject: async () => null,
 		openPath: async () => false,
 		showItemInFolder: async () => false,
 		openExternal: async (url: string) => {

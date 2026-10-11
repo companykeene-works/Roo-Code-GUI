@@ -17,6 +17,7 @@ interface ElectronDesktopApi {
 	isElectron?: boolean
 	platform?: string
 	selectFolder?: () => Promise<string | null>
+	createQuickProject?: () => Promise<any>
 	showItemInFolder?: (filePath: string) => Promise<boolean>
 	openPath?: (filePath: string) => Promise<boolean>
 	sendToExtension?: (message: unknown) => void
@@ -57,6 +58,12 @@ export class ElectronBridge implements IDesktopBridge {
 		selectFolder: async () => {
 			if (window.__desktopAPI?.selectFolder) {
 				return await window.__desktopAPI.selectFolder()
+			}
+			return null
+		},
+		createQuickProject: async () => {
+			if (window.__desktopAPI?.createQuickProject) {
+				return await window.__desktopAPI.createQuickProject()
 			}
 			return null
 		},

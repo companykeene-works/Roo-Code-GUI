@@ -24,6 +24,7 @@ import { fileURLToPath } from "url"
 import { DesktopAgentHost } from "./agent-host.js"
 import { createDesktopServer, validatePathWithinRoot, getGitBranch, listWorkspaceFiles, scanWorkspace } from "./server.js"
 import { loadDesktopConfig, saveDesktopConfig, canonicalizePath } from "./config.js"
+import { createQuickProject } from "./quick-project.js"
 import type { WorkspaceInfo } from "../shared/types.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -410,6 +411,32 @@ export async function startDesktopApp(options: DesktopRunOptions = {}) {
 
 			ipcMain.handle("desktop:select-folder", handleSelectFolder)
 			ipcMain.handle("desktop:select-workspace", handleSelectFolder)
+
+			ipcMain.handle("desktop:create-quick-project", async () => {
+				const result = await createQuickProject(agentHost, {
+					broadcast: (msg) => {
+						if (!win.isDestroyed()) {
+							win.webContents.send("desktop:message-from-extension", msg)
+						}
+					},
+					broadcastSidebarData: () => {
+						if (!win.isDestroyed()) {
+							const cfg = loadDesktopConfig()
+							win.webContents.send("desktop:message-from-extension", {
+								type: "sidebarData",
+								data: {
+									recentWorkspaces: cfg.recentWorkspaces || [],
+									projectNames: cfg.projectNames || {},
+									currentWorkspace: agentHost.getWorkspace(),
+									activeTaskId: agentHost.getActiveTaskId(),
+									chats: agentHost.getChatsByWorkspace(),
+								},
+							})
+						}
+					},
+				})
+				return result
+			})
 
 			ipcMain.handle("desktop:show-item", async (_event: any, filePath: string) => {
 				if (filePath && typeof filePath === "string") {

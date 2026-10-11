@@ -86,6 +86,7 @@ export type DesktopClientMessage =
 	| { type: "openProjectFolder"; path: string }
 	| { type: "renameChat"; taskId: string; title: string }
 	| { type: "reorderWorkspaces"; workspaces: string[] }
+	| { type: "createQuickProject" }
 
 export type DesktopServerMessage =
 	| ({ type: "navigationCounts" } & NavigationCounts)
@@ -127,4 +128,5 @@ export type DesktopServerMessage =
 	| { type: "projectRemoved"; path: string; success: boolean; error?: string; requiresStop?: boolean; activeTasksCount?: number }
 	| { type: "projectRenameResult"; path: string; success: boolean; error?: string }
 	| { type: "conversationTitleUpdated"; taskId: string; title: string; titleSource?: "generated_ai" | "manual" | "fallback" }
+	| { type: "quickProjectCreated"; path: string; name: string; workspace: WorkspaceInfo }
 	| { type: "error"; message: string }

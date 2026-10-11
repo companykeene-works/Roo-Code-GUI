@@ -3332,6 +3332,30 @@ body.light-theme .sidebar-context-menu .context-menu-item.active {
 	color: #000000;
 }
 
+.sidebar-context-menu .context-menu-item .menu-item-text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	text-align: left;
+	min-width: 0;
+}
+
+.sidebar-context-menu .context-menu-item .menu-item-title {
+	font-weight: 500;
+	font-size: 12px;
+	line-height: 1.25;
+}
+
+.sidebar-context-menu .context-menu-item .menu-item-desc {
+	font-size: 10px;
+	color: var(--text-muted, #a1a1aa);
+	line-height: 1.2;
+}
+
+body.light-theme .sidebar-context-menu .context-menu-item .menu-item-desc {
+	color: #71717a;
+}
+
 .sidebar-context-menu .context-menu-item.danger {
 	color: #f87171;
 }

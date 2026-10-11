@@ -271,6 +271,12 @@
 			workspaces: "Workspaces",
 			projectsSection: "PROJECTS",
 			addProject: "Add project",
+			newProject: "New Project",
+			newProjectDesc: "Open an existing folder on your disk",
+			quickProject: "Quick Project",
+			quickProjectDesc: "Create instantly in your Roo Code projects folder",
+			quickProjectCreating: "Creating Quick Project...",
+			quickProjectError: "Failed to create Quick Project",
 			viewMoreChats: (count) => `View more (${count})`,
 			viewLessChats: "View less",
 			noConversations: "No conversations",
@@ -388,6 +394,12 @@
 			workspaces: "Obszary robocze",
 			projectsSection: "PROJEKTY",
 			addProject: "Dodaj projekt",
+			newProject: "Nowy projekt",
+			newProjectDesc: "Otwórz istniejący folder na dysku",
+			quickProject: "Quick Project",
+			quickProjectDesc: "Utwórz natychmiast w folderze projektów Roo Code",
+			quickProjectCreating: "Tworzenie szybkiego projektu...",
+			quickProjectError: "Nie udało się utworzyć szybkiego projektu",
 			viewMoreChats: (count) => `Pokaż więcej (${count})`,
 			viewLessChats: "Pokaż mniej",
 			noConversations: "Brak konwersacji",
@@ -700,9 +712,75 @@
 		}
 	})
 
-	sidebarAddProjectBtn?.addEventListener("click", () => {
-		openFolderDialog()
+	sidebarAddProjectBtn?.addEventListener("click", (e) => {
+		e.stopPropagation()
+		if (activeContextMenuTrigger === sidebarAddProjectBtn && sidebarContextMenuEl && !sidebarContextMenuEl.classList.contains("hidden")) {
+			closeSidebarContextMenu()
+			return
+		}
+		openAddProjectMenu()
 	})
+
+	function openAddProjectMenu() {
+		if (!sidebarAddProjectBtn) return
+		const rect = sidebarAddProjectBtn.getBoundingClientRect()
+		const items = [
+			{
+				label: tDesktop("newProject") || "New Project",
+				description: tDesktop("newProjectDesc") || "Open an existing folder on your disk",
+				icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
+				action: () => {
+					openFolderDialog()
+				},
+			},
+			{
+				label: tDesktop("quickProject") || "Quick Project",
+				description: tDesktop("quickProjectDesc") || "Create instantly in your Roo Code projects folder",
+				icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+				action: () => {
+					handleCreateQuickProject()
+				},
+			},
+		]
+		openSidebarContextMenu({
+			x: rect.left,
+			y: rect.bottom + 4,
+			items,
+			triggerEl: sidebarAddProjectBtn,
+		})
+	}
+
+	async function handleCreateQuickProject() {
+		closeSidebarContextMenu()
+		try {
+			let result = null
+			if (desktopBridge?.shell?.createQuickProject) {
+				result = await desktopBridge.shell.createQuickProject()
+			} else if (window.__desktopAPI?.createQuickProject) {
+				result = await window.__desktopAPI.createQuickProject()
+			} else {
+				const resp = await fetch("/api/quick-project", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+				})
+				if (!resp.ok) {
+					const errData = await resp.json().catch(() => ({}))
+					throw new Error(errData.error || `HTTP ${resp.status}`)
+				}
+				result = await resp.json()
+			}
+
+			const projectPath = result?.path || result?.workspace?.path
+			if (projectPath) {
+				projectExpansions.add(projectPath)
+				await selectWorkspaceFolder(projectPath)
+				await fetchSidebarData()
+			}
+		} catch (err) {
+			console.error("Failed to create Quick Project:", err)
+			window.alert((tDesktop("quickProjectError") || "Failed to create Quick Project") + ": " + (err.message || err))
+		}
+	}
 
 	async function openFolderDialog() {
 		if (desktopBridge?.shell?.selectFolder) {
@@ -1050,15 +1128,20 @@
 			if (item.type === "divider") {
 				itemsHtml += `<div class="context-menu-divider" role="separator"></div>`
 			} else {
+				const titleAttr = item.description ? `title="${escapeHtml(item.description)}"` : ""
+				const contentHtml = item.description
+					? `<div class="menu-item-text"><span class="menu-item-title">${escapeHtml(item.label)}</span><span class="menu-item-desc">${escapeHtml(item.description)}</span></div>`
+					: `<span>${escapeHtml(item.label)}</span>`
 				itemsHtml += `
 					<button class="context-menu-item ${item.danger ? "danger" : ""}" 
 					        type="button" 
 					        role="menuitem" 
 					        tabindex="${idx === 0 ? "0" : "-1"}" 
 					        data-index="${idx}"
+					        ${titleAttr}
 					        aria-label="${escapeHtml(item.label)}">
 						${item.icon ? `<span class="menu-icon">${item.icon}</span>` : ""}
-						<span>${escapeHtml(item.label)}</span>
+						${contentHtml}
 					</button>
 				`
 			}
@@ -1069,7 +1152,7 @@
 		sidebarContextMenuEl.setAttribute("aria-hidden", "false")
 
 		// Viewport bounds detection
-		const menuWidth = 200
+		const menuWidth = Math.max(200, sidebarContextMenuEl.offsetWidth || 200)
 		const menuHeight = sidebarContextMenuEl.offsetHeight || 130
 		const winW = window.innerWidth
 		const winH = window.innerHeight
@@ -4907,7 +4990,7 @@
 	// Context Menu Dismissals
 	document.addEventListener("click", (e) => {
 		if (sidebarContextMenuEl && !sidebarContextMenuEl.classList.contains("hidden")) {
-			if (!sidebarContextMenuEl.contains(e.target) && !e.target.closest("[data-action='chat-menu'], [data-action='project-menu']")) {
+			if (!sidebarContextMenuEl.contains(e.target) && !e.target.closest("[data-action='chat-menu'], [data-action='project-menu'], #sidebar-add-project-btn")) {
 				closeSidebarContextMenu()
 			}
 		}

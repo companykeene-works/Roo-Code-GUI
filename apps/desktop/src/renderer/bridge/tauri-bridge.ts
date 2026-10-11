@@ -88,6 +88,7 @@ export class TauriBridge implements IDesktopBridge {
 			}
 			return null
 		},
+		createQuickProject: async () => null,
 		openPath: async (filePath: string) => {
 			const invoke = getTauriInvoke()
 			if (invoke) {

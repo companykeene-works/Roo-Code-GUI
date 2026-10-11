@@ -16,6 +16,7 @@ export interface IWindowBridge {
 
 export interface IShellBridge {
 	selectFolder(options?: { defaultPath?: string }): Promise<string | null>
+	createQuickProject?(): Promise<any>
 	openPath(filePath: string): Promise<boolean>
 	showItemInFolder(filePath: string): Promise<boolean>
 	openExternal(url: string): Promise<void>
