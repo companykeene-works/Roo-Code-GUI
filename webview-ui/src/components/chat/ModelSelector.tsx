@@ -410,6 +410,7 @@ export const ModelSelector = ({
 		lockApiConfigAcrossModes: extLockApiConfigAcrossModes,
 		recentModels: extRecentModels,
 		setRecentModels,
+		currentTaskItem,
 	} = useExtensionState()
 
 	useEffect(() => {
@@ -434,6 +435,12 @@ export const ModelSelector = ({
 
 	const { id: activeModelId, info: activeModelInfo, isUnavailable } = useSelectedModel(apiConfiguration)
 	const activeProvider = (apiConfiguration?.apiProvider || "xkiro") as ProviderName
+
+	const isExecutionModelDifferent = Boolean(
+		currentTaskItem?.executionModelId &&
+		activeModelId &&
+		currentTaskItem.executionModelId !== activeModelId
+	)
 
 	const handleRefreshModels = useCallback(() => {
 		setIsRefreshingModels(true)
@@ -1099,11 +1106,32 @@ export const ModelSelector = ({
 			<StandardTooltip
 				content={
 					<div className="flex flex-col gap-0.5 text-xs text-left">
-						<div className="font-semibold text-vscode-foreground">{activeDisplayName}</div>
-						<div className="text-vscode-descriptionForeground font-mono text-[11px]">Model: {activeModelId}</div>
-						<div className="text-vscode-descriptionForeground text-[11px]">
-							Provider: {currentProviderLabel}
-						</div>
+						{isExecutionModelDifferent ? (
+							<>
+								<div className="font-semibold text-vscode-foreground">
+									Current execution: {currentTaskItem?.executionModelId}
+								</div>
+								<div className="text-vscode-descriptionForeground text-[11px]">
+									Selected (next): {activeDisplayName}
+								</div>
+								<div className="text-vscode-descriptionForeground text-[11px]">
+									Provider: {currentProviderLabel}
+								</div>
+								<div className="text-[10px] text-amber-500/90 mt-0.5">
+									Model change will apply after current execution stops.
+								</div>
+							</>
+						) : (
+							<>
+								<div className="font-semibold text-vscode-foreground">{activeDisplayName}</div>
+								<div className="text-vscode-descriptionForeground font-mono text-[11px]">
+									Model: {activeModelId}
+								</div>
+								<div className="text-vscode-descriptionForeground text-[11px]">
+									Provider: {currentProviderLabel}
+								</div>
+							</>
+						)}
 					</div>
 				}>
 				<PopoverTrigger
@@ -1176,6 +1204,12 @@ export const ModelSelector = ({
 								</span>
 							</div>
 						</div>
+
+						{isExecutionModelDifferent && (
+							<div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[11px] text-amber-500/90 leading-tight">
+								Active task is running on <span className="font-mono font-medium">{currentTaskItem?.executionModelId}</span>. Changes apply to the next execution turn or recovery.
+							</div>
+						)}
 
 						{/* Search Bar */}
 						<div className="relative flex items-center">

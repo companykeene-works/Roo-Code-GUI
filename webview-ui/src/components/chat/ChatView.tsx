@@ -162,6 +162,33 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [enableButtons, setEnableButtons] = useState<boolean>(false)
 	const [primaryButtonText, setPrimaryButtonText] = useState<string | undefined>(undefined)
 	const [secondaryButtonText, setSecondaryButtonText] = useState<string | undefined>(undefined)
+
+	const selectedModel = useSelectedModel(apiConfiguration)
+	const model = selectedModel.info
+
+	const isModelDiffDuringFailure = useMemo(() => {
+		if (clineAsk !== "api_req_failed") return false
+		const execModel = currentTaskItem?.executionModelId
+		if (!execModel) return false
+		const selectedId = selectedModel.id
+		return Boolean(selectedId && selectedId !== execModel)
+	}, [clineAsk, currentTaskItem?.executionModelId, selectedModel.id])
+
+	const effectivePrimaryButtonText = useMemo(() => {
+		if (clineAsk === "api_req_failed" && isModelDiffDuringFailure) {
+			const targetName = selectedModel.id
+			return `Switch to ${targetName} & Resume`
+		}
+		return primaryButtonText
+	}, [clineAsk, isModelDiffDuringFailure, selectedModel.id, primaryButtonText])
+
+	const effectiveSecondaryButtonText = useMemo(() => {
+		if (clineAsk === "api_req_failed" && isModelDiffDuringFailure) {
+			return `Retry with ${currentTaskItem?.executionModelId || "original model"}`
+		}
+		return secondaryButtonText
+	}, [clineAsk, isModelDiffDuringFailure, currentTaskItem?.executionModelId, secondaryButtonText])
+
 	const [_didClickCancel, setDidClickCancel] = useState(false)
 	const [isStopping, setIsStopping] = useState(false)
 	const [isResuming, setIsResuming] = useState(false)
@@ -1265,6 +1292,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						vscode.postMessage({
 							type: "askResponse",
 							askResponse: "yesButtonClicked",
+							switchModel: clineAsk === "api_req_failed" && isModelDiffDuringFailure ? true : undefined,
+							apiConfiguration:
+								clineAsk === "api_req_failed" && isModelDiffDuringFailure
+									? apiConfiguration
+									: undefined,
 							text: trimmedInput,
 							images: images,
 							taskId: currentTaskItem?.id,
@@ -1273,7 +1305,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						setInputValue("")
 						setSelectedImages([])
 					} else {
-						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked", taskId: currentTaskItem?.id })
+						vscode.postMessage({
+							type: "askResponse",
+							askResponse: "yesButtonClicked",
+							switchModel: clineAsk === "api_req_failed" && isModelDiffDuringFailure ? true : undefined,
+							apiConfiguration:
+								clineAsk === "api_req_failed" && isModelDiffDuringFailure
+									? apiConfiguration
+									: undefined,
+							taskId: currentTaskItem?.id,
+						})
 					}
 					break
 				case "resume_task":
@@ -1343,7 +1384,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setPrimaryButtonText(undefined)
 			setSecondaryButtonText(undefined)
 		},
-		[clineAsk, startNewTask, currentTaskItem?.parentTaskId, currentTaskItem?.id, primaryButtonText, t],
+		[clineAsk, startNewTask, currentTaskItem?.parentTaskId, currentTaskItem?.id, primaryButtonText, t, isModelDiffDuringFailure, apiConfiguration],
 	)
 
 	const handleSecondaryButtonClick = useCallback(
@@ -1360,6 +1401,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			switch (clineAsk) {
 				case "api_req_failed":
+					if (isModelDiffDuringFailure) {
+						vscode.postMessage({
+							type: "askResponse",
+							askResponse: "yesButtonClicked",
+							switchModel: false,
+							taskId: currentTaskItem?.id,
+						})
+					} else {
+						startNewTask()
+					}
+					break
 				case "mistake_limit_reached":
 					startNewTask()
 					break
@@ -1430,10 +1482,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
-		[clineAsk, startNewTask, isStreaming, setDidClickCancel, secondaryButtonText, t, currentTaskItem?.id, handleStopTask],
+		[clineAsk, startNewTask, isStreaming, setDidClickCancel, secondaryButtonText, t, currentTaskItem?.id, handleStopTask, isModelDiffDuringFailure],
 	)
-
-	const { info: model } = useSelectedModel(apiConfiguration)
 
 	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
 
@@ -2190,7 +2240,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				!isProfileDisabled &&
 				hasInput
 
-			if (enableButtons && primaryButtonText) {
+			if (enableButtons && (effectivePrimaryButtonText || primaryButtonText)) {
 				handlePrimaryButtonClick(inputValue, selectedImages)
 			} else if (canSend) {
 				handleSendMessage(inputValue, selectedImages)
@@ -2208,7 +2258,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		vscode.postMessage({ type: "condenseTaskContextRequest", text: taskId })
 	}
 
-	const areButtonsVisible = showScrollToBottom || primaryButtonText || secondaryButtonText
+	const areButtonsVisible =
+		showScrollToBottom ||
+		effectivePrimaryButtonText ||
+		effectiveSecondaryButtonText ||
+		primaryButtonText ||
+		secondaryButtonText
 
 	const isHydratingPersistedTask =
 		!task &&
@@ -2336,55 +2391,59 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									</>
 								) : (
 									<>
-										{primaryButtonText && (
+										{effectivePrimaryButtonText && (
 											<StandardTooltip
 												content={
-													primaryButtonText === t("chat:retry.title")
-														? t("chat:retry.tooltip")
-														: primaryButtonText === t("chat:save.title")
-															? t("chat:save.tooltip")
-															: primaryButtonText === t("chat:approve.title")
-																? t("chat:approve.tooltip")
-																: primaryButtonText === t("chat:runCommand.title")
-																	? t("chat:runCommand.tooltip")
-																	: primaryButtonText === t("chat:startNewTask.title")
-																		? t("chat:startNewTask.tooltip")
-																		: primaryButtonText ===
-																				  t("chat:proceedAnyways.title")
-																				? t("chat:proceedAnyways.tooltip")
-																				: primaryButtonText ===
-																					  t("chat:proceedWhileRunning.title")
-																					? t("chat:proceedWhileRunning.tooltip")
-																					: undefined
+													isModelDiffDuringFailure
+														? "Switch execution to the newly selected model and resume the task"
+														: effectivePrimaryButtonText === t("chat:retry.title")
+															? t("chat:retry.tooltip")
+															: effectivePrimaryButtonText === t("chat:save.title")
+																? t("chat:save.tooltip")
+																: effectivePrimaryButtonText === t("chat:approve.title")
+																	? t("chat:approve.tooltip")
+																	: effectivePrimaryButtonText === t("chat:runCommand.title")
+																		? t("chat:runCommand.tooltip")
+																		: effectivePrimaryButtonText === t("chat:startNewTask.title")
+																			? t("chat:startNewTask.tooltip")
+																			: effectivePrimaryButtonText ===
+																					  t("chat:proceedAnyways.title")
+																					? t("chat:proceedAnyways.tooltip")
+																					: effectivePrimaryButtonText ===
+																						  t("chat:proceedWhileRunning.title")
+																						? t("chat:proceedWhileRunning.tooltip")
+																						: undefined
 												}>
 												<Button
 													variant="primary"
 													disabled={!enableButtons}
-													className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
+													className={effectiveSecondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
 													onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
-													{primaryButtonText}
+													{effectivePrimaryButtonText}
 												</Button>
 											</StandardTooltip>
 										)}
-										{secondaryButtonText && (
+										{effectiveSecondaryButtonText && (
 											<StandardTooltip
 												content={
-													secondaryButtonText === t("chat:startNewTask.title")
-														? t("chat:startNewTask.tooltip")
-														: secondaryButtonText === t("chat:reject.title")
-															? t("chat:reject.tooltip")
-															: secondaryButtonText === t("chat:killCommand.title")
-																	? t("chat:killCommand.tooltip")
-																	: secondaryButtonText === t("chat:cancel.title")
-																		? t("chat:cancel.tooltip")
-																		: undefined
+													isModelDiffDuringFailure
+														? `Retry the request using the previous model (${currentTaskItem?.executionModelId})`
+														: effectiveSecondaryButtonText === t("chat:startNewTask.title")
+															? t("chat:startNewTask.tooltip")
+															: effectiveSecondaryButtonText === t("chat:reject.title")
+																? t("chat:reject.tooltip")
+																: effectiveSecondaryButtonText === t("chat:killCommand.title")
+																		? t("chat:killCommand.tooltip")
+																		: effectiveSecondaryButtonText === t("chat:cancel.title")
+																			? t("chat:cancel.tooltip")
+																			: undefined
 												}>
 												<Button
 													variant="secondary"
 													disabled={!enableButtons}
-													className={primaryButtonText ? "flex-1 ml-[6px]" : "w-full"}
+													className={effectivePrimaryButtonText ? "flex-1 ml-[6px]" : "w-full"}
 													onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
-													{secondaryButtonText}
+													{effectiveSecondaryButtonText}
 												</Button>
 											</StandardTooltip>
 										)}

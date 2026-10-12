@@ -12,6 +12,7 @@ import { Button } from "../ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { PROVIDERS } from "../settings/constants"
+import type { ProviderName } from "@roo-code/types"
 
 /**
  * Unified error display component for all error types in the chat.
@@ -96,8 +97,10 @@ export const ErrorRow = memo(
 		const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
 		const [showDetailsCopySuccess, setShowDetailsCopySuccess] = useState(false)
 		const { copyWithFeedback } = useCopyToClipboard()
-		const { version, apiConfiguration } = useExtensionState()
-		const { provider, id: modelId } = useSelectedModel(apiConfiguration)
+		const { version, apiConfiguration, currentTaskItem } = useExtensionState()
+		const selected = useSelectedModel(apiConfiguration)
+		const provider = (currentTaskItem?.executionProvider as ProviderName) || selected.provider
+		const modelId = currentTaskItem?.executionModelId || selected.id
 
 		const usesProxy = PROVIDERS.find((p) => p.value === provider)?.proxy ?? false
 
@@ -143,6 +146,14 @@ export const ErrorRow = memo(
 		// Default titles for different error types
 		const getDefaultTitle = () => {
 			if (title) return title
+
+			if (type === "api_failure" || type === "streaming_failed" || type === "error") {
+				const fullText = `${message || ""} ${errorDetails || ""}`
+				if (/\b(?:capacity|overloaded|out of capacity|server is overloaded)\b/i.test(fullText)) {
+					const modelName = modelId || "Model"
+					return `${modelName} is temporarily at capacity`
+				}
+			}
 
 			switch (type) {
 				case "error":

@@ -79,4 +79,16 @@ describe("ErrorRow diagnostics download", () => {
 		// Timestamp is generated at runtime, but should be a string
 		expect(typeof payload.values.timestamp).toBe("string")
 	})
+
+	it("displays actionable capacity message when model is at capacity", () => {
+		render(
+			<ErrorRow
+				type="api_failure"
+				message="This model is temporarily at capacity. Please try again shortly or use a different model."
+				errorDetails="HTTP 503 Out of capacity"
+			/>,
+		)
+
+		expect(screen.getByText("test-model is temporarily at capacity")).toBeInTheDocument()
+	})
 })
