@@ -167,6 +167,7 @@ import { mergeConsecutiveApiMessages } from "./mergeConsecutiveApiMessages"
 import { classifyApiError } from "../../api/providers/utils/error-classifier"
 import { StreamAuditTracker, type StreamPhase } from "./StreamAudit"
 import { buildTaskContract } from "./TaskContract"
+import { resolveTaskExecutionConfig } from "../config/resolveTaskExecutionConfig"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -349,6 +350,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	public readonly taskStartModel?: string
 	public readonly taskStartProvider?: string
 	public readonly taskStartEffort?: string
+	public executionEpoch: number = 1
+	public executionModelId?: string
+	public executionProvider?: string
+	public executionReasoningEffort?: string
+	public isProviderErrorHalted: boolean = false
+	private apiRequestCount: number = 0
 	static get lastGlobalApiRequestTime(): number | undefined {
 		return ProviderRequestCoordinator.getInstance().getLastRequestTime()
 	}
@@ -723,6 +730,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.taskStartModel = getModelId(this.apiConfiguration)
 		this.taskStartProvider = this.apiConfiguration.apiProvider
 		this.taskStartEffort = (this.apiConfiguration as any).reasoningEffort
+		this.executionEpoch = historyItem?.executionEpoch ?? 1
+		this.executionModelId = historyItem?.executionModelId || this.taskStartModel
+		this.executionProvider = historyItem?.executionProvider || this.taskStartProvider
+		this.executionReasoningEffort = historyItem?.executionReasoningEffort ?? this.taskStartEffort
 		this.api = buildApiHandler(this.apiConfiguration)
 		this.autoApprovalHandler = new AutoApprovalHandler()
 
@@ -738,10 +749,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.initialStatus = initialStatus ?? historyItem?.status
 		this.historyItem = historyItem
 		if (this.historyItem) {
-			this.historyItem.executionModelId = this.historyItem.executionModelId || this.taskStartModel
-			this.historyItem.executionProvider = this.historyItem.executionProvider || this.taskStartProvider
+			this.historyItem.executionEpoch = this.executionEpoch
+			this.historyItem.executionModelId = this.executionModelId
+			this.historyItem.executionProvider = this.executionProvider
 			if (this.historyItem.executionReasoningEffort === undefined) {
-				this.historyItem.executionReasoningEffort = this.taskStartEffort
+				this.historyItem.executionReasoningEffort = this.executionReasoningEffort
 			}
 			this.historyItem.chatModelId = this.historyItem.chatModelId || this.taskStartModel
 			this.historyItem.chatProvider = this.historyItem.chatProvider || this.taskStartProvider
@@ -1547,9 +1559,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				chatModelId: this.historyItem?.chatModelId || getModelId(this.apiConfiguration),
 				chatProvider: this.historyItem?.chatProvider || this.apiConfiguration?.apiProvider,
 				chatReasoningEffort: this.historyItem?.chatReasoningEffort ?? (this.apiConfiguration as any)?.reasoningEffort,
-				executionModelId: this.taskStartModel || this.historyItem?.executionModelId || getModelId(this.apiConfiguration),
-				executionProvider: this.taskStartProvider || this.historyItem?.executionProvider || this.apiConfiguration?.apiProvider,
-				executionReasoningEffort: this.taskStartEffort !== undefined ? this.taskStartEffort : this.historyItem?.executionReasoningEffort,
+				executionEpoch: this.executionEpoch,
+				executionModelId: this.executionModelId || this.taskStartModel || this.historyItem?.executionModelId || getModelId(this.apiConfiguration),
+				executionProvider: this.executionProvider || this.taskStartProvider || this.historyItem?.executionProvider || this.apiConfiguration?.apiProvider,
+				executionReasoningEffort: this.executionReasoningEffort !== undefined ? this.executionReasoningEffort : (this.taskStartEffort !== undefined ? this.taskStartEffort : this.historyItem?.executionReasoningEffort),
 			})
 
 			if (isBlockedState) {
@@ -2160,6 +2173,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		this.clearStreamWatchdog()
+
+		if (type === "api_req_failed") {
+			this.isProviderErrorHalted = true
+		}
 
 		let askTs: number
 
@@ -2793,61 +2810,67 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			}
 		}
 
-		// Wait for askResponse to be set
-		await pWaitFor(
-			() => {
-				if (this.abort) {
-					throw new Error(`[RooCode#ask] task ${this.taskId}.${this.instanceId} aborted`)
-				}
-				if (this.askResponse !== undefined || this.lastMessageTs !== askTs) {
-					return true
-				}
-
-				// If a queued message arrives while we're blocked on resume_completed_task,
-				// consume it immediately to start the next conversational turn.
-				if (shouldDrainQueuedMessageForAsk && !this.messageQueueService.isEmpty()) {
-					const message = this.messageQueueService.dequeueMessage()
-					if (message) {
-						this.handleWebviewAskResponse("messageResponse", message.text, message.images, message.webSearchMode)
+		try {
+			// Wait for askResponse to be set
+			await pWaitFor(
+				() => {
+					if (this.abort) {
+						throw new Error(`[RooCode#ask] task ${this.taskId}.${this.instanceId} aborted`)
 					}
-				}
+					if (this.askResponse !== undefined || this.lastMessageTs !== askTs) {
+						return true
+					}
 
-				return false
-			},
-			{ interval: 100 },
-		)
+					// If a queued message arrives while we're blocked on resume_completed_task,
+					// consume it immediately to start the next conversational turn.
+					if (shouldDrainQueuedMessageForAsk && !this.messageQueueService.isEmpty()) {
+						const message = this.messageQueueService.dequeueMessage()
+						if (message) {
+							this.handleWebviewAskResponse("messageResponse", message.text, message.images, message.webSearchMode)
+						}
+					}
 
-		if (this.lastMessageTs !== askTs) {
-			// Could happen if we send multiple asks in a row i.e. with
-			// command_output. It's important that when we know an ask could
-			// fail, it is handled gracefully.
-			throw new AskIgnoredError("superseded")
+					return false
+				},
+				{ interval: 100 },
+			)
+
+			if (this.lastMessageTs !== askTs) {
+				// Could happen if we send multiple asks in a row i.e. with
+				// command_output. It's important that when we know an ask could
+				// fail, it is handled gracefully.
+				throw new AskIgnoredError("superseded")
+			}
+
+			const result = {
+				response: this.askResponse!,
+				text: this.askResponseText,
+				images: this.askResponseImages,
+				webSearchMode: this.askResponseWebSearchMode,
+			}
+			this.askResponse = undefined
+			this.askResponseText = undefined
+			this.askResponseImages = undefined
+			this.askResponseWebSearchMode = undefined
+
+			// Cancel the timeouts if they are still running.
+			timeouts.forEach((timeout) => clearTimeout(timeout))
+
+			// Switch back to an active state.
+			if (this.idleAsk || this.resumableAsk || this.interactiveAsk) {
+				this.idleAsk = undefined
+				this.resumableAsk = undefined
+				this.interactiveAsk = undefined
+				this.emit(RooCodeEventName.TaskActive, this.taskId)
+			}
+
+			this.emit(RooCodeEventName.TaskAskResponded)
+			return result
+		} finally {
+			if (type === "api_req_failed") {
+				this.isProviderErrorHalted = false
+			}
 		}
-
-		const result = {
-			response: this.askResponse!,
-			text: this.askResponseText,
-			images: this.askResponseImages,
-			webSearchMode: this.askResponseWebSearchMode,
-		}
-		this.askResponse = undefined
-		this.askResponseText = undefined
-		this.askResponseImages = undefined
-		this.askResponseWebSearchMode = undefined
-
-		// Cancel the timeouts if they are still running.
-		timeouts.forEach((timeout) => clearTimeout(timeout))
-
-		// Switch back to an active state.
-		if (this.idleAsk || this.resumableAsk || this.interactiveAsk) {
-			this.idleAsk = undefined
-			this.resumableAsk = undefined
-			this.interactiveAsk = undefined
-			this.emit(RooCodeEventName.TaskActive, this.taskId)
-		}
-
-		this.emit(RooCodeEventName.TaskAskResponded)
-		return result
 	}
 
 	/**
@@ -2877,6 +2900,119 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			}
 			this.handleWebviewAskResponse(askResponse, text, images, webSearchMode)
 		}
+	}
+
+	/**
+	 * Returns true if the task is currently halted specifically due to a provider failure.
+	 */
+	public isHaltedOnProviderError(): boolean {
+		if (this.isProviderErrorHalted) {
+			return true
+		}
+		const lastMessage = this.clineMessages.at(-1)
+		return Boolean(
+			lastMessage &&
+				lastMessage.type === "ask" &&
+				lastMessage.ask === "api_req_failed" &&
+				!this.isStreaming &&
+				!this.isWaitingForFirstChunk &&
+				!this.isTaskCompleted &&
+				!this.abort,
+		)
+	}
+
+	/**
+	 * Guard condition: an execution model switch is ONLY permitted when:
+	 * - Task exists and is not aborted/abandoned/completed
+	 * - No active request, no streaming, no first-chunk wait
+	 * - No tool currently executing
+	 * - Task is halted specifically because provider execution failed
+	 */
+	public canSwitchExecutionModel(): boolean {
+		if (this.abort || this.abandoned || this.isTaskCompleted) {
+			return false
+		}
+		if (this.isStreaming || this.isWaitingForFirstChunk) {
+			return false
+		}
+		if (this.currentRequestAbortController !== undefined) {
+			return false
+		}
+		return this.isHaltedOnProviderError()
+	}
+
+	/**
+	 * Switches the execution model after a provider failure halt and resumes the task in a new execution epoch.
+	 *
+	 * Preserves: taskId, conversation history, tool results, todoList, workspace, clineMessages.
+	 * Updates: executionEpoch++, executionModelId, executionProvider, executionReasoningEffort, apiConfiguration, api.
+	 * Resets: consecutiveIdenticalFailures, lastFailedRequestFingerprint (circuit breaker for the new model).
+	 */
+	public async switchExecutionModelAndResume(
+		newSettings: ProviderSettings,
+		askResponse: ClineAskResponse = "yesButtonClicked",
+		text?: string,
+		images?: string[],
+		webSearchMode?: WebSearchMode,
+	): Promise<void> {
+		if (!this.canSwitchExecutionModel()) {
+			throw new Error(
+				"Cannot switch execution model: task is not in a halted provider error state or is actively executing.",
+			)
+		}
+
+		// 1. Resolve and validate target execution config using canonical resolution & reasoning effort normalization
+		const resolvedConfig = resolveTaskExecutionConfig({
+			baseProviderSettings: newSettings,
+			chatMetadata: {
+				executionModelId: getModelId(newSettings),
+				executionProvider: newSettings.apiProvider,
+				executionReasoningEffort: (newSettings as any).reasoningEffort,
+			},
+			isNewChat: false,
+		})
+
+		const newModelId = getModelId(resolvedConfig)
+		const newProvider = resolvedConfig.apiProvider
+
+		if (!newModelId) {
+			throw new Error("Invalid model configuration: target model ID is missing.")
+		}
+
+		// 2. Pre-validate API handler creation before mutating any state (Phase 41).
+		const newApiHandler = buildApiHandler(resolvedConfig)
+
+		// 3. Atomically transition to new execution epoch
+		this.executionEpoch += 1
+		this.executionModelId = newModelId
+		this.executionProvider = newProvider
+		this.executionReasoningEffort = (resolvedConfig as any).reasoningEffort
+		this.apiConfiguration = resolvedConfig
+		this.api = newApiHandler
+
+		// 4. Reset circuit breaker & failure counters for the new epoch
+		this.consecutiveIdenticalFailures = 0
+		this.lastFailedRequestFingerprint = undefined
+
+		// 5. Update historyItem metadata if present
+		if (this.historyItem) {
+			this.historyItem.executionEpoch = this.executionEpoch
+			this.historyItem.executionModelId = this.executionModelId
+			this.historyItem.executionProvider = this.executionProvider
+			this.historyItem.executionReasoningEffort = this.executionReasoningEffort
+			this.historyItem.chatModelId = this.executionModelId
+			this.historyItem.chatProvider = this.executionProvider
+			this.historyItem.chatReasoningEffort = this.executionReasoningEffort
+		}
+
+		await this.saveClineMessages()
+
+		console.log(
+			`[Task#switchExecutionModelAndResume] Task ${this.taskId} transitioned to executionEpoch ${this.executionEpoch} with model ${this.executionModelId} (${this.executionProvider})`,
+		)
+
+		// 6. Resume execution
+		await this.resumeWithResponse(askResponse, text, images, webSearchMode)
 	}
 
 	public clearTaskBlockerStateOnResume(userText?: string): void {
@@ -5180,11 +5316,12 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 				modelId,
 			)
 
-			// Invariant verification: ensure worker model has not drifted from taskStartModel
+			// Invariant verification: ensure worker model has not drifted from expected execution model
+			const expectedExecutionModel = this.executionModelId || this.taskStartModel
 			const currentHandlerModel = this.api.getModel().id
-			if (this.taskStartModel && currentHandlerModel !== this.taskStartModel) {
+			if (expectedExecutionModel && currentHandlerModel !== expectedExecutionModel) {
 				console.warn(
-					`[TaskModelAudit#${this.taskId}] Model drift detected! Initial: ${this.taskStartModel}, Current: ${currentHandlerModel}. Active tasks must preserve their initial model.`,
+					`[TaskModelAudit#${this.taskId}] Model drift detected! Expected: ${expectedExecutionModel}, Current: ${currentHandlerModel}. Active tasks must preserve their execution model.`,
 				)
 			}
 
@@ -7365,10 +7502,11 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		}
 
 		const currentFingerprint = this.calculateRequestFingerprint(
-			this.api.getModel().id,
+			this.executionModelId || this.api.getModel().id,
 			systemPrompt,
 			cleanConversationHistory,
 			allTools,
+			this.executionEpoch,
 		)
 
 		const providerDeref = this.providerRef.deref()
@@ -7392,8 +7530,9 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		}
 
 		try {
+			this.apiRequestCount += 1
 			console.log(
-				`[RequestAudit] taskId=${this.taskId} provider=${this.apiConfiguration?.apiProvider} model=${getModelId(this.apiConfiguration)} effort=${(this.apiConfiguration as any)?.reasoningEffort} executionSnapshotModel=${this.taskStartModel}`,
+				`[RequestAudit] taskId=${this.taskId} executionEpoch=${this.executionEpoch} requestId=${this.apiRequestCount} provider=${this.executionProvider || this.apiConfiguration?.apiProvider} model=${this.executionModelId || getModelId(this.apiConfiguration)} profile=${this._taskApiConfigName || "default"} effort=${this.executionReasoningEffort ?? (this.apiConfiguration as any)?.reasoningEffort} executionSnapshotModel=${this.executionModelId || this.taskStartModel}`,
 			)
 			// The provider accepts reasoning items alongside standard messages; cast to the expected parameter type.
 			const stream = this.api.createMessage(
@@ -7570,8 +7709,11 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		systemPrompt: string,
 		messages: unknown[],
 		tools: unknown[],
+		epoch: number = this.executionEpoch,
 	): string {
 		const hash = crypto.createHash("sha256")
+		hash.update(String(epoch))
+		hash.update("::")
 		hash.update(modelId || "")
 		hash.update("::")
 		hash.update(systemPrompt || "")

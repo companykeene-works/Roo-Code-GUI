@@ -699,14 +699,36 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					provider.getCurrentTask()
 				if (targetTask) {
 					console.log(
-						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, started=${targetTask.isStarted}`,
+						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, switchModel=${Boolean(message.switchModel)}, started=${targetTask.isStarted}`,
 					)
-					await targetTask.resumeWithResponse(
-						message.askResponse!,
-						resolved.text,
-						resolved.images,
-						message.webSearchMode,
-					)
+					if (message.switchModel) {
+						try {
+							const { apiConfiguration: globalApiConfig } = await provider.getState()
+							const targetSettings = message.apiConfiguration || globalApiConfig
+							await targetTask.switchExecutionModelAndResume(
+								targetSettings,
+								message.askResponse!,
+								resolved.text,
+								resolved.images,
+								message.webSearchMode,
+							)
+						} catch (error) {
+							const errorMsg = error instanceof Error ? error.message : String(error)
+							console.error(
+								`[askResponse] Failed to switch execution model for task ${targetTask.taskId}:`,
+								error,
+							)
+							vscode.window.showErrorMessage(`Failed to switch execution model: ${errorMsg}`)
+							await provider.postStateToWebview()
+						}
+					} else {
+						await targetTask.resumeWithResponse(
+							message.askResponse!,
+							resolved.text,
+							resolved.images,
+							message.webSearchMode,
+						)
+					}
 				}
 			}
 			break

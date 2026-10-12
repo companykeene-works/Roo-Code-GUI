@@ -58,6 +58,7 @@ export const historyItemSchema = z.object({
 	executionModelId: z.string().optional(),
 	executionProvider: z.string().optional(),
 	executionReasoningEffort: z.string().optional(),
+	executionEpoch: z.number().optional(),
 	promptQueue: z.array(queuedMessageSchema).optional(),
 	delegatedToId: z.string().optional(), // Last child this parent delegated to
 	childIds: z.array(z.string()).optional(), // All children spawned by this task

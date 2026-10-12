@@ -584,6 +584,7 @@ export interface WebviewMessage {
 	context?: string
 	dataUri?: string
 	askResponse?: ClineAskResponse
+	switchModel?: boolean
 	apiConfiguration?: ProviderSettings
 	images?: string[]
 	bool?: boolean

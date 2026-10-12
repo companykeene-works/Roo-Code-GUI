@@ -2416,7 +2416,7 @@ export class ClineProvider
 			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
 			currentTaskId: currentTask?.taskId ?? null,
-			currentTaskItem: currentTask?.taskId ? (this.taskHistoryStore.get(currentTask.taskId) ?? null) : null,
+			currentTaskItem: currentTask?.taskId ? (currentTask.historyItem ?? this.taskHistoryStore.get(currentTask.taskId) ?? null) : null,
 			clineMessages: currentTask?.clineMessages || [],
 			currentTaskTodos: currentTask?.todoList || [],
 			messageQueue: currentTask?.messageQueueService?.messages,

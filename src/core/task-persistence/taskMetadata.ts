@@ -41,6 +41,8 @@ export type TaskMetadataOptions = {
 	executionProvider?: string
 	/** Task execution snapshot reasoning effort */
 	executionReasoningEffort?: string
+	/** Task execution epoch/generation */
+	executionEpoch?: number
 	/** Child task ID currently being awaited by this task */
 	awaitingChildId?: string
 	/** Child task ID this task was delegated to */
@@ -71,6 +73,7 @@ export async function taskMetadata({
 	executionModelId,
 	executionProvider,
 	executionReasoningEffort,
+	executionEpoch,
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, id)
 
@@ -229,6 +232,7 @@ export async function taskMetadata({
 		...(executionModelId ? { executionModelId } : {}),
 		...(executionProvider ? { executionProvider } : {}),
 		...(executionReasoningEffort !== undefined ? { executionReasoningEffort } : {}),
+		...(executionEpoch !== undefined ? { executionEpoch } : {}),
 		...(typeof apiConfigName === "string" && apiConfigName.length > 0 ? { apiConfigName } : {}),
 		...(resolvedStatus && { status: resolvedStatus }),
 		...(isBlocked ? { isBlockedOutcome: true } : {}),
