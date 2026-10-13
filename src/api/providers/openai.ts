@@ -301,10 +301,26 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						}
 					}
 
-					if ("reasoning_content" in delta && delta.reasoning_content) {
+					let reasoningText: string | undefined
+					if ("reasoning_content" in delta && typeof delta.reasoning_content === "string" && delta.reasoning_content.length > 0) {
+						reasoningText = delta.reasoning_content
+					} else if ("reasoning" in delta && typeof (delta as any).reasoning === "string" && (delta as any).reasoning.length > 0) {
+						reasoningText = (delta as any).reasoning
+					} else if ("thinking" in delta && typeof (delta as any).thinking === "string" && (delta as any).thinking.length > 0) {
+						reasoningText = (delta as any).thinking
+					} else if (Array.isArray((delta as any).reasoning_details)) {
+						const details = (delta as any).reasoning_details
+						for (const d of details) {
+							if ((d.type === "reasoning.text" || d.type === "reasoning.summary") && typeof d.text === "string" && d.text.length > 0) {
+								reasoningText = (reasoningText || "") + d.text
+							}
+						}
+					}
+
+					if (reasoningText !== undefined && reasoningText.length > 0) {
 						yield {
 							type: "reasoning",
-							text: (delta.reasoning_content as string | undefined) || "",
+							text: reasoningText,
 						}
 						chunkProducedActivity = true
 					}

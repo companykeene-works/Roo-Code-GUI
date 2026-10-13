@@ -152,10 +152,10 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			}
 
 			if (delta) {
-				for (const key of ["reasoning_content", "reasoning"] as const) {
+				for (const key of ["reasoning_content", "reasoning", "thinking"] as const) {
 					if (key in delta) {
 						const reasoning_content = ((delta as any)[key] as string | undefined) || ""
-						if (reasoning_content?.trim()) {
+						if (typeof reasoning_content === "string" && reasoning_content.length > 0) {
 							yield { type: "reasoning", text: reasoning_content }
 						}
 						break

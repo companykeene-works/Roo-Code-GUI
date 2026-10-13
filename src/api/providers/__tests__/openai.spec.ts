@@ -1624,5 +1624,86 @@ describe("getOpenAiModels", () => {
 			expect(output).toContain('data: {"choices":[{"index":0,"delta":{}}]}')
 			expect(output).toContain('data: {"choices":[{"delta":{"content":"test"}}]}')
 		})
+
+		it("should extract reasoning from delta.reasoning as type reasoning instead of heartbeat", async () => {
+			mockCreate.mockImplementationOnce(() => ({
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "chatcmpl-1",
+						choices: [{ delta: { reasoning: "Analyzing the problem..." } as any, index: 0 }],
+					}
+				},
+			}))
+
+			const handler = new OpenAiHandler({
+				openAiApiKey: "test-key",
+				openAiBaseUrl: "https://api.xkiro.com/v1",
+				openAiModelId: "openai/gpt-6.1-sol",
+			})
+
+			const stream = handler.createMessage("system", [{ role: "user", content: "hi" }])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(chunks).toContainEqual({
+				type: "reasoning",
+				text: "Analyzing the problem...",
+			})
+			expect(chunks).not.toContainEqual({ type: "heartbeat" })
+		})
+
+		it("should extract reasoning from delta.thinking as type reasoning instead of heartbeat", async () => {
+			mockCreate.mockImplementationOnce(() => ({
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "chatcmpl-2",
+						choices: [{ delta: { thinking: "Deep thought..." } as any, index: 0 }],
+					}
+				},
+			}))
+
+			const handler = new OpenAiHandler({
+				openAiApiKey: "test-key",
+				openAiModelId: "custom-model",
+			})
+
+			const stream = handler.createMessage("system", [{ role: "user", content: "hi" }])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(chunks).toContainEqual({
+				type: "reasoning",
+				text: "Deep thought...",
+			})
+		})
+
+		it("should emit heartbeat for truly empty choices delta", async () => {
+			mockCreate.mockImplementationOnce(() => ({
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "chatcmpl-3",
+						choices: [{ delta: {}, index: 0 }],
+					}
+				},
+			}))
+
+			const handler = new OpenAiHandler({
+				openAiApiKey: "test-key",
+				openAiModelId: "custom-model",
+			})
+
+			const stream = handler.createMessage("system", [{ role: "user", content: "hi" }])
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(chunks).toContainEqual({ type: "heartbeat" })
+			expect(chunks.filter((c) => c.type === "reasoning")).toHaveLength(0)
+		})
 	})
 })

@@ -439,9 +439,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 				// Handle top-level reasoning field for UI display.
 				// Skip if we've already yielded from reasoning_details to avoid duplicate display.
-				if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
-					if (!hasYieldedReasoningFromDetails) {
+				if (!hasYieldedReasoningFromDetails) {
+					if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
 						yield { type: "reasoning", text: delta.reasoning }
+					} else if ("reasoning_content" in delta && (delta as any).reasoning_content && typeof (delta as any).reasoning_content === "string") {
+						yield { type: "reasoning", text: (delta as any).reasoning_content }
 					}
 				}
 
