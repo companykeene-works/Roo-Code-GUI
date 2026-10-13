@@ -181,6 +181,8 @@
 		"responseInterruptedByUser": "Odpowiedź przerwana przez użytkownika",
 		"responseInterruptedByApiError": "Odpowiedź przerwana przez błąd API",
 		"streamTerminatedByProvider": "Dostawca zakończył żądanie",
+		"streamStoppedNoProgress": "Roo zatrzymało żądanie: połączenie aktywne (odebrano heartbeat), ale brak treści",
+		"streamStoppedTimeout": "Roo zatrzymało żądanie z powodu limitu czasu strumienia",
 		"connectionStalledRetrying": "Połączenie zostało chwilowo zawieszone — ponawianie próby automatycznie..."
 	},
 	"storage": {

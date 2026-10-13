@@ -181,6 +181,8 @@
 		"responseInterruptedByUser": "Response interrupted by user",
 		"responseInterruptedByApiError": "Response interrupted by API error",
 		"streamTerminatedByProvider": "Provider ended the request",
+		"streamStoppedNoProgress": "Roo stopped the request: received heartbeat/keep-alive frames but no content",
+		"streamStoppedTimeout": "Roo stopped the request due to stream timeout",
 		"connectionStalledRetrying": "Connection temporarily stalled — retrying automatically..."
 	},
 	"storage": {

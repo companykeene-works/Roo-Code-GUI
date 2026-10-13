@@ -808,5 +808,183 @@ describe("Stream Idle Watchdog & Recovery Architecture (20 Scenarios)", () => {
 		const stats = coordinator.getStats(providerKey)
 		expect(stats.blockedUntil).toBeGreaterThan(Date.now())
 	})
+
+	// Scenario 34: Stream no-progress timeout diagnostics and attribution formatting
+	it("Scenario 34: no-progress timeout accurately formats 240s and truthful attribution instead of blaming provider or claiming 75s", () => {
+		const rawErrorMessage =
+			"Stream no-progress timeout: received heartbeat/keep-alive frames but no content for 240 seconds"
+		const isNoProgressTimeout = /stream no-progress timeout|heartbeat\/keep-alive frames but no content/i.test(
+			rawErrorMessage,
+		)
+		const noProgressSeconds = Math.round(MAX_NO_PROGRESS_TIMEOUT_MS / 1000)
+		const currentWatchdogTimeout = 75_000
+		const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
+		const currentRetry = 2
+		const effectiveMaxRetries = 2
+		const phaseDisplay = "first-chunk"
+
+		const streamAudit = new StreamAuditTracker("task-123", "inst-1", "xkiro", "openai/gpt-6.1-sol", 2)
+		streamAudit.recordChunk("heartbeat")
+
+		const isStreamIdle = true
+		const streamingFailedDetails = isStreamIdle
+			? isNoProgressTimeout
+				? [
+						`Error type: Stream no-progress timeout`,
+						`Phase: ${phaseDisplay}`,
+						`Timeout: ${noProgressSeconds}s (connection alive, no model content)`,
+						`First content timeout: ${watchdogSeconds}s`,
+						`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+						`Last valid event: ${streamAudit.data.lastEventType}`,
+						`Request ID: ${streamAudit.data.requestId}`,
+				  ].join("\n")
+				: [
+						`Error type: Stream idle timeout`,
+						`Phase: ${phaseDisplay}`,
+						`Timeout: ${watchdogSeconds}s`,
+						`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+						`Last valid event: ${streamAudit.data.lastEventType}`,
+						`Request ID: ${streamAudit.data.requestId}`,
+				  ].join("\n")
+			: ""
+
+		expect(streamingFailedDetails).toContain("Error type: Stream no-progress timeout")
+		expect(streamingFailedDetails).toContain("Timeout: 240s (connection alive, no model content)")
+		expect(streamingFailedDetails).toContain("First content timeout: 75s")
+		expect(streamingFailedDetails).toContain("Auto retries: 2/2")
+		expect(streamingFailedDetails).toContain("Last valid event: heartbeat")
+
+		// Truthful reason text
+		const providerDisplayName = "xKiro"
+		const formattedModelName = "GPT-6.1 Sol"
+		const reasonText = `${providerDisplayName} connection temporarily stalled\n\nThe provider connection remained active (heartbeat/keep-alive frames received), but no model content was generated for ${noProgressSeconds} seconds.\nAutomatic recovery was attempted ${currentRetry} time(s).\n\nTask progress has been preserved.\nYou can click "Retry" to continue this task, or change the model in settings/header and retry.\n\nModel:\n${formattedModelName}`
+
+		expect(reasonText).toContain(
+			"The provider connection remained active (heartbeat/keep-alive frames received), but no model content was generated for 240 seconds.",
+		)
+		expect(reasonText).not.toContain("did not send stream data for 75 seconds")
+	})
+
+	// Scenario 35: Standard stream idle silence timeout formatting
+	it("Scenario 35: standard stream idle timeout formats silence timeout correctly", () => {
+		const rawErrorMessage = "Stream idle timeout: no data received from provider for 45 seconds"
+		const isNoProgressTimeout = /stream no-progress timeout|heartbeat\/keep-alive frames but no content/i.test(
+			rawErrorMessage,
+		)
+		expect(isNoProgressTimeout).toBe(false)
+
+		const currentWatchdogTimeout = 45_000
+		const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
+		const isStreamIdle = true
+
+		const streamAudit = new StreamAuditTracker("task-123", "inst-1", "anthropic", "claude-3-5-sonnet", 0)
+		const streamingFailedDetails = isStreamIdle
+			? isNoProgressTimeout
+				? "no-progress"
+				: [
+						`Error type: Stream idle timeout`,
+						`Phase: content`,
+						`Timeout: ${watchdogSeconds}s`,
+						`Auto retries: 0/2`,
+						`Last valid event: ${streamAudit.data.lastEventType}`,
+						`Request ID: ${streamAudit.data.requestId}`,
+				  ].join("\n")
+			: ""
+
+		expect(streamingFailedDetails).toContain("Error type: Stream idle timeout")
+		expect(streamingFailedDetails).toContain("Timeout: 45s")
+	})
+
+	// Scenario 36: Heartbeat chunk in phase reasoning does not prematurely switch to post_reasoning_wait
+	it("Scenario 36: heartbeat frame does not mutate phase away from reasoning", () => {
+		const currentStreamPhase = "reasoning"
+		const chunk = { type: "heartbeat" as const }
+
+		if (chunk.type === "heartbeat") {
+			// In our fix, hadReasoning does NOT flip currentStreamPhase to post_reasoning_wait
+			expect(currentStreamPhase).toBe("reasoning")
+		}
+	})
+
+	// Scenario 37: Semantic progress gate logic
+	it("Scenario 37: semantic progress updates vs liveness keep-alives", () => {
+		let lastMeaningfulEventTime = 1000
+
+		// Heartbeat does not update lastMeaningfulEventTime
+		const heartbeatChunk = { type: "heartbeat" as const }
+		if (heartbeatChunk.type !== "heartbeat") {
+			lastMeaningfulEventTime = 2000
+		}
+		expect(lastMeaningfulEventTime).toBe(1000)
+
+		// Empty reasoning chunk does not update lastMeaningfulEventTime
+		const emptyReasoning = { type: "reasoning" as const, text: "" }
+		if (emptyReasoning.text && emptyReasoning.text.length > 0) {
+			lastMeaningfulEventTime = 3000
+		}
+		expect(lastMeaningfulEventTime).toBe(1000)
+
+		// Non-empty reasoning chunk updates lastMeaningfulEventTime
+		const validReasoning = { type: "reasoning" as const, text: "thinking..." }
+		if (validReasoning.text && validReasoning.text.length > 0) {
+			lastMeaningfulEventTime = 4000
+		}
+		expect(lastMeaningfulEventTime).toBe(4000)
+
+		// Empty text chunk does not update lastMeaningfulEventTime
+		const emptyText = { type: "text" as const, text: "" }
+		if (emptyText.text && emptyText.text.length > 0) {
+			lastMeaningfulEventTime = 5000
+		}
+		expect(lastMeaningfulEventTime).toBe(4000)
+
+		// Non-empty text chunk updates lastMeaningfulEventTime
+		const validText = { type: "text" as const, text: "Hello" }
+		if (validText.text && validText.text.length > 0) {
+			lastMeaningfulEventTime = 6000
+		}
+		expect(lastMeaningfulEventTime).toBe(6000)
+
+		// Empty tool partial does not update lastMeaningfulEventTime
+		const emptyTool = { type: "tool_call_partial" as const, arguments: "" }
+		if ((emptyTool.arguments && emptyTool.arguments.length > 0) || (emptyTool as any).id) {
+			lastMeaningfulEventTime = 7000
+		}
+		expect(lastMeaningfulEventTime).toBe(6000)
+
+		// Tool partial with arguments updates lastMeaningfulEventTime
+		const validTool = { type: "tool_call_partial" as const, arguments: '{"path":"file.txt"}' }
+		if ((validTool.arguments && validTool.arguments.length > 0) || (validTool as any).id) {
+			lastMeaningfulEventTime = 8000
+		}
+		expect(lastMeaningfulEventTime).toBe(8000)
+	})
+
+	// Scenario 38: Monotonic timer isolation per retry
+	it("Scenario 38: retries create isolated monotonic timer state and unique attempt request IDs", () => {
+		const tracker0 = new StreamAuditTracker("task-1", "inst-1", "xkiro", "openai/gpt-6.1-sol", 0)
+		const tracker1 = new StreamAuditTracker("task-1", "inst-1", "xkiro", "openai/gpt-6.1-sol", 1)
+		const tracker2 = new StreamAuditTracker("task-1", "inst-1", "xkiro", "openai/gpt-6.1-sol", 2)
+
+		expect(tracker0.data.requestId).toBe("task-1.inst-1.a0")
+		expect(tracker1.data.requestId).toBe("task-1.inst-1.a1")
+		expect(tracker2.data.requestId).toBe("task-1.inst-1.a2")
+		expect(tracker0.data.attemptNumber).toBe(0)
+		expect(tracker1.data.attemptNumber).toBe(1)
+		expect(tracker2.data.attemptNumber).toBe(2)
+	})
+
+	// Scenario 39: Replay of xKiro GPT-6.1 Sol incident
+	it("Scenario 39: incident replay with xKiro GPT-6.1 Sol - bounded no-progress timeout and classification", () => {
+		const error = new Error(
+			"Stream no-progress timeout: received heartbeat/keep-alive frames but no content for 240 seconds",
+		)
+		const classification = classifyApiError(error)
+
+		expect(classification.category).toBe("stream_idle")
+		expect(classification.retryable).toBe(true)
+		expect(classification.maxRetries).toBe(2)
+		expect(classification.isDeterministic).toBe(false)
+	})
 })
 

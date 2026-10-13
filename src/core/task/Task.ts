@@ -5758,9 +5758,6 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 								// Transport activity without assistant content (SSE comment, keepalive ping, role-only frame).
 								// Watchdog was reset by chunk arrival, but no message content is created.
 								streamAudit.recordChunk("heartbeat")
-								if (hadReasoning) {
-									currentStreamPhase = "post_reasoning_wait"
-								}
 								if (
 									currentStreamPhase === "waiting_first_chunk" ||
 									currentStreamPhase === "reasoning" ||
@@ -5776,8 +5773,10 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 								hadReasoning = true
 								currentStreamPhase = "reasoning"
 								currentIdleTimeout = REASONING_STREAM_IDLE_TIMEOUT_MS
-								lastMeaningfulEventTime = performance.now()
-								streamAudit.recordChunk("reasoning", chunk.text.length)
+								if (chunk.text && chunk.text.length > 0) {
+									lastMeaningfulEventTime = performance.now()
+								}
+								streamAudit.recordChunk("reasoning", chunk.text?.length || 0)
 								reasoningMessage += chunk.text
 								// Only apply formatting if the message contains sentence-ending punctuation followed by **
 								let formattedReasoning = reasoningMessage
@@ -5820,7 +5819,9 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							case "tool_call_partial": {
 								currentStreamPhase = "tool_call"
 								currentIdleTimeout = DEFAULT_STREAM_IDLE_TIMEOUT_MS
-								lastMeaningfulEventTime = performance.now()
+								if ((chunk.arguments && chunk.arguments.length > 0) || chunk.id || chunk.name) {
+									lastMeaningfulEventTime = performance.now()
+								}
 								streamAudit.recordChunk("tool_call_partial", chunk.arguments?.length || 0)
 								// Process raw tool call chunk through NativeToolCallParser
 								// which handles tracking, buffering, and emits events
@@ -5981,8 +5982,10 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							case "text": {
 								currentStreamPhase = "content"
 								currentIdleTimeout = DEFAULT_STREAM_IDLE_TIMEOUT_MS
-								lastMeaningfulEventTime = performance.now()
-								streamAudit.recordChunk("text", chunk.text.length)
+								if (chunk.text && chunk.text.length > 0) {
+									lastMeaningfulEventTime = performance.now()
+								}
+								streamAudit.recordChunk("text", chunk.text?.length || 0)
 								assistantMessage += chunk.text
 
 								// Native tool calling: text chunks are plain text.
@@ -6348,21 +6351,42 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							? maxStreamIdleRetries
 							: classification.maxRetries
 
+						const isNoProgressTimeout = /stream no-progress timeout|heartbeat\/keep-alive frames but no content/i.test(rawErrorMessage)
+						const noProgressSeconds = Math.round(MAX_NO_PROGRESS_TIMEOUT_MS / 1000)
+						const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
+
 						const streamingFailedDetails = isStreamIdle
-							? [
-									`Error type: Stream idle timeout`,
-									`Phase: ${phaseDisplay}`,
-									`Timeout: ${Math.round(currentWatchdogTimeout / 1000)}s`,
-									`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
-									`Last valid event: ${streamAudit.data.lastEventType}`,
-									`Request ID: ${streamAudit.data.requestId}`,
-							  ].join("\n")
+							? isNoProgressTimeout
+								? [
+										`Error type: Stream no-progress timeout`,
+										`Phase: ${phaseDisplay}`,
+										`Timeout: ${noProgressSeconds}s (connection alive, no model content)`,
+										`First content timeout: ${watchdogSeconds}s`,
+										`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+										`Last valid event: ${streamAudit.data.lastEventType}`,
+										`Request ID: ${streamAudit.data.requestId}`,
+								  ].join("\n")
+								: [
+										`Error type: Stream idle timeout`,
+										`Phase: ${phaseDisplay}`,
+										`Timeout: ${watchdogSeconds}s`,
+										`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+										`Last valid event: ${streamAudit.data.lastEventType}`,
+										`Request ID: ${streamAudit.data.requestId}`,
+								  ].join("\n")
 							: ""
 
-						const errorPrefix =
-							classification.category === "network_error"
-								? t("common:interruption.responseInterruptedByApiError")
-								: t("common:interruption.streamTerminatedByProvider")
+						const errorPrefix = isNoProgressTimeout
+							? t("common:interruption.streamStoppedNoProgress", {
+									defaultValue: "Roo stopped the request: received heartbeat/keep-alive frames but no content",
+							  })
+							: isStreamIdle
+							? t("common:interruption.streamStoppedTimeout", {
+									defaultValue: "Roo stopped the request due to stream timeout",
+							  })
+							: classification.category === "network_error"
+							? t("common:interruption.responseInterruptedByApiError")
+							: t("common:interruption.streamTerminatedByProvider")
 
 						const streamingFailedMessage = this.abort
 							? undefined
@@ -6395,9 +6419,11 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 								)
 								let reasonText: string
 								if (isStreamIdle) {
-									reasonText = `${providerDisplayName} connection temporarily unavailable\n\nThe provider did not send stream data for ${Math.round(
-										currentWatchdogTimeout / 1000,
-									)} seconds.\nAutomatic recovery was attempted ${currentRetry} time(s).\n\nTask progress has been preserved.\nYou can click "Retry" to continue this task, or change the model in settings/header and retry.\n\nModel:\n${formattedModelName}`
+									if (isNoProgressTimeout) {
+										reasonText = `${providerDisplayName} connection temporarily stalled\n\nThe provider connection remained active (heartbeat/keep-alive frames received), but no model content was generated for ${noProgressSeconds} seconds.\nAutomatic recovery was attempted ${currentRetry} time(s).\n\nTask progress has been preserved.\nYou can click "Retry" to continue this task, or change the model in settings/header and retry.\n\nModel:\n${formattedModelName}`
+									} else {
+										reasonText = `${providerDisplayName} connection temporarily unavailable\n\nThe provider did not send stream data for ${watchdogSeconds} seconds.\nAutomatic recovery was attempted ${currentRetry} time(s).\n\nTask progress has been preserved.\nYou can click "Retry" to continue this task, or change the model in settings/header and retry.\n\nModel:\n${formattedModelName}`
+									}
 								} else if (!classification.retryable) {
 									reasonText = `Deterministic stream failure (${classification.category}): ${streamingFailedMessage}`
 								} else {

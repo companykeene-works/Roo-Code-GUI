@@ -331,7 +331,7 @@ describe("Task - Provider Recovery Model Switching Architecture", () => {
 
 		// Add messages and tools before failure
 		task.clineMessages.push(
-			{ ts: 1000, type: "say", say: "task", text: "Original task" },
+			{ ts: 1000, type: "say", say: "text", text: "Original task" },
 			{ ts: 2000, type: "say", say: "tool", text: JSON.stringify({ tool: "readFile", path: "test.ts" }) },
 			{ ts: 3000, type: "ask", ask: "api_req_failed", text: "Capacity outage" },
 		)
