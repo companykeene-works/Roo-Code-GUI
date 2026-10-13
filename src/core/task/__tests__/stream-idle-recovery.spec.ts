@@ -816,15 +816,35 @@ describe("Stream Idle Watchdog & Recovery Architecture (20 Scenarios)", () => {
 		const isNoProgressTimeout = /stream no-progress timeout|heartbeat\/keep-alive frames but no content/i.test(
 			rawErrorMessage,
 		)
-		const noProgressSeconds = Math.round(MAX_NO_PROGRESS_TIMEOUT_MS / 1000)
-		const currentWatchdogTimeout = 75_000
-		const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
+		const effectiveFirstContentTimeout = 150_000
+		const reasoningIdleTimeout = 75_000
+		const currentWatchdogTimeout = reasoningIdleTimeout
 		const currentRetry = 2
 		const effectiveMaxRetries = 2
 		const phaseDisplay = "first-chunk"
 
-		const streamAudit = new StreamAuditTracker("task-123", "inst-1", "xkiro", "openai/gpt-6.1-sol", 2)
+		const streamAudit = new StreamAuditTracker(
+			"task-123",
+			"inst-1",
+			"xkiro",
+			"openai/gpt-6.1-sol",
+			2,
+			effectiveFirstContentTimeout,
+			reasoningIdleTimeout,
+			MAX_NO_PROGRESS_TIMEOUT_MS,
+		)
 		streamAudit.recordChunk("heartbeat")
+
+		const noProgressSeconds = Math.round(
+			(streamAudit.data.noProgressTimeoutMs || MAX_NO_PROGRESS_TIMEOUT_MS) / 1000,
+		)
+		const firstContentSeconds = Math.round(
+			(streamAudit.data.firstContentTimeoutMs || effectiveFirstContentTimeout) / 1000,
+		)
+		const streamIdleSeconds = Math.round(
+			(streamAudit.data.streamIdleTimeoutMs || reasoningIdleTimeout) / 1000,
+		)
+		const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
 
 		const isStreamIdle = true
 		const streamingFailedDetails = isStreamIdle
@@ -832,8 +852,9 @@ describe("Stream Idle Watchdog & Recovery Architecture (20 Scenarios)", () => {
 				? [
 						`Error type: Stream no-progress timeout`,
 						`Phase: ${phaseDisplay}`,
-						`Timeout: ${noProgressSeconds}s (connection alive, no model content)`,
-						`First content timeout: ${watchdogSeconds}s`,
+						`No progress timeout: ${noProgressSeconds}s (connection alive, no model content)`,
+						`First content timeout: ${firstContentSeconds}s`,
+						`Stream idle timeout: ${streamIdleSeconds}s`,
 						`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
 						`Last valid event: ${streamAudit.data.lastEventType}`,
 						`Request ID: ${streamAudit.data.requestId}`,
@@ -849,8 +870,10 @@ describe("Stream Idle Watchdog & Recovery Architecture (20 Scenarios)", () => {
 			: ""
 
 		expect(streamingFailedDetails).toContain("Error type: Stream no-progress timeout")
-		expect(streamingFailedDetails).toContain("Timeout: 240s (connection alive, no model content)")
-		expect(streamingFailedDetails).toContain("First content timeout: 75s")
+		expect(streamingFailedDetails).toContain("No progress timeout: 240s (connection alive, no model content)")
+		expect(streamingFailedDetails).toContain("First content timeout: 150s")
+		expect(streamingFailedDetails).toContain("Stream idle timeout: 75s")
+		expect(streamingFailedDetails).not.toContain("First content timeout: 75s")
 		expect(streamingFailedDetails).toContain("Auto retries: 2/2")
 		expect(streamingFailedDetails).toContain("Last valid event: heartbeat")
 
@@ -985,6 +1008,133 @@ describe("Stream Idle Watchdog & Recovery Architecture (20 Scenarios)", () => {
 		expect(classification.retryable).toBe(true)
 		expect(classification.maxRetries).toBe(2)
 		expect(classification.isDeterministic).toBe(false)
+	})
+
+	// Scenario 40: Truthful timeout hierarchy for reasoning models (gpt-6.1-sol on xkiro)
+	it("Scenario 40: verifies exact true timeout constants for reasoning model", () => {
+		// 1. BASE_FIRST_CONTENT_TIMEOUT
+		expect(REASONING_FIRST_CHUNK_TIMEOUT_MS).toBe(90_000)
+		expect(FIRST_CHUNK_TIMEOUT_MS).toBe(60_000)
+
+		// Dynamic prompt scale calculation
+		const calculateMargin = (tokens: number) => {
+			return tokens > 30_000 ? Math.min(60_000, Math.floor(tokens / 20_000) * 15_000) : 0
+		}
+
+		// PROMPT_SCALE_MARGIN for large prompt (>= 80k tokens)
+		const maxMargin = calculateMargin(80_000)
+		expect(maxMargin).toBe(60_000)
+
+		// EFFECTIVE_FIRST_CONTENT_TIMEOUT with max margin
+		const effectiveMaxFirstContent = REASONING_FIRST_CHUNK_TIMEOUT_MS + maxMargin
+		expect(effectiveMaxFirstContent).toBe(150_000) // Exactly 150s
+
+		// Incident tokens (64,795) margin
+		const incidentMargin = calculateMargin(64_795)
+		expect(incidentMargin).toBe(45_000)
+		const incidentEffectiveFirstContent = REASONING_FIRST_CHUNK_TIMEOUT_MS + incidentMargin
+		expect(incidentEffectiveFirstContent).toBe(135_000) // Exactly 135s
+
+		// 2. STREAM_IDLE_TIMEOUT
+		expect(REASONING_STREAM_IDLE_TIMEOUT_MS).toBe(75_000) // Exactly 75s
+		expect(DEFAULT_STREAM_IDLE_TIMEOUT_MS).toBe(45_000) // Exactly 45s
+
+		// 3. MAX_NO_PROGRESS_TIMEOUT
+		expect(MAX_NO_PROGRESS_TIMEOUT_MS).toBe(240_000) // Exactly 240s
+	})
+
+	// Scenario 41: StreamAuditTracker acts as typed single source of truth for all three timeout values
+	it("Scenario 41: StreamAuditTracker maintains distinct typed timeout values without cross-contamination", () => {
+		const tracker = new StreamAuditTracker(
+			"task-replay",
+			"inst-1",
+			"xkiro",
+			"openai/gpt-6.1-sol",
+			0,
+			150_000,
+			75_000,
+			240_000,
+		)
+
+		expect(tracker.data.firstContentTimeoutMs).toBe(150_000)
+		expect(tracker.data.streamIdleTimeoutMs).toBe(75_000)
+		expect(tracker.data.noProgressTimeoutMs).toBe(240_000)
+
+		// Dynamic idle timeout update when switching phases
+		tracker.recordStreamIdleTimeout(45_000)
+		expect(tracker.data.streamIdleTimeoutMs).toBe(45_000)
+		// First content and no-progress timeouts remain untouched
+		expect(tracker.data.firstContentTimeoutMs).toBe(150_000)
+		expect(tracker.data.noProgressTimeoutMs).toBe(240_000)
+
+		const log = tracker.formatLog()
+		expect(log).toContain("firstContentTimeoutMs=150000")
+		expect(log).toContain("streamIdleTimeoutMs=45000")
+		expect(log).toContain("noProgressTimeoutMs=240000")
+	})
+
+	// Scenario 42: UI error details never mislabels 75s as first-content timeout when real value is 150s
+	it("Scenario 42: UI error details strictly separates 150s first-content, 75s stream idle, and 240s no-progress timeouts", () => {
+		const streamAudit = new StreamAuditTracker(
+			"task-inc",
+			"inst-1",
+			"xkiro",
+			"openai/gpt-6.1-sol",
+			1,
+			150_000,
+			75_000,
+			240_000,
+		)
+		streamAudit.recordChunk("heartbeat")
+
+		const isNoProgressTimeout = true
+		const isStreamIdle = true
+		const phaseDisplay = "first-chunk"
+		const currentRetry = 1
+		const effectiveMaxRetries = 2
+		const currentWatchdogTimeout = 75_000 // Watchdog was reset to idle timeout 75s
+
+		const noProgressSeconds = Math.round(
+			(streamAudit.data.noProgressTimeoutMs || MAX_NO_PROGRESS_TIMEOUT_MS) / 1000,
+		)
+		const firstContentSeconds = Math.round(
+			(streamAudit.data.firstContentTimeoutMs || 150_000) / 1000,
+		)
+		const streamIdleSeconds = Math.round(
+			(streamAudit.data.streamIdleTimeoutMs || 75_000) / 1000,
+		)
+		const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
+
+		const streamingFailedDetails = isStreamIdle
+			? isNoProgressTimeout
+				? [
+						`Error type: Stream no-progress timeout`,
+						`Phase: ${phaseDisplay}`,
+						`No progress timeout: ${noProgressSeconds}s (connection alive, no model content)`,
+						`First content timeout: ${firstContentSeconds}s`,
+						`Stream idle timeout: ${streamIdleSeconds}s`,
+						`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+						`Last valid event: ${streamAudit.data.lastEventType}`,
+						`Request ID: ${streamAudit.data.requestId}`,
+				  ].join("\n")
+				: [
+						`Error type: Stream idle timeout`,
+						`Phase: ${phaseDisplay}`,
+						`Timeout: ${watchdogSeconds}s`,
+						`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
+						`Last valid event: ${streamAudit.data.lastEventType}`,
+						`Request ID: ${streamAudit.data.requestId}`,
+				  ].join("\n")
+			: ""
+
+		// Critical assertions: labels match reality
+		expect(streamingFailedDetails).toContain("No progress timeout: 240s (connection alive, no model content)")
+		expect(streamingFailedDetails).toContain("First content timeout: 150s")
+		expect(streamingFailedDetails).toContain("Stream idle timeout: 75s")
+
+		// Ban wrong labels
+		expect(streamingFailedDetails).not.toContain("First content timeout: 75s")
+		expect(streamingFailedDetails).not.toMatch(/^Timeout: 75s/m)
 	})
 })
 

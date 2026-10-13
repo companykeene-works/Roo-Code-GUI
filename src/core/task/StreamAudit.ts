@@ -30,6 +30,9 @@ export interface StreamAuditData {
 	contentEventCount: number
 	toolEventCount: number
 
+	firstContentTimeoutMs: number
+	streamIdleTimeoutMs: number
+	noProgressTimeoutMs: number
 	idleTimeoutMs: number
 	idleTriggered: boolean
 	idleCategory: "TRANSIENT_STREAM_IDLE" | "NONE"
@@ -54,14 +57,19 @@ export class StreamAuditTracker {
 					requestId: string
 					provider: string
 					model: string
-					idleTimeoutMs: number
+					idleTimeoutMs?: number
+					firstContentTimeoutMs?: number
+					streamIdleTimeoutMs?: number
+					noProgressTimeoutMs?: number
 					autoRetryAttempt: number
 			  },
 		instanceId?: string,
 		provider?: string,
 		model?: string,
 		autoRetryAttempt?: number,
-		idleTimeoutMs?: number,
+		firstContentTimeoutMs?: number,
+		streamIdleTimeoutMs?: number,
+		noProgressTimeoutMs?: number,
 	) {
 		const now = Date.now()
 		this.lastEventTime = performance.now()
@@ -71,14 +79,18 @@ export class StreamAuditTracker {
 		let attemptId: string
 		let prov: string
 		let mod: string
-		let idleMs: number
+		let firstContentMs: number
+		let streamIdleMs: number
+		let noProgressMs: number
 		let retryAttempt: number
 
 		if (typeof paramsOrTaskId === "object") {
 			logicalRequestId = paramsOrTaskId.requestId
 			prov = paramsOrTaskId.provider
 			mod = paramsOrTaskId.model
-			idleMs = paramsOrTaskId.idleTimeoutMs
+			firstContentMs = paramsOrTaskId.firstContentTimeoutMs ?? paramsOrTaskId.idleTimeoutMs ?? 60_000
+			streamIdleMs = paramsOrTaskId.streamIdleTimeoutMs ?? 45_000
+			noProgressMs = paramsOrTaskId.noProgressTimeoutMs ?? 240_000
 			retryAttempt = paramsOrTaskId.autoRetryAttempt
 			attemptId = `${logicalRequestId}.a${retryAttempt}.${now.toString(36).slice(-4)}`
 			requestId = logicalRequestId.startsWith("req-")
@@ -89,7 +101,9 @@ export class StreamAuditTracker {
 			prov = provider || "unknown"
 			mod = model || "unknown"
 			retryAttempt = autoRetryAttempt ?? 0
-			idleMs = idleTimeoutMs ?? 45_000
+			firstContentMs = firstContentTimeoutMs ?? 60_000
+			streamIdleMs = streamIdleTimeoutMs ?? 45_000
+			noProgressMs = noProgressTimeoutMs ?? 240_000
 			attemptId = `${logicalRequestId}.a${retryAttempt}.${now.toString(36).slice(-4)}`
 			requestId = instanceId ? `${logicalRequestId}.a${retryAttempt}` : paramsOrTaskId
 		}
@@ -112,7 +126,10 @@ export class StreamAuditTracker {
 			reasoningEventCount: 0,
 			contentEventCount: 0,
 			toolEventCount: 0,
-			idleTimeoutMs: idleMs,
+			firstContentTimeoutMs: firstContentMs,
+			streamIdleTimeoutMs: streamIdleMs,
+			noProgressTimeoutMs: noProgressMs,
+			idleTimeoutMs: firstContentMs,
 			idleTriggered: false,
 			idleCategory: "NONE",
 			streamPhase: "waiting_first_chunk",
@@ -123,6 +140,10 @@ export class StreamAuditTracker {
 			autoRetryAttempt: retryAttempt,
 			retrySucceeded: null,
 		}
+	}
+
+	public recordStreamIdleTimeout(timeoutMs: number): void {
+		this.data.streamIdleTimeoutMs = timeoutMs
 	}
 
 	public recordPhase(phase: StreamPhase): void {
@@ -225,6 +246,9 @@ export class StreamAuditTracker {
 			`reasoningEventCount=${d.reasoningEventCount} ` +
 			`contentEventCount=${d.contentEventCount} ` +
 			`toolEventCount=${d.toolEventCount} ` +
+			`firstContentTimeoutMs=${d.firstContentTimeoutMs} ` +
+			`streamIdleTimeoutMs=${d.streamIdleTimeoutMs} ` +
+			`noProgressTimeoutMs=${d.noProgressTimeoutMs} ` +
 			`idleTimeoutMs=${d.idleTimeoutMs} ` +
 			`idleTriggered=${d.idleTriggered} ` +
 			`idleCategory=${d.idleCategory} ` +

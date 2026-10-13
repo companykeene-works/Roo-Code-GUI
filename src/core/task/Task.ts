@@ -5659,6 +5659,8 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 					cachedModelId,
 					currentRetry,
 					initialFirstChunkTimeout,
+					currentIdleTimeout,
+					MAX_NO_PROGRESS_TIMEOUT_MS,
 				)
 
 				// Yields only if the first chunk is successful, otherwise will
@@ -5766,6 +5768,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 									currentIdleTimeout = isReasoningModel
 										? REASONING_STREAM_IDLE_TIMEOUT_MS
 										: DEFAULT_STREAM_IDLE_TIMEOUT_MS
+									streamAudit.recordStreamIdleTimeout(currentIdleTimeout)
 								}
 								break
 							}
@@ -5773,6 +5776,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 								hadReasoning = true
 								currentStreamPhase = "reasoning"
 								currentIdleTimeout = REASONING_STREAM_IDLE_TIMEOUT_MS
+								streamAudit.recordStreamIdleTimeout(currentIdleTimeout)
 								if (chunk.text && chunk.text.length > 0) {
 									lastMeaningfulEventTime = performance.now()
 								}
@@ -5819,6 +5823,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							case "tool_call_partial": {
 								currentStreamPhase = "tool_call"
 								currentIdleTimeout = DEFAULT_STREAM_IDLE_TIMEOUT_MS
+								streamAudit.recordStreamIdleTimeout(currentIdleTimeout)
 								if ((chunk.arguments && chunk.arguments.length > 0) || chunk.id || chunk.name) {
 									lastMeaningfulEventTime = performance.now()
 								}
@@ -5949,6 +5954,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							case "tool_call": {
 								currentStreamPhase = "tool_call"
 								currentIdleTimeout = DEFAULT_STREAM_IDLE_TIMEOUT_MS
+								streamAudit.recordStreamIdleTimeout(currentIdleTimeout)
 								lastMeaningfulEventTime = performance.now()
 								streamAudit.recordChunk("tool_call", chunk.arguments?.length || 0)
 								// Legacy: Handle complete tool calls (for backward compatibility)
@@ -5982,6 +5988,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							case "text": {
 								currentStreamPhase = "content"
 								currentIdleTimeout = DEFAULT_STREAM_IDLE_TIMEOUT_MS
+								streamAudit.recordStreamIdleTimeout(currentIdleTimeout)
 								if (chunk.text && chunk.text.length > 0) {
 									lastMeaningfulEventTime = performance.now()
 								}
@@ -6352,7 +6359,15 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 							: classification.maxRetries
 
 						const isNoProgressTimeout = /stream no-progress timeout|heartbeat\/keep-alive frames but no content/i.test(rawErrorMessage)
-						const noProgressSeconds = Math.round(MAX_NO_PROGRESS_TIMEOUT_MS / 1000)
+						const noProgressSeconds = Math.round(
+							(streamAudit.data.noProgressTimeoutMs || MAX_NO_PROGRESS_TIMEOUT_MS) / 1000,
+						)
+						const firstContentSeconds = Math.round(
+							(streamAudit.data.firstContentTimeoutMs || initialFirstChunkTimeout) / 1000,
+						)
+						const streamIdleSeconds = Math.round(
+							(streamAudit.data.streamIdleTimeoutMs || currentIdleTimeout) / 1000,
+						)
 						const watchdogSeconds = Math.round(currentWatchdogTimeout / 1000)
 
 						const streamingFailedDetails = isStreamIdle
@@ -6360,8 +6375,9 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 								? [
 										`Error type: Stream no-progress timeout`,
 										`Phase: ${phaseDisplay}`,
-										`Timeout: ${noProgressSeconds}s (connection alive, no model content)`,
-										`First content timeout: ${watchdogSeconds}s`,
+										`No progress timeout: ${noProgressSeconds}s (connection alive, no model content)`,
+										`First content timeout: ${firstContentSeconds}s`,
+										`Stream idle timeout: ${streamIdleSeconds}s`,
 										`Auto retries: ${currentRetry}/${effectiveMaxRetries}`,
 										`Last valid event: ${streamAudit.data.lastEventType}`,
 										`Request ID: ${streamAudit.data.requestId}`,
