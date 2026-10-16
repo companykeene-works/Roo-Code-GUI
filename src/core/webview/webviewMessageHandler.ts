@@ -3633,6 +3633,273 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		}
 
+		case "chatListSessions": {
+			try {
+				const sessions = await provider.chatSessionManager.listSessions()
+				await provider.postMessageToWebview({
+					type: "chatSessionsList",
+					chatSessions: sessions,
+				})
+			} catch (error) {
+				provider.log(`Error listing chat sessions: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatGetSession": {
+			try {
+				if (message.chatSessionId) {
+					const session = await provider.chatSessionManager.getSession(message.chatSessionId)
+					await provider.postMessageToWebview({
+						type: "chatSessionData",
+						chatSession: session,
+					})
+				}
+			} catch (error) {
+				provider.log(`Error getting chat session: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatCreateSession": {
+			try {
+				const session = await provider.chatSessionManager.createSession({
+					title: message.text,
+					modelPreference: message.chatModelPreference,
+				})
+				await provider.postMessageToWebview({
+					type: "chatSessionData",
+					chatSession: session,
+				})
+				const sessions = await provider.chatSessionManager.listSessions()
+				await provider.postMessageToWebview({
+					type: "chatSessionsList",
+					chatSessions: sessions,
+				})
+			} catch (error) {
+				provider.log(`Error creating chat session: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatDeleteSession": {
+			try {
+				if (message.chatSessionId) {
+					await provider.chatSessionManager.deleteSession(message.chatSessionId)
+					const sessions = await provider.chatSessionManager.listSessions()
+					await provider.postMessageToWebview({
+						type: "chatSessionsList",
+						chatSessions: sessions,
+					})
+				}
+			} catch (error) {
+				provider.log(`Error deleting chat session: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatRenameSession": {
+			try {
+				if (message.chatSessionId && message.text) {
+					await provider.chatSessionManager.renameSession(message.chatSessionId, message.text)
+					const session = await provider.chatSessionManager.getSession(message.chatSessionId)
+					if (session) {
+						await provider.postMessageToWebview({
+							type: "chatSessionData",
+							chatSession: session,
+						})
+					}
+					const sessions = await provider.chatSessionManager.listSessions()
+					await provider.postMessageToWebview({
+						type: "chatSessionsList",
+						chatSessions: sessions,
+					})
+				}
+			} catch (error) {
+				provider.log(`Error renaming chat session: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatSaveDraft": {
+			try {
+				if (message.chatSessionId && message.chatDraft) {
+					await provider.chatSessionManager.saveDraft(message.chatSessionId, message.chatDraft)
+				}
+			} catch (error) {
+				provider.log(`Error saving chat draft: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatGetPreferences": {
+			try {
+				const preferences = await provider.chatSessionManager.getPreferences()
+				await provider.postMessageToWebview({
+					type: "chatPreferencesData",
+					chatPreferences: preferences,
+				})
+			} catch (error) {
+				provider.log(`Error getting chat preferences: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatSavePreferences": {
+			try {
+				if (message.chatPreferences) {
+					await provider.chatSessionManager.savePreferences(message.chatPreferences)
+					await provider.postMessageToWebview({
+						type: "chatPreferencesData",
+						chatPreferences: message.chatPreferences,
+					})
+				}
+			} catch (error) {
+				provider.log(`Error saving chat preferences: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatSendMessage": {
+			try {
+				const sessionId = message.chatSessionId
+				if (!sessionId || !message.text) break
+
+				const onChunk = (chunk: any) => {
+					provider.postMessageToWebview({
+						type: "chatStreamChunk",
+						chatStreamChunk: { ...chunk, sessionId },
+					})
+				}
+
+				provider.chatSessionManager
+					.sendMessage({
+						sessionId,
+						text: message.text,
+						images: message.images,
+						webSearchMode: message.chatDraft?.webSearchMode,
+						onChunk,
+					})
+					.then(async () => {
+						const updatedSession = await provider.chatSessionManager.getSession(sessionId)
+						if (updatedSession) {
+							await provider.postMessageToWebview({
+								type: "chatSessionData",
+								chatSession: updatedSession,
+							})
+						}
+						const sessions = await provider.chatSessionManager.listSessions()
+						await provider.postMessageToWebview({
+							type: "chatSessionsList",
+							chatSessions: sessions,
+						})
+					})
+					.catch((err: unknown) => {
+						provider.log(`Error in chatSendMessage: ${err instanceof Error ? err.message : String(err)}`)
+					})
+			} catch (error) {
+				provider.log(`Error starting chatSendMessage: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatAbortStream": {
+			try {
+				if (message.chatSessionId) {
+					provider.chatSessionManager.abortStream(message.chatSessionId)
+				}
+			} catch (error) {
+				provider.log(`Error aborting chat stream: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatEditMessage": {
+			try {
+				const sessionId = message.chatSessionId
+				const messageId = message.chatMessageId
+				if (!sessionId || !messageId || !message.text) break
+
+				const onChunk = (chunk: any) => {
+					provider.postMessageToWebview({
+						type: "chatStreamChunk",
+						chatStreamChunk: { ...chunk, sessionId },
+					})
+				}
+
+				provider.chatSessionManager
+					.editMessageAndRegenerate({
+						sessionId,
+						messageId,
+						newText: message.text,
+						images: message.images,
+						onChunk,
+					})
+					.then(async () => {
+						const updatedSession = await provider.chatSessionManager.getSession(sessionId)
+						if (updatedSession) {
+							await provider.postMessageToWebview({
+								type: "chatSessionData",
+								chatSession: updatedSession,
+							})
+						}
+						const sessions = await provider.chatSessionManager.listSessions()
+						await provider.postMessageToWebview({
+							type: "chatSessionsList",
+							chatSessions: sessions,
+						})
+					})
+					.catch((err: unknown) => {
+						provider.log(`Error in chatEditMessage: ${err instanceof Error ? err.message : String(err)}`)
+					})
+			} catch (error) {
+				provider.log(`Error starting chatEditMessage: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
+		case "chatRegenerateMessage": {
+			try {
+				const sessionId = message.chatSessionId
+				const messageId = message.chatMessageId
+				if (!sessionId || !messageId) break
+
+				const onChunk = (chunk: any) => {
+					provider.postMessageToWebview({
+						type: "chatStreamChunk",
+						chatStreamChunk: { ...chunk, sessionId },
+					})
+				}
+
+				provider.chatSessionManager
+					.regenerateMessage({
+						sessionId,
+						messageId,
+						onChunk,
+					})
+					.then(async () => {
+						const updatedSession = await provider.chatSessionManager.getSession(sessionId)
+						if (updatedSession) {
+							await provider.postMessageToWebview({
+								type: "chatSessionData",
+								chatSession: updatedSession,
+							})
+						}
+						const sessions = await provider.chatSessionManager.listSessions()
+						await provider.postMessageToWebview({
+							type: "chatSessionsList",
+							chatSessions: sessions,
+						})
+					})
+					.catch((err: unknown) => {
+						provider.log(`Error in chatRegenerateMessage: ${err instanceof Error ? err.message : String(err)}`)
+					})
+			} catch (error) {
+				provider.log(`Error starting chatRegenerateMessage: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+
 		default: {
 			// console.log(`Unhandled message type: ${message.type}`)
 			//

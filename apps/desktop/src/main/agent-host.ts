@@ -192,6 +192,10 @@ export class DesktopAgentHost extends EventEmitter {
 		return this.storageDir
 	}
 
+	public getChatSessionManager(): any {
+		return this.provider?.chatSessionManager
+	}
+
 	public async setWorkspace(newWorkspace?: string): Promise<void> {
 		this.currentWorkspaceEpoch++
 		const epoch = this.currentWorkspaceEpoch

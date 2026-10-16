@@ -129,4 +129,5 @@ export type DesktopServerMessage =
 	| { type: "projectRenameResult"; path: string; success: boolean; error?: string }
 	| { type: "conversationTitleUpdated"; taskId: string; title: string; titleSource?: "generated_ai" | "manual" | "fallback" }
 	| { type: "quickProjectCreated"; path: string; name: string; workspace: WorkspaceInfo }
+	| { type: "chatSessionsUpdated" }
 	| { type: "error"; message: string }

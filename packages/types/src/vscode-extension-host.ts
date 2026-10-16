@@ -17,6 +17,7 @@ import type { ProviderLimits } from "./providers/provider-limits.js"
 import type { SkillMetadata } from "./skills.js"
 import type { WorktreeIncludeStatus } from "./worktree.js"
 import type { DecisionLogEntry } from "./command-safety.js"
+import type { ChatSession, ChatSessionSummary, ChatPreferences, ChatDraft, ChatModelPreference, ChatStreamChunk } from "./chat-session.js"
 
 /**
  * ExtensionMessage
@@ -105,7 +106,16 @@ export interface ExtensionMessage {
 		| "terminalSessionEnded"
 		| "workspaceFilesChanged"
 		| "decisionLog"
+		// Native AI Chat Mode events
+		| "chatSessionsList"
+		| "chatSessionData"
+		| "chatPreferencesData"
+		| "chatStreamChunk"
 	text?: string
+	chatSessions?: ChatSessionSummary[]
+	chatSession?: ChatSession | null
+	chatPreferences?: ChatPreferences
+	chatStreamChunk?: ChatStreamChunk
 	/** For fileContent: { path, content, error? } */
 	fileContent?: { path: string; content: string | null; error?: string }
 	id?: string
@@ -332,6 +342,8 @@ export type ExtensionState = Pick<
 	| "webSearchApiKey"
 	| "webSearchSearxngUrl"
 	| "webSearchMaxResults"
+	| "chatPreferences"
+	| "nativeChatModeEnabled"
 > & {
 	lockApiConfigAcrossModes?: boolean
 	openAiModelInfos?: Record<string, ModelInfo>
@@ -574,12 +586,30 @@ export interface WebviewMessage {
 		| "compactTask"
 		| "approvalMode"
 		| "getDecisionLog"
+		// Native AI Chat Mode messages
+		| "chatListSessions"
+		| "chatGetSession"
+		| "chatCreateSession"
+		| "chatDeleteSession"
+		| "chatRenameSession"
+		| "chatSaveDraft"
+		| "chatGetPreferences"
+		| "chatSavePreferences"
+		| "chatSendMessage"
+		| "chatAbortStream"
+		| "chatEditMessage"
+		| "chatRegenerateMessage"
 	text?: string
 	webSearchMode?: WebSearchMode
 	approvalMode?: ApprovalMode
 	taskId?: string
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "nativeChat"
+	chatSessionId?: string
+	chatMessageId?: string
+	chatPreferences?: ChatPreferences
+	chatDraft?: ChatDraft
+	chatModelPreference?: ChatModelPreference
 	disabled?: boolean
 	context?: string
 	dataUri?: string

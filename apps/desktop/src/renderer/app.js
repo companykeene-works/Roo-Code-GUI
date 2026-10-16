@@ -573,13 +573,48 @@
 		const prevTab = currentDesktopTab
 		currentDesktopTab = targetTab
 
-		// Update nav tabs active styling (main tabs: chat, diffs, terminal, files)
+		// Update nav tabs active styling (main tabs: chat, native-chat, diffs, terminal, files)
 		tabs.forEach((t) => t.classList.toggle("active", t.getAttribute("data-tab") === targetTab))
 
-		// Update panels active styling (chat, diffs, terminal, files)
+		// Update panels active styling (chat and native-chat share tab-chat container)
 		panels.forEach((p) => {
-			p.classList.toggle("active", p.id === `tab-${targetTab}`)
+			const isPanelActive =
+				(p.id === "tab-chat" && (targetTab === "chat" || targetTab === "native-chat")) ||
+				p.id === `tab-${targetTab}`
+			p.classList.toggle("active", isPanelActive)
 		})
+
+		const agentSidebarEl = document.getElementById("agent-sidebar-view")
+		const chatSidebarEl = document.getElementById("chat-sidebar-view")
+		const sidebarHeaderTitleEl = document.getElementById("sidebar-header-title")
+
+		if (targetTab === "native-chat") {
+			if (agentSidebarEl) agentSidebarEl.style.display = "none"
+			if (chatSidebarEl) chatSidebarEl.style.display = "flex"
+			if (sidebarHeaderTitleEl) sidebarHeaderTitleEl.textContent = "Chats"
+			renderChatSidebar()
+			if (origin === "user") {
+				forwardToWebview({
+					type: "switchTab",
+					tab: "nativeChat",
+					origin: "sync",
+				})
+			}
+		} else {
+			if (chatSidebarEl) chatSidebarEl.style.display = "none"
+			if (agentSidebarEl) agentSidebarEl.style.display = "flex"
+			if (sidebarHeaderTitleEl) sidebarHeaderTitleEl.textContent = tDesktop("workspaces") || "Workspaces"
+			if (targetTab === "chat") {
+				renderSidebar()
+				if (origin === "user") {
+					forwardToWebview({
+						type: "switchTab",
+						tab: "chat",
+						origin: "sync",
+					})
+				}
+			}
+		}
 
 		// If switching to files tab and files tree is empty or requires refresh, load files
 		if (targetTab === "files") {
@@ -608,17 +643,6 @@
 				terminalRenderedOnce = true
 				if (activeSession) activeSession._dirty = false
 				lastRenderedTerminalSessionId = selectedTerminalSessionId
-			}
-		}
-
-		// If user clicked in desktop shell, notify webview with origin: "sync"
-		if (origin === "user") {
-			if (targetTab === "chat") {
-				forwardToWebview({
-					type: "switchTab",
-					tab: "chat",
-					origin: "sync",
-				})
 			}
 		}
 
@@ -1108,6 +1132,231 @@
 			projectList?.focus?.()
 		}
 		lastFocusedElement = null
+	// =========================================================================
+	// Native AI Chat Mode - Sidebar Controller
+	// =========================================================================
+	let chatSessionsList = []
+	let activeChatSessionId = null
+	let chatSearchFilter = ""
+
+	async function fetchChatSessions() {
+		try {
+			const res = await fetch("/api/chat-sessions")
+			if (res.ok) {
+				const data = await res.json()
+				chatSessionsList = Array.isArray(data.sessions) ? data.sessions : []
+				renderChatSidebar()
+			}
+		} catch (err) {
+			console.warn("[ChatSidebar] Failed to fetch chat sessions:", err)
+		}
+	}
+
+	function renderChatSidebar() {
+		const listEl = document.getElementById("chat-sessions-list")
+		if (!listEl) return
+
+		let filtered = chatSessionsList
+		if (chatSearchFilter.trim()) {
+			const q = chatSearchFilter.trim().toLowerCase()
+			filtered = chatSessionsList.filter((s) => {
+				const titleMatch = s.title && s.title.toLowerCase().includes(q)
+				const previewMatch = s.lastMessagePreview && s.lastMessagePreview.toLowerCase().includes(q)
+				return titleMatch || previewMatch
+			})
+		}
+
+		if (filtered.length === 0) {
+			listEl.innerHTML = `<div class="chat-sidebar-empty">${
+				chatSearchFilter.trim() ? "No conversations match your search" : "No conversations yet"
+			}</div>`
+			return
+		}
+
+		// Grouping: Today, Yesterday, Previous
+		const now = new Date()
+		const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+		const startOfYesterday = startOfToday - 86400000
+
+		const todayList = []
+		const yesterdayList = []
+		const previousList = []
+
+		for (const session of filtered) {
+			const ts = session.updatedAt || session.createdAt || 0
+			if (ts >= startOfToday) {
+				todayList.push(session)
+			} else if (ts >= startOfYesterday) {
+				yesterdayList.push(session)
+			} else {
+				previousList.push(session)
+			}
+		}
+
+		function renderSessionGroup(heading, sessions) {
+			if (sessions.length === 0) return ""
+			let groupHtml = `<div class="chat-group-heading">${escapeHtml(heading)}</div>`
+			for (const s of sessions) {
+				const isActive = s.id === activeChatSessionId
+				const preview = s.lastMessagePreview ? escapeHtml(s.lastMessagePreview) : "No messages yet"
+				const title = escapeHtml(s.title || "Untitled Chat")
+				groupHtml += `
+					<div class="chat-session-item ${isActive ? "active" : ""}" data-session-id="${s.id}">
+						<div class="chat-session-info">
+							<span class="chat-session-title">${title}</span>
+							<span class="chat-session-preview">${preview}</span>
+						</div>
+						<div class="chat-session-actions">
+							<button class="chat-session-action-btn btn-rename" title="Rename" data-session-id="${s.id}">
+								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+								</svg>
+							</button>
+							<button class="chat-session-action-btn btn-delete" title="Delete" data-session-id="${s.id}">
+								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="3 6 5 6 21 6"></polyline>
+									<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+				`
+			}
+			return groupHtml
+		}
+
+		let html = ""
+		html += renderSessionGroup("Today", todayList)
+		html += renderSessionGroup("Yesterday", yesterdayList)
+		html += renderSessionGroup("Previous", previousList)
+		listEl.innerHTML = html
+
+		// Bind item click
+		listEl.querySelectorAll(".chat-session-item").forEach((item) => {
+			item.addEventListener("click", (e) => {
+				if (e.target.closest(".chat-session-actions")) return
+				const sessionId = item.getAttribute("data-session-id")
+				selectChatSession(sessionId)
+			})
+		})
+
+		// Bind rename
+		listEl.querySelectorAll(".btn-rename").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation()
+				const sessionId = btn.getAttribute("data-session-id")
+				renameChatSession(sessionId)
+			})
+		})
+
+		// Bind delete
+		listEl.querySelectorAll(".btn-delete").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation()
+				const sessionId = btn.getAttribute("data-session-id")
+				deleteChatSession(sessionId)
+			})
+		})
+	}
+
+	function selectChatSession(sessionId) {
+		activeChatSessionId = sessionId
+		renderChatSidebar()
+		forwardToWebview({
+			type: "chatGetSession",
+			chatSessionId: sessionId,
+		})
+	}
+
+	async function createNewChatSession() {
+		try {
+			const res = await fetch("/api/chat-sessions/create", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ title: "New Chat" }),
+			})
+			if (res.ok) {
+				const data = await res.json()
+				if (data.session) {
+					activeChatSessionId = data.session.id
+					await fetchChatSessions()
+					selectChatSession(data.session.id)
+				}
+			}
+		} catch (err) {
+			console.error("[ChatSidebar] Failed to create chat session:", err)
+		}
+	}
+
+	function renameChatSession(sessionId) {
+		const session = chatSessionsList.find((s) => s.id === sessionId)
+		const currentTitle = session ? session.title : ""
+		const newTitle = prompt("Enter new conversation title:", currentTitle)
+		if (newTitle !== null && newTitle.trim()) {
+			fetch("/api/chat-sessions/rename", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id: sessionId, title: newTitle.trim() }),
+			}).then(() => {
+				fetchChatSessions()
+			})
+		}
+	}
+
+	function deleteChatSession(sessionId) {
+		const session = chatSessionsList.find((s) => s.id === sessionId)
+		const title = session ? session.title : "this conversation"
+		showConfirmationModal({
+			title: "Delete Conversation",
+			subtitle: "This action cannot be undone.",
+			message: `Are you sure you want to permanently delete "${title}"?`,
+			icon: "🗑️",
+			confirmText: "Delete",
+			confirmClass: "btn-danger",
+			onConfirm: async () => {
+				try {
+					await fetch("/api/chat-sessions/delete", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: sessionId }),
+					})
+					if (activeChatSessionId === sessionId) {
+						activeChatSessionId = null
+					}
+					await fetchChatSessions()
+				} catch (err) {
+					console.error("[ChatSidebar] Failed to delete session:", err)
+				}
+			},
+		})
+	}
+
+	// Setup New Chat button & search bar events
+	const newChatBtn = document.getElementById("btn-new-chat")
+	if (newChatBtn) {
+		newChatBtn.addEventListener("click", () => {
+			createNewChatSession()
+		})
+	}
+
+	const chatSearchInput = document.getElementById("chat-search-input")
+	const chatSearchClearBtn = document.getElementById("chat-search-clear-btn")
+	if (chatSearchInput) {
+		chatSearchInput.addEventListener("input", (e) => {
+			chatSearchFilter = e.target.value || ""
+			if (chatSearchClearBtn) {
+				chatSearchClearBtn.classList.toggle("hidden", !chatSearchFilter)
+			}
+			renderChatSidebar()
+		})
+	}
+	if (chatSearchClearBtn) {
+		chatSearchClearBtn.addEventListener("click", () => {
+			if (chatSearchInput) chatSearchInput.value = ""
+			chatSearchFilter = ""
+			chatSearchClearBtn.classList.add("hidden")
+			renderChatSidebar()
+		})
 	}
 
 	function closeSidebarContextMenu() {
@@ -2621,6 +2870,7 @@
 					}, "*")
 				}
 				if (isFromMainWebview && data.type === "webviewDidLaunch") {
+					fetchChatSessions()
 					if (activeTaskId && (!latestExtensionState || !latestExtensionState.currentTaskId)) {
 						switchChat(activeTaskId, sidebarData.currentWorkspace)
 					}
@@ -2653,7 +2903,7 @@
 					return
 				}
 				if (data.type === "switchTab" && data.tab) {
-					if (isFromSettingsWebview && data.tab === "chat") {
+					if (isFromSettingsWebview && (data.tab === "chat" || data.tab === "nativeChat")) {
 						closeSettingsModal()
 						return
 					}
@@ -2662,8 +2912,20 @@
 						openSettingsModal(targetSection)
 						return
 					}
+					if (data.tab === "nativeChat") {
+						switchDesktopTab("native-chat", "sync")
+						return
+					}
 					switchDesktopTab(data.tab, "sync")
 					return
+				}
+				if (data.type === "chatSessionsList" && Array.isArray(data.chatSessions)) {
+					chatSessionsList = data.chatSessions
+					renderChatSidebar()
+				}
+				if (data.type === "chatSessionData" && data.chatSession) {
+					activeChatSessionId = data.chatSession.id
+					renderChatSidebar()
 				}
 				if (data.type === "action" && data.action) {
 					if (data.action === "chatButtonClicked" || (data.action === "switchTab" && data.tab === "chat")) {
@@ -2906,6 +3168,10 @@
 						renderSidebar()
 					}
 				}
+				break
+
+			case "chatSessionsUpdated":
+				fetchChatSessions()
 				break
 
 			case "workspaceInfo":

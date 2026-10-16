@@ -737,6 +737,170 @@ export function createDesktopServer(options: DesktopServerOptions): {
 			return
 		}
 
+		if (pathname === "/api/chat-sessions") {
+			void (async () => {
+				const chatSessionManager = agentHost.getChatSessionManager()
+				if (!chatSessionManager) {
+					res.writeHead(200, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ sessions: [] }))
+					return
+				}
+				try {
+					const sessions = await chatSessionManager.listSessions()
+					res.writeHead(200, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ sessions }))
+				} catch (e: any) {
+					res.writeHead(500, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ error: e?.message || String(e) }))
+				}
+			})()
+			return
+		}
+
+		if (pathname === "/api/chat-sessions/create") {
+			if (req.method === "POST") {
+				let body = ""
+				req.on("data", (chunk) => {
+					body += chunk
+				})
+				req.on("end", async () => {
+					const chatSessionManager = agentHost.getChatSessionManager()
+					if (!chatSessionManager) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: "ChatSessionManager not initialized" }))
+						return
+					}
+					try {
+						const data = JSON.parse(body || "{}")
+						const session = await chatSessionManager.createSession({
+							title: data.title,
+							modelPreference: data.modelPreference,
+						})
+						broadcast({ type: "chatSessionsUpdated" })
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ session }))
+					} catch (e: any) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: e?.message || String(e) }))
+					}
+				})
+				return
+			}
+			res.writeHead(405, { "Content-Type": "application/json" })
+			res.end(JSON.stringify({ error: "Method not allowed" }))
+			return
+		}
+
+		if (pathname === "/api/chat-sessions/delete") {
+			if (req.method === "POST") {
+				let body = ""
+				req.on("data", (chunk) => {
+					body += chunk
+				})
+				req.on("end", async () => {
+					const chatSessionManager = agentHost.getChatSessionManager()
+					if (!chatSessionManager) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: "ChatSessionManager not initialized" }))
+						return
+					}
+					try {
+						const data = JSON.parse(body || "{}")
+						if (!data.id) {
+							res.writeHead(400, { "Content-Type": "application/json" })
+							res.end(JSON.stringify({ error: "Missing session id" }))
+							return
+						}
+						await chatSessionManager.deleteSession(data.id)
+						broadcast({ type: "chatSessionsUpdated" })
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ success: true }))
+					} catch (e: any) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: e?.message || String(e) }))
+					}
+				})
+				return
+			}
+			res.writeHead(405, { "Content-Type": "application/json" })
+			res.end(JSON.stringify({ error: "Method not allowed" }))
+			return
+		}
+
+		if (pathname === "/api/chat-sessions/rename") {
+			if (req.method === "POST") {
+				let body = ""
+				req.on("data", (chunk) => {
+					body += chunk
+				})
+				req.on("end", async () => {
+					const chatSessionManager = agentHost.getChatSessionManager()
+					if (!chatSessionManager) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: "ChatSessionManager not initialized" }))
+						return
+					}
+					try {
+						const data = JSON.parse(body || "{}")
+						if (!data.id || !data.title) {
+							res.writeHead(400, { "Content-Type": "application/json" })
+							res.end(JSON.stringify({ error: "Missing session id or title" }))
+							return
+						}
+						await chatSessionManager.renameSession(data.id, data.title)
+						broadcast({ type: "chatSessionsUpdated" })
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ success: true }))
+					} catch (e: any) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: e?.message || String(e) }))
+					}
+				})
+				return
+			}
+			res.writeHead(405, { "Content-Type": "application/json" })
+			res.end(JSON.stringify({ error: "Method not allowed" }))
+			return
+		}
+
+		if (pathname === "/api/chat-preferences") {
+			const chatSessionManager = agentHost.getChatSessionManager()
+			if (!chatSessionManager) {
+				res.writeHead(200, { "Content-Type": "application/json" })
+				res.end(JSON.stringify({}))
+				return
+			}
+			if (req.method === "POST") {
+				let body = ""
+				req.on("data", (chunk) => {
+					body += chunk
+				})
+				req.on("end", async () => {
+					try {
+						const data = JSON.parse(body || "{}")
+						await chatSessionManager.savePreferences(data)
+						res.writeHead(200, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ success: true }))
+					} catch (e: any) {
+						res.writeHead(500, { "Content-Type": "application/json" })
+						res.end(JSON.stringify({ error: e?.message || String(e) }))
+					}
+				})
+				return
+			}
+			void (async () => {
+				try {
+					const prefs = await chatSessionManager.getPreferences()
+					res.writeHead(200, { "Content-Type": "application/json" })
+					res.end(JSON.stringify(prefs))
+				} catch (e: any) {
+					res.writeHead(500, { "Content-Type": "application/json" })
+					res.end(JSON.stringify({ error: e?.message || String(e) }))
+				}
+			})()
+			return
+		}
+
 		if (pathname === "/api/project/remove") {
 			if (req.method === "POST") {
 				let body = ""

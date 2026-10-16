@@ -1,4 +1,5 @@
 export * from "./api.js"
+export * from "./chat-session.js"
 export * from "./cli.js"
 export * from "./command-safety.js"
 export * from "./organization.js"

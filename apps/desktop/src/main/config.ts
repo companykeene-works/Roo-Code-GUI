@@ -17,6 +17,8 @@ export interface DesktopConfig {
 	}
 	openAiModelInfos?: Record<string, any>
 	openAiModels?: string[]
+	chatPreferences?: any
+	nativeChatModeEnabled?: boolean
 }
 
 /**

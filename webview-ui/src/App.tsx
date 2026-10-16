@@ -19,8 +19,9 @@ import ErrorBoundary from "./components/ErrorBoundary"
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
+import { NativeChatView } from "./components/native-chat/NativeChatView"
 
-type Tab = "settings" | "history" | "chat"
+type Tab = "settings" | "history" | "chat" | "nativeChat"
 
 interface DeleteMessageDialogState {
 	isOpen: boolean
@@ -381,6 +382,10 @@ const App = () => {
 				isHidden={tab !== "chat"}
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}
+			/>
+			<NativeChatView
+				isHidden={tab !== "nativeChat"}
+				onSwitchToAgent={() => switchTab("chat")}
 			/>
 			{deleteMessageDialogState.hasCheckpoint ? (
 				<MemoizedCheckpointRestoreDialog

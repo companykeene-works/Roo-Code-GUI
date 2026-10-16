@@ -37,6 +37,12 @@
 						</svg>
 						<span id="tab-label-chat">Agent</span>
 					</button>
+					<button class="nav-tab" data-tab="native-chat">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M8 9h8m-8 4h6m4-5v8a2 2 0 0 1-2 2H6l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"></path>
+						</svg>
+						<span id="tab-label-native-chat">Chat</span>
+					</button>
 					<button class="nav-tab" data-tab="diffs">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<circle cx="18" cy="18" r="3"></circle>
@@ -120,20 +126,47 @@
 				</div>
 
 				<div class="sidebar-scroll-content" id="sidebar-scroll-content">
-					<div class="sidebar-section-header">
-						<span class="section-label" id="sidebar-projects-label">PROJECTS</span>
-						<div class="sidebar-section-actions">
-							<button class="sidebar-section-btn" id="sidebar-add-project-btn" type="button" aria-label="Add project" title="Add project" tabindex="0">
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<!-- Agent Mode Sidebar View -->
+					<div id="agent-sidebar-view" class="sidebar-view-mode">
+						<div class="sidebar-section-header">
+							<span class="section-label" id="sidebar-projects-label">PROJECTS</span>
+							<div class="sidebar-section-actions">
+								<button class="sidebar-section-btn" id="sidebar-add-project-btn" type="button" aria-label="Add project" title="Add project" tabindex="0">
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="12" y1="5" x2="12" y2="19"></line>
+										<line x1="5" y1="12" x2="19" y2="12"></line>
+									</svg>
+								</button>
+								<span class="section-badge" id="sidebar-projects-count">0</span>
+							</div>
+						</div>
+						<div class="sidebar-projects-list" id="sidebar-projects-list">
+							<div class="sidebar-empty-state" id="sidebar-empty-state">Loading workspaces...</div>
+						</div>
+					</div>
+
+					<!-- Native AI Chat Mode Sidebar View -->
+					<div id="chat-sidebar-view" class="sidebar-view-mode" style="display: none;">
+						<div class="chat-sidebar-controls">
+							<button class="btn-new-chat" id="btn-new-chat" type="button">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<line x1="12" y1="5" x2="12" y2="19"></line>
 									<line x1="5" y1="12" x2="19" y2="12"></line>
 								</svg>
+								<span id="label-new-chat">New Chat</span>
 							</button>
-							<span class="section-badge" id="sidebar-projects-count">0</span>
+							<div class="chat-search-wrap">
+								<svg class="chat-search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="11" cy="11" r="8"></circle>
+									<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+								</svg>
+								<input type="text" id="chat-search-input" class="chat-search-input" placeholder="Search conversations..." />
+								<button id="chat-search-clear-btn" class="chat-search-clear-btn hidden" type="button">&times;</button>
+							</div>
 						</div>
-					</div>
-					<div class="sidebar-projects-list" id="sidebar-projects-list">
-						<div class="sidebar-empty-state" id="sidebar-empty-state">Loading workspaces...</div>
+						<div class="chat-sessions-list" id="chat-sessions-list">
+							<div class="chat-sidebar-empty">No conversations yet</div>
+						</div>
 					</div>
 				</div>
 

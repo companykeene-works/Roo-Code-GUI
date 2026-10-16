@@ -97,6 +97,7 @@ import { ContextProxy } from "../config/ContextProxy"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
+import { ChatSessionManager } from "../chat/ChatSessionManager"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import type { ClineMessage, TodoItem } from "@roo-code/types"
@@ -183,6 +184,7 @@ export class ClineProvider
 	public readonly latestAnnouncementId = "may-2026-final-roo-code-release" // Final Roo Code release announcement.
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
+	public readonly chatSessionManager: ChatSessionManager
 
 	constructor(
 		readonly context: vscode.ExtensionContext,
@@ -231,6 +233,24 @@ export class ClineProvider
 
 		this.customModesManager = new CustomModesManager(this.context, async () => {
 			await this.postStateToWebviewWithoutClineMessages()
+		})
+
+		this.chatSessionManager = new ChatSessionManager({
+			storageDir: this.contextProxy.globalStorageUri.fsPath,
+			getGlobalSettings: () => {
+				try {
+					return this.contextProxy.getProviderSettings()
+				} catch {
+					return {}
+				}
+			},
+			getSecret: (key: string) => this.contextProxy.getSecret(key as any),
+			saveChatPreferences: async (pref) => {
+				await this.updateGlobalState("chatPreferences", pref)
+			},
+			loadChatPreferences: async () => {
+				return this.contextProxy.getValue("chatPreferences") as any
+			},
 		})
 
 		// Initialize MCP Hub through the singleton manager
@@ -2512,6 +2532,10 @@ export class ClineProvider
 			})(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
 			recentModels: recentModels ?? [],
+			chatPreferences:
+				(this.contextProxy.getValue("chatPreferences") as any) ||
+				(await this.chatSessionManager.getPreferences()),
+			nativeChatModeEnabled: (this.contextProxy.getValue("nativeChatModeEnabled") as any) ?? true,
 		}
 	}
 

@@ -16,6 +16,7 @@ import { toolNamesSchema } from "./tool.js"
 import { languagesSchema } from "./vscode.js"
 import { commandSafetyConfigSchema } from "./command-safety.js"
 import { modelInfoSchema } from "./model.js"
+import { chatPreferencesSchema } from "./chat-session.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -103,6 +104,10 @@ export const globalSettingsSchema = z.object({
 	customInstructions: z.string().optional(),
 	taskHistory: z.array(historyItemSchema).optional(),
 	dismissedUpsells: z.array(z.string()).optional(),
+
+	// Native AI Chat Mode settings (completely isolated from Agent)
+	chatPreferences: chatPreferencesSchema.optional(),
+	nativeChatModeEnabled: z.boolean().optional(),
 
 	// Image generation settings (experimental) - flattened for simplicity
 	imageGenerationProvider: z.enum(["openrouter"]).optional(),

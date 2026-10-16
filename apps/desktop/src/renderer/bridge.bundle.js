@@ -20,7 +20,7 @@ var DesktopBridgeModule = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // apps/desktop/src/renderer/bridge/index.ts
+  // src/renderer/bridge/index.ts
   var index_exports = {};
   __export(index_exports, {
     ElectronBridge: () => ElectronBridge,
@@ -29,7 +29,7 @@ var DesktopBridgeModule = (() => {
     getDesktopBridge: () => getDesktopBridge
   });
 
-  // apps/desktop/src/renderer/bridge/electron-bridge.ts
+  // src/renderer/bridge/electron-bridge.ts
   var ElectronBridge = class {
     constructor(sendSocketFn) {
       __publicField(this, "capabilities");
@@ -122,7 +122,7 @@ var DesktopBridgeModule = (() => {
     }
   };
 
-  // apps/desktop/src/renderer/bridge/tauri-bridge.ts
+  // src/renderer/bridge/tauri-bridge.ts
   function getTauriInvoke() {
     if (typeof window === "undefined") return null;
     const tauri = window.__TAURI__;
@@ -288,7 +288,7 @@ var DesktopBridgeModule = (() => {
     }
   };
 
-  // apps/desktop/src/renderer/bridge/websocket-bridge.ts
+  // src/renderer/bridge/websocket-bridge.ts
   var WebSocketBridge = class {
     constructor(sendSocketFn) {
       __publicField(this, "capabilities", {
@@ -338,7 +338,7 @@ var DesktopBridgeModule = (() => {
     }
   };
 
-  // apps/desktop/src/renderer/bridge/index.ts
+  // src/renderer/bridge/index.ts
   var activeBridge = null;
   function getDesktopBridge(sendSocketFallback) {
     if (activeBridge) return activeBridge;
