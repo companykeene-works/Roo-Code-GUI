@@ -148,3 +148,4 @@ sessions/
 __pycache__/
 *.py[cod]
 *$py.class
+isolated-test-data/

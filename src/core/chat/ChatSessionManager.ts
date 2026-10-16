@@ -42,7 +42,14 @@ export class ChatSessionManager {
 
 	constructor(options: ChatSessionManagerOptions) {
 		this.storageDir = options.storageDir
-		this.sessionsDir = path.join(this.storageDir, "global-storage", "chat-sessions")
+		const norm = path.normalize(options.storageDir)
+		const isGlobalStorage =
+			path.basename(norm).toLowerCase() === "global-storage" ||
+			norm.endsWith("global-storage") ||
+			norm.endsWith("globalStorage")
+		this.sessionsDir = isGlobalStorage
+			? path.join(this.storageDir, "chat-sessions")
+			: path.join(this.storageDir, "global-storage", "chat-sessions")
 		this.indexPath = path.join(this.sessionsDir, "_index.json")
 		this.getGlobalSettings = options.getGlobalSettings
 		this.getSecret = options.getSecret

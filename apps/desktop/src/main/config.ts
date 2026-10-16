@@ -30,6 +30,9 @@ export interface DesktopConfig {
  */
 export function getConfigFilePath(): string {
 	try {
+		if (process.env.ROO_CONFIG_DIR) {
+			return path.join(process.env.ROO_CONFIG_DIR, "desktop-config.json")
+		}
 		if (process.platform === "win32") {
 			const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming")
 			return path.join(appData, "Roo Code", "desktop-config.json")
@@ -77,10 +80,12 @@ export function loadDesktopConfig(): DesktopConfig {
 
 		// Fallback & automatic migration from legacy locations (e.g. %APPDATA%\@roo-code\desktop\desktop-config.json)
 		const legacyCandidates: string[] = []
-		if (process.platform === "win32" && process.env.APPDATA) {
-			legacyCandidates.push(path.join(process.env.APPDATA, "@roo-code", "desktop", "desktop-config.json"))
+		if (!process.env.ROO_CONFIG_DIR) {
+			if (process.platform === "win32" && process.env.APPDATA) {
+				legacyCandidates.push(path.join(process.env.APPDATA, "@roo-code", "desktop", "desktop-config.json"))
+			}
+			legacyCandidates.push(path.join(os.homedir(), ".roo-desktop-data", "desktop-config.json"))
 		}
-		legacyCandidates.push(path.join(os.homedir(), ".roo-desktop-data", "desktop-config.json"))
 
 		for (const legacyPath of legacyCandidates) {
 			if (fs.existsSync(legacyPath)) {

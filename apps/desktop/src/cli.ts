@@ -16,6 +16,7 @@ program
 	.version("1.0.0")
 	.option("-w, --workspace <path>", "Workspace directory path")
 	.option("-p, --port <number>", "HTTP & WebSocket server port", (v) => parseInt(v, 10), 4500)
+	.option("-s, --storage-dir <path>", "Storage directory path")
 	.option("--electron", "Launch as native Electron desktop window", false)
 	.option("--web", "Launch as web desktop (accessible via browser)", false)
 	.option("--no-open", "Do not automatically open browser in web mode")
@@ -47,6 +48,7 @@ program
 		await startDesktopApp({
 			workspacePath: opts.workspace,
 			port: opts.port,
+			storageDir: opts.storageDir || process.env.ROO_STORAGE_DIR,
 			isElectron: Boolean(opts.electron || process.versions.electron),
 			openBrowser: opts.open && !opts.electron && !process.versions.electron,
 			dev: opts.dev,

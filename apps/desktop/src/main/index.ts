@@ -92,7 +92,7 @@ export async function startDesktopApp(options: DesktopRunOptions = {}) {
 	// Zero-state resilience: do not force process.cwd() when no workspace is selected!
 	workspacePath = workspacePath && workspacePath.trim() ? canonicalizePath(workspacePath) : ""
 	const port = options.port || 4500
-	const storageDir = options.storageDir || path.join(os.homedir(), ".roo-desktop-data")
+	const storageDir = options.storageDir || process.env.ROO_STORAGE_DIR || path.join(os.homedir(), ".roo-desktop-data")
 	if (!fs.existsSync(storageDir)) {
 		fs.mkdirSync(storageDir, { recursive: true })
 	}
