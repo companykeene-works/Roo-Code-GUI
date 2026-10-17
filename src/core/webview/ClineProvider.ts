@@ -2349,15 +2349,17 @@ export class ClineProvider
 		let effectiveApiConfiguration = { ...apiConfiguration }
 		if (currentTask) {
 			const chatProvider = (currentTask.historyItem?.chatProvider ||
+				currentTask.historyItem?.executionProvider ||
 				currentTask.apiConfiguration?.apiProvider) as ProviderName | undefined
 			const chatModelId =
 				currentTask.historyItem?.chatModelId ||
+				currentTask.historyItem?.executionModelId ||
 				(currentTask.apiConfiguration ? getModelId(currentTask.apiConfiguration) : undefined)
 			const hasExplicitChatEffort =
 				Boolean(currentTask.historyItem && "chatReasoningEffort" in currentTask.historyItem)
 			const chatReasoningEffort = hasExplicitChatEffort
 				? currentTask.historyItem!.chatReasoningEffort
-				: (currentTask.apiConfiguration as any)?.reasoningEffort
+				: (currentTask.historyItem?.executionReasoningEffort || (currentTask.apiConfiguration as any)?.reasoningEffort)
 
 			if (chatProvider) {
 				effectiveApiConfiguration.apiProvider = chatProvider

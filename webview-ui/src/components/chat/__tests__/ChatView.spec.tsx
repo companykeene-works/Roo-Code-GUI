@@ -177,6 +177,8 @@ interface ChatTextAreaProps {
 	selectedImages?: string[]
 	shouldDisableImages?: boolean
 	onResume?: () => void
+	resumeButtonText?: string
+	resumeButtonTooltip?: string
 	isStreaming?: boolean
 	isTaskActive?: boolean
 	isStopping?: boolean
@@ -221,7 +223,7 @@ vi.mock("../ChatTextArea", () => {
 					}}
 					data-sending-disabled={props.sendingDisabled}
 				/>
-				{props.onResume && <button onClick={props.onResume}>Continue</button>}
+				{props.onResume && <button onClick={props.onResume}>{props.resumeButtonText || "Continue"}</button>}
 				{(props.isStreaming || props.isTaskActive || props.isStopping) && !props.isEditMode && (
 					<button onClick={props.onStop}>Stop</button>
 				)}
@@ -1717,6 +1719,219 @@ describe("ChatView - Task Completion & Resumption Button Bar Tests", () => {
 			expect(getByText("chat:reject.title")).toBeInTheDocument()
 			// STOP button must NOT be present
 			expect(queryByRole("button", { name: "chat:stop.title" })).not.toBeInTheDocument()
+		})
+	})
+
+	describe("ChatView - Model Selection and Safe Resume (Scenarios A - N)", () => {
+		beforeEach(() => vi.clearAllMocks())
+
+		it("Scenario A, B, C, D, E: shows 'Switch to [model] & Continue' and sends switchModel: true with apiConfiguration when resumed", async () => {
+			const { getByText, queryByText } = renderChatView()
+
+			mockPostMessage({
+				currentTaskId: "task-paused-model-switch",
+				currentTaskItem: {
+					id: "task-paused-model-switch",
+					status: "interrupted",
+					executionModelId: "openai/gpt-6.1-sol",
+					executionProvider: "xkiro",
+				},
+				apiConfiguration: {
+					apiProvider: "xkiro",
+					apiModelId: "qwen/qwen3.8-max:free",
+					xkiroModelId: "qwen/qwen3.8-max:free",
+				},
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: 1000,
+						text: "Work paused",
+					},
+				],
+			})
+
+			// Scenario B & C: Button reflects the user's selected model for resume, and no request is fired prior to clicking Continue
+			await waitFor(() => {
+				expect(getByText("Switch to Qwen 3.8 Max & Continue")).toBeInTheDocument()
+			})
+			expect(vscode.postMessage).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "askResponse",
+				}),
+			)
+
+			// Scenario D & E: User clicks Continue -> sends askResponse with switchModel: true and apiConfiguration
+			fireEvent.click(getByText("Switch to Qwen 3.8 Max & Continue"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "askResponse",
+					askResponse: "yesButtonClicked",
+					switchModel: true,
+					apiConfiguration: expect.objectContaining({
+						apiModelId: "qwen/qwen3.8-max:free",
+						apiProvider: "xkiro",
+					}),
+					taskId: "task-paused-model-switch",
+				}),
+			)
+		})
+
+		it("Scenario F: normal Continue without model change sends askResponse without switchModel", async () => {
+			const { getByText, queryByText } = renderChatView()
+
+			mockPostMessage({
+				currentTaskId: "task-paused-same-model",
+				currentTaskItem: {
+					id: "task-paused-same-model",
+					status: "interrupted",
+					executionModelId: "openai/gpt-6.1-sol",
+					executionProvider: "xkiro",
+				},
+				apiConfiguration: {
+					apiProvider: "xkiro",
+					apiModelId: "openai/gpt-6.1-sol",
+					xkiroModelId: "openai/gpt-6.1-sol",
+				},
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: 1000,
+						text: "Work paused",
+					},
+				],
+			})
+
+			// Plain Continue button (no model switch label)
+			await waitFor(() => {
+				expect(getByText("Continue")).toBeInTheDocument()
+				expect(queryByText("Switch to Qwen 3.8 Max & Continue")).toBeNull()
+			})
+
+			fireEvent.click(getByText("Continue"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "askResponse",
+				askResponse: "yesButtonClicked",
+				taskId: "task-paused-same-model",
+			})
+		})
+
+		it("Scenario H: api_req_failed with changed model shows Switch to [model] & Resume and Retry with original model", async () => {
+			const { getByText } = renderChatView()
+
+			mockPostMessage({
+				currentTaskId: "task-failed-model-switch",
+				currentTaskItem: {
+					id: "task-failed-model-switch",
+					status: "interrupted",
+					executionModelId: "openai/gpt-6.1-sol",
+					executionProvider: "xkiro",
+				},
+				apiConfiguration: {
+					apiProvider: "xkiro",
+					apiModelId: "qwen/qwen3.8-max:free",
+					xkiroModelId: "qwen/qwen3.8-max:free",
+				},
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: 1000,
+						text: "Task with failure",
+					},
+					{
+						type: "ask",
+						ask: "api_req_failed",
+						ts: 2000,
+						text: "Credit limit exceeded",
+					},
+				],
+			})
+
+			await waitFor(() => {
+				expect(getByText("Switch to Qwen 3.8 Max & Resume")).toBeInTheDocument()
+				expect(getByText("Retry with GPT-6.1 Sol")).toBeInTheDocument()
+			})
+
+			// Clicking Switch & Resume sends switchModel: true
+			fireEvent.click(getByText("Switch to Qwen 3.8 Max & Resume"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "askResponse",
+					askResponse: "yesButtonClicked",
+					switchModel: true,
+					apiConfiguration: expect.objectContaining({
+						apiModelId: "qwen/qwen3.8-max:free",
+					}),
+					taskId: "task-failed-model-switch",
+				}),
+			)
+		})
+
+		it("Scenario N: submitting answer to followup ask with changed model includes switchModel: true", async () => {
+			const { getByTestId } = renderChatView()
+
+			mockPostMessage({
+				currentTaskId: "task-followup-switch",
+				currentTaskItem: {
+					id: "task-followup-switch",
+					status: "active",
+					executionModelId: "openai/gpt-6.1-sol",
+					executionProvider: "xkiro",
+				},
+				apiConfiguration: {
+					apiProvider: "xkiro",
+					apiModelId: "qwen/qwen3.8-max:free",
+					xkiroModelId: "qwen/qwen3.8-max:free",
+				},
+				clineMessages: [
+					{
+						type: "say",
+						say: "task",
+						ts: 1000,
+						text: "Task with question",
+					},
+					{
+						type: "ask",
+						ask: "followup",
+						ts: 2000,
+						text: "Which directory should I use?",
+					},
+				],
+			})
+
+			await waitFor(() => {
+				expect(getByTestId("chat-textarea")).toBeInTheDocument()
+			})
+
+			vi.mocked(vscode.postMessage).mockClear()
+
+			const chatTextArea = getByTestId("chat-textarea")
+			const input = chatTextArea.querySelector("input")! as HTMLInputElement
+
+			await act(async () => {
+				fireEvent.change(input, { target: { value: "use src directory" } })
+				fireEvent.keyDown(input, { key: "Enter", code: "Enter" })
+			})
+
+			await waitFor(() => {
+				expect(vscode.postMessage).toHaveBeenCalledWith(
+					expect.objectContaining({
+						type: "askResponse",
+						askResponse: "messageResponse",
+						switchModel: true,
+						apiConfiguration: expect.objectContaining({
+							apiModelId: "qwen/qwen3.8-max:free",
+						}),
+						text: "use src directory",
+						taskId: "task-followup-switch",
+					}),
+				)
+			})
 		})
 	})
 })

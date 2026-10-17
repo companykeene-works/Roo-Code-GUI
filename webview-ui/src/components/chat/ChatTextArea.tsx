@@ -62,6 +62,8 @@ interface ChatTextAreaProps {
 	onStop?: () => void
 	onEnqueueMessage?: () => void
 	onResume?: () => void
+	resumeButtonText?: string
+	resumeButtonTooltip?: string
 	contextTokens?: number
 	webSearchMode?: WebSearchMode
 	setWebSearchMode?: (mode: WebSearchMode) => void
@@ -91,6 +93,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			onStop,
 			onEnqueueMessage,
 			onResume,
+			resumeButtonText,
+			resumeButtonTooltip,
 			contextTokens = 0,
 			webSearchMode = "auto",
 			setWebSearchMode,
@@ -121,10 +125,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		} = useExtensionState()
 
 		const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration, openAiModelInfos)
-		const modelId = currentTaskItem?.executionModelId || selectedModelId
+		const activeExecutionModelId = isStreaming ? currentTaskItem?.executionModelId : undefined
+		const modelId = activeExecutionModelId || selectedModelId
 		const model =
-			currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModelId
-				? openAiModelInfos?.[currentTaskItem.executionModelId] || selectedModelInfo
+			activeExecutionModelId && activeExecutionModelId !== selectedModelId
+				? openAiModelInfos?.[activeExecutionModelId] || selectedModelInfo
 				: selectedModelInfo
 		const customContextOverride =
 			(apiConfiguration as any)?.xkiroCustomContextWindow || (apiConfiguration as any)?.customContextWindow
@@ -1253,9 +1258,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								)}
 								{/* Discrete inline Resume button for paused/resumable tasks */}
 								{onResume && !hasInputContent && !isStreaming && !isStopMode && !isTaskActive && !isStopping && (
-									<StandardTooltip content={t("chat:resumeTask.tooltip")}>
+									<StandardTooltip content={resumeButtonTooltip || t("chat:resumeTask.tooltip")}>
 										<button
-											aria-label={t("chat:resumeTask.title")}
+											aria-label={resumeButtonText || t("chat:resumeTask.title")}
 											type="button"
 											disabled={false}
 											onClick={onResume}
@@ -1269,7 +1274,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 												"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 											)}>
 											<span className="codicon codicon-play text-xs" />
-											<span>{t("chat:resumeTask.title")}</span>
+											<span>{resumeButtonText || t("chat:resumeTask.title")}</span>
 										</button>
 									</StandardTooltip>
 								)}

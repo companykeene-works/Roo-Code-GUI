@@ -35,6 +35,7 @@ import Announcement from "./Announcement"
 import ChatRow from "./ChatRow"
 import WarningRow from "./WarningRow"
 import { ChatTextArea } from "./ChatTextArea"
+import { cleanModelDisplayName } from "./ModelSelector"
 import TaskHeader from "./TaskHeader"
 import ProfileViolationWarning from "./ProfileViolationWarning"
 import { CheckpointWarning } from "./CheckpointWarning"
@@ -169,10 +170,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const isModelDiffDuringFailure = useMemo(() => {
 		if (clineAsk !== "api_req_failed") return false
 		const execModel = currentTaskItem?.executionModelId
+		const execProvider = currentTaskItem?.executionProvider
 		if (!execModel) return false
 		const selectedId = selectedModel.id
-		return Boolean(selectedId && selectedId !== execModel)
-	}, [clineAsk, currentTaskItem?.executionModelId, selectedModel.id])
+		const selectedProvider = apiConfiguration?.apiProvider
+		const isModelDiff = Boolean(selectedId && selectedId !== execModel)
+		const isProviderDiff = Boolean(selectedProvider && execProvider && selectedProvider !== execProvider)
+		return isModelDiff || isProviderDiff
+	}, [clineAsk, currentTaskItem?.executionModelId, currentTaskItem?.executionProvider, selectedModel.id, apiConfiguration?.apiProvider])
 
 	const [_didClickCancel, setDidClickCancel] = useState(false)
 	const [isStopping, setIsStopping] = useState(false)
@@ -980,7 +985,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		) {
 			return false
 		}
-		// If there is an active ask requiring user decision (e.g. tool approval, command approval, followup),
+		if (clineAsk === "api_req_failed") {
+			return false
+		}
+		// If there is an active ask requiring user decision (e.g. tool approval, command approval, followup, api_req_failed),
 		// approval/decision controls take precedence over resume.
 		if (
 			activeAskMessage &&
@@ -989,7 +997,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				activeAskMessage.ask === "followup" ||
 				activeAskMessage.ask === "tool" ||
 				activeAskMessage.ask === "command" ||
-				activeAskMessage.ask === "use_mcp_server")
+				activeAskMessage.ask === "use_mcp_server" ||
+				activeAskMessage.ask === "api_req_failed")
 		) {
 			return false
 		}
@@ -1002,32 +1011,56 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return isStatusInterrupted || isActionableResumeAsk
 	}, [isExecutionActive, isResuming, currentTaskItem?.status, currentTaskItem?.awaitingChildId, activeAskMessage, clineAsk, lastMessage])
 
-	const isModelDiffDuringResume = useMemo(() => {
-		if (!canResume) return false
+	const isModelDiff = useMemo(() => {
 		const execModel = currentTaskItem?.executionModelId
+		const execProvider = currentTaskItem?.executionProvider
 		if (!execModel) return false
 		const selectedId = selectedModel.id
-		return Boolean(selectedId && selectedId !== execModel)
-	}, [canResume, currentTaskItem?.executionModelId, selectedModel.id])
+		const selectedProvider = apiConfiguration?.apiProvider
+		const isModelChanged = Boolean(selectedId && selectedId !== execModel)
+		const isProviderChanged = Boolean(selectedProvider && execProvider && selectedProvider !== execProvider)
+		return isModelChanged || isProviderChanged
+	}, [currentTaskItem?.executionModelId, currentTaskItem?.executionProvider, selectedModel.id, apiConfiguration?.apiProvider])
+
+	const isModelDiffDuringResume = useMemo(() => {
+		if (!canResume) return false
+		return isModelDiff
+	}, [canResume, isModelDiff])
+
+	const resumeTargetName = useMemo(() => {
+		return cleanModelDisplayName(selectedModel.id, selectedModel.info)
+	}, [selectedModel.id, selectedModel.info])
+
+	const resumeButtonText = useMemo(() => {
+		if (isModelDiffDuringResume) {
+			return `Switch to ${resumeTargetName} & Continue`
+		}
+		return undefined
+	}, [isModelDiffDuringResume, resumeTargetName])
+
+	const resumeButtonTooltip = useMemo(() => {
+		if (isModelDiffDuringResume) {
+			return `Switch execution to ${resumeTargetName} and continue the task`
+		}
+		return undefined
+	}, [isModelDiffDuringResume, resumeTargetName])
 
 	const effectivePrimaryButtonText = useMemo(() => {
 		if (clineAsk === "api_req_failed" && isModelDiffDuringFailure) {
-			const targetName = selectedModel.id
-			return `Switch to ${targetName} & Resume`
+			return `Switch to ${resumeTargetName} & Resume`
 		}
-		if (isModelDiffDuringResume) {
-			const targetName = selectedModel.id
-			return `Switch to ${targetName} & Resume`
+		if (primaryButtonText && isModelDiffDuringResume) {
+			return `Switch to ${resumeTargetName} & Continue`
 		}
 		return primaryButtonText
-	}, [clineAsk, isModelDiffDuringFailure, isModelDiffDuringResume, selectedModel.id, primaryButtonText])
+	}, [clineAsk, isModelDiffDuringFailure, isModelDiffDuringResume, resumeTargetName, primaryButtonText])
 
 	const effectiveSecondaryButtonText = useMemo(() => {
 		if (clineAsk === "api_req_failed" && isModelDiffDuringFailure) {
-			return `Retry with ${currentTaskItem?.executionModelId || "original model"}`
+			return `Retry with ${cleanModelDisplayName(currentTaskItem?.executionModelId || "original model")}`
 		}
-		if (isModelDiffDuringResume) {
-			return `Resume with ${currentTaskItem?.executionModelId || "original model"}`
+		if (secondaryButtonText && isModelDiffDuringResume) {
+			return `Resume with ${cleanModelDisplayName(currentTaskItem?.executionModelId || "original model")}`
 		}
 		return secondaryButtonText
 	}, [clineAsk, isModelDiffDuringFailure, isModelDiffDuringResume, currentTaskItem?.executionModelId, secondaryButtonText])
@@ -1155,6 +1188,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						markFollowUpAsAnswered()
 					}
 
+					const shouldSwitchModel = isModelDiff
+
 					// Use clineAskRef.current
 					switch (
 						clineAskRef.current // Use clineAskRef.current
@@ -1170,6 +1205,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							vscode.postMessage({
 								type: "askResponse",
 								askResponse: "messageResponse",
+								...(shouldSwitchModel ? { switchModel: true, apiConfiguration } : {}),
 								text,
 								images,
 								taskId: currentTaskItem?.id,
@@ -1180,10 +1216,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 				} else {
 					deleteDraft(cwd || "global", currentChatKeyRef.current)
+					const shouldSwitchModel = isModelDiff
 					// This is a new message in an ongoing task.
 					vscode.postMessage({
 						type: "askResponse",
 						askResponse: "messageResponse",
+						...(shouldSwitchModel ? { switchModel: true, apiConfiguration } : {}),
 						text,
 						images,
 						taskId: currentTaskItem?.id,
@@ -1200,7 +1238,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			sendingDisabled,
 			isStreaming,
 			messageQueue.length,
-			apiConfiguration?.apiProvider,
+			apiConfiguration,
+			isModelDiff,
+			isExecutionActive,
 			currentTaskItem?.id,
 			currentTaskItem?.status,
 			cwd,
@@ -1282,9 +1322,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			return
 		}
 		setIsResuming(true)
-		vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked", taskId: currentTaskItem?.id })
+		vscode.postMessage({
+			type: "askResponse",
+			askResponse: "yesButtonClicked",
+			...(isModelDiffDuringResume ? { switchModel: true, apiConfiguration } : {}),
+			taskId: currentTaskItem?.id,
+		})
 		setClineAsk(undefined)
-	}, [isResuming, isExecutionActive, currentTaskItem?.id])
+	}, [isResuming, isExecutionActive, isModelDiffDuringResume, apiConfiguration, currentTaskItem?.id])
 
 	// This logic depends on the useEffect[messages] above to set clineAsk,
 	// after which buttons are shown and we then send an askResponse to the
@@ -2572,6 +2617,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setSelectedImages={setSelectedImages}
 				onSend={() => handleSendMessage(inputValue, selectedImages)}
 				onResume={canResume ? handleResumeTask : undefined}
+				resumeButtonText={resumeButtonText}
+				resumeButtonTooltip={resumeButtonTooltip}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
 				onHeightChange={() => {

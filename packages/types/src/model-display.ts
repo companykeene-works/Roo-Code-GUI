@@ -1,4 +1,4 @@
-import type { ModelInfo } from "./model.js"
+import { type ModelInfo, stripModelTag } from "./model.js"
 
 /**
  * Formats a single model token with intelligent casing:
@@ -171,8 +171,8 @@ export function formatModelDisplayName(modelId: string, modelInfo?: ModelInfo): 
 		return CANONICAL_MODEL_NAMES[modelPartLower]
 	}
 
-	// Strip common container/tag suffixes (e.g. :latest)
-	const modelPart = rawModelPart.replace(/:latest$/i, "")
+	// Strip common container/tag suffixes (e.g. :latest, :free, :beta)
+	const modelPart = stripModelTag(rawModelPart) || rawModelPart
 
 	// --------------------------------------------------------------------------
 	// 3. Algorithmic formatters for major families & generic models

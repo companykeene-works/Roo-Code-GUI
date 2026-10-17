@@ -862,8 +862,7 @@ describe("ModelSelector", () => {
 	})
 
 	describe("Active Task Model Snapshot & TaskModelLock GUI Invariants", () => {
-		test("displays currentTaskItem.executionModelId in trigger button even when global apiConfiguration is different", () => {
-			// Global config is set to Qwen3.8 Max
+		test("displays currentTaskItem.executionModelId in trigger button when task is actively streaming (disabled=true)", () => {
 			mockExtensionState.apiConfiguration = {
 				apiProvider: "xkiro",
 				apiModelId: "qwen/qwen3.8-max:free",
@@ -874,41 +873,54 @@ describe("ModelSelector", () => {
 				info: { contextWindow: 1000000, maxTokens: 64000 },
 			}
 
-			// BUT the active/paused task was locked to GPT-6.1 Sol
+			// Active task is streaming on GPT-6.1 Sol
 			mockExtensionState.currentTaskItem = {
-				id: "paused-task-123",
+				id: "streaming-task-123",
 				executionModelId: "openai/gpt-6.1-sol",
 				executionProvider: "xkiro",
 			}
 
-			render(<ModelSelector />)
+			render(<ModelSelector disabled={true} />)
 			const trigger = screen.getByTestId("model-selector-trigger")
 
-			// Trigger MUST show GPT-6.1 Sol (the model actually running and resuming), NOT Qwen3.8 Max
+			// When actively streaming, trigger displays the active execution snapshot
 			expect(trigger).toHaveTextContent("GPT-6.1 Sol")
-			expect(trigger).not.toHaveTextContent("Qwen3.8 Max")
+			expect(trigger).not.toHaveTextContent("Qwen 3.8 Max")
 		})
 
-		test("popover checkmark selects currentTaskItem.executionModelId and tooltip contains no misleading deferred badges", () => {
+		test("displays selected model in trigger and selects it in popover when task is paused and awaiting continue", () => {
 			mockExtensionState.apiConfiguration = {
 				apiProvider: "xkiro",
 				apiModelId: "qwen/qwen3.8-max:free",
 				xkiroModelId: "qwen/qwen3.8-max:free",
 			}
+			mockSelectedModel = {
+				id: "qwen/qwen3.8-max:free",
+				info: { contextWindow: 1000000, maxTokens: 64000 },
+			}
+
+			// Paused task with executionModelId = GPT-6.1 Sol, but user chose Qwen 3.8 Max for next continue
 			mockExtensionState.currentTaskItem = {
 				id: "paused-task-123",
 				executionModelId: "openai/gpt-6.1-sol",
 				executionProvider: "xkiro",
+				chatModelId: "qwen/qwen3.8-max:free",
 			}
 
-			render(<ModelSelector />)
+			render(<ModelSelector disabled={false} />)
+			const trigger = screen.getByTestId("model-selector-trigger")
+
+			// Trigger MUST show Qwen 3.8 Max (the user's choice to resume with)
+			expect(trigger).toHaveTextContent("Qwen 3.8 Max")
+			// executionModelId is NOT mutated prematurely
+			expect(mockExtensionState.currentTaskItem.executionModelId).toBe("openai/gpt-6.1-sol")
 
 			// Tooltip / trigger contains no deceptive "Selected (next)" or deferred message
 			expect(screen.queryByText(/Selected \(next\)/i)).not.toBeInTheDocument()
 			expect(screen.queryByText(/Changes apply to the next execution turn/i)).not.toBeInTheDocument()
 
 			// Open popover
-			fireEvent.click(screen.getByTestId("model-selector-trigger"))
+			fireEvent.click(trigger)
 
 			// Check that no amber deferred banner is rendered
 			expect(screen.queryByText(/Changes apply to the next execution turn/i)).not.toBeInTheDocument()

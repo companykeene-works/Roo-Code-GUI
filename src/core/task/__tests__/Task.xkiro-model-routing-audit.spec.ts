@@ -674,5 +674,102 @@ describe("xKiro Model Routing & TaskModelLock Audit Suite", () => {
 			expect(payloads[0].model).toBe("qwen/qwen3.8-max:free")
 			expect(payloads[1].model).toBe("qwen/qwen3.8-max:free")
 		})
+
+		it("Scenario D & E: switchExecutionModelAndResume increments epoch and routes subsequent requests to new model", async () => {
+			const agentTask = new Task({
+				provider: mockProvider as unknown as ClineProvider,
+				apiConfiguration: xkiroGpt61Config,
+				task: "Epoch increment test",
+				startTask: false,
+			})
+			;(agentTask as any)._started = true
+			expect(agentTask.executionEpoch).toBe(1)
+			expect(agentTask.executionModelId).toBe("openai/gpt-6.1-sol")
+
+			// Simulate paused task with resume_task ask
+			agentTask.clineMessages.push({
+				ts: Date.now(),
+				type: "ask",
+				ask: "resume_task",
+				text: "",
+			})
+
+			// User switches to Qwen and resumes
+			await agentTask.switchExecutionModelAndResume(xkiroQwenConfig, "yesButtonClicked")
+
+			expect(agentTask.executionEpoch).toBe(2)
+			expect(agentTask.executionModelId).toBe("qwen/qwen3.8-max:free")
+
+			// Outgoing request now uses the switched model
+			const stream = agentTask.api.createMessage("System prompt", [{ role: "user", content: "Post switch task" }], {
+				taskId: agentTask.taskId,
+			})
+			for await (const _chunk of stream) {}
+
+			const lastAgentPayload = outgoingPayloads.filter((p) => p.source === "agent").pop()
+			expect(lastAgentPayload?.model).toBe("qwen/qwen3.8-max:free")
+		})
+
+		it("Scenario F: normal resume without model switch preserves executionEpoch and model", async () => {
+			const agentTask = new Task({
+				provider: mockProvider as unknown as ClineProvider,
+				apiConfiguration: xkiroGpt61Config,
+				task: "Normal resume test",
+				startTask: false,
+			})
+			;(agentTask as any)._started = true
+			const initialEpoch = agentTask.executionEpoch
+			expect(agentTask.executionModelId).toBe("openai/gpt-6.1-sol")
+
+			agentTask.clineMessages.push({
+				ts: Date.now(),
+				type: "ask",
+				ask: "resume_task",
+				text: "",
+			})
+
+			// Normal resume without switch
+			await agentTask.resumeWithResponse("yesButtonClicked")
+
+			expect(agentTask.executionEpoch).toBe(initialEpoch)
+			expect(agentTask.executionModelId).toBe("openai/gpt-6.1-sol")
+		})
+
+		it("Scenario M: stopping after model switch preserves new model for subsequent resume", async () => {
+			const agentTask = new Task({
+				provider: mockProvider as unknown as ClineProvider,
+				apiConfiguration: xkiroGpt61Config,
+				task: "Stop after switch test",
+				startTask: false,
+			})
+			;(agentTask as any)._started = true
+			agentTask.clineMessages.push({
+				ts: Date.now(),
+				type: "ask",
+				ask: "resume_task",
+				text: "",
+			})
+
+			// Switch to Qwen
+			await agentTask.switchExecutionModelAndResume(xkiroQwenConfig, "yesButtonClicked")
+			expect(agentTask.executionModelId).toBe("qwen/qwen3.8-max:free")
+			expect(agentTask.executionEpoch).toBe(2)
+
+			// Task is stopped
+			await agentTask.abortTask()
+			expect(agentTask.executionModelId).toBe("qwen/qwen3.8-max:free")
+
+			// Subsequent resume without further switch keeps Qwen
+			agentTask.clineMessages.push({
+				ts: Date.now(),
+				type: "ask",
+				ask: "resume_task",
+				text: "",
+			})
+			await agentTask.resumeWithResponse("yesButtonClicked")
+
+			expect(agentTask.executionModelId).toBe("qwen/qwen3.8-max:free")
+			expect(agentTask.executionEpoch).toBe(2)
+		})
 	})
 })

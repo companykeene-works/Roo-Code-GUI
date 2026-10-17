@@ -436,17 +436,26 @@ export const ModelSelector = ({
 	const { id: activeModelId, info: activeModelInfo, isUnavailable } = useSelectedModel(apiConfiguration)
 	const activeProvider = (apiConfiguration?.apiProvider || "xkiro") as ProviderName
 
-	const effectiveModelId = currentTaskItem?.executionModelId || activeModelId
-	const effectiveProvider = (currentTaskItem?.executionProvider || activeProvider) as ProviderName
+	// When actively streaming, the selector is locked and reflects the in-flight execution model.
+	// When interactive (idle, paused, interrupted, awaiting continue), it reflects the user's selected model for the next continuation.
+	const isTaskStreaming = Boolean(disabled && currentTaskItem?.executionModelId)
+	const effectiveModelId = (isTaskStreaming
+		? currentTaskItem?.executionModelId
+		: (activeModelId || currentTaskItem?.executionModelId)) || ""
+	const effectiveProvider = (
+		isTaskStreaming && currentTaskItem?.executionProvider
+			? currentTaskItem.executionProvider
+			: (activeProvider || currentTaskItem?.executionProvider || "xkiro")
+	) as ProviderName
 
 	const effectiveModelInfo = useMemo(() => {
 		if (effectiveModelId === activeModelId) {
 			return activeModelInfo
 		}
-		if (openAiModelInfos?.[effectiveModelId]) {
+		if (effectiveModelId && openAiModelInfos?.[effectiveModelId]) {
 			return openAiModelInfos[effectiveModelId]
 		}
-		if (MODELS_BY_PROVIDER[effectiveProvider]?.[effectiveModelId]) {
+		if (effectiveModelId && effectiveProvider && MODELS_BY_PROVIDER[effectiveProvider]?.[effectiveModelId]) {
 			return MODELS_BY_PROVIDER[effectiveProvider][effectiveModelId]
 		}
 		return undefined

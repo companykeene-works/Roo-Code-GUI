@@ -81,10 +81,11 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 	} = useExtensionState()
 
 	const selectedModel = useSelectedModel(apiConfiguration, openAiModelInfos)
-	const activeModelId = propModelId ?? (currentTaskItem?.executionModelId || selectedModel?.id || "")
+	const isTaskExecuting = Boolean(disabled && currentTaskItem?.executionModelId)
+	const activeModelId = propModelId ?? (isTaskExecuting ? currentTaskItem?.executionModelId : selectedModel?.id) ?? ""
 	const activeModelInfo =
 		propModelInfo ??
-		(currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModel?.id
+		(isTaskExecuting && currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModel?.id
 			? openAiModelInfos?.[currentTaskItem.executionModelId] || selectedModel?.info
 			: selectedModel?.info)
 
@@ -133,7 +134,11 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 		) {
 			return "Off"
 		}
-		const effort = (currentTaskItem?.executionReasoningEffort || apiConfiguration?.reasoningEffort || activeModelInfo?.reasoningEffort)?.toLowerCase()
+		const effort = (
+			(isTaskExecuting ? currentTaskItem?.executionReasoningEffort : undefined) ||
+			apiConfiguration?.reasoningEffort ||
+			activeModelInfo?.reasoningEffort
+		)?.toLowerCase()
 		if (effort === "none") return "Off"
 
 		if (effort) {

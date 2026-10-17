@@ -2953,6 +2953,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 			this.currentStatus === "interrupted" ||
 			this.historyItem?.status === "interrupted" ||
 			this.currentAskType === "resume_task" ||
+			this.currentAskType === "followup" ||
 			Boolean(this.resumableAsk)
 		)
 	}
