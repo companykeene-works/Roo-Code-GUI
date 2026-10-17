@@ -860,4 +860,77 @@ describe("ModelSelector", () => {
 			expect(screen.getByPlaceholderText("Enter custom model ID...")).toBeInTheDocument()
 		})
 	})
+
+	describe("Active Task Model Snapshot & TaskModelLock GUI Invariants", () => {
+		test("displays currentTaskItem.executionModelId in trigger button even when global apiConfiguration is different", () => {
+			// Global config is set to Qwen3.8 Max
+			mockExtensionState.apiConfiguration = {
+				apiProvider: "xkiro",
+				apiModelId: "qwen/qwen3.8-max:free",
+				xkiroModelId: "qwen/qwen3.8-max:free",
+			}
+			mockSelectedModel = {
+				id: "qwen/qwen3.8-max:free",
+				info: { contextWindow: 1000000, maxTokens: 64000 },
+			}
+
+			// BUT the active/paused task was locked to GPT-6.1 Sol
+			mockExtensionState.currentTaskItem = {
+				id: "paused-task-123",
+				executionModelId: "openai/gpt-6.1-sol",
+				executionProvider: "xkiro",
+			}
+
+			render(<ModelSelector />)
+			const trigger = screen.getByTestId("model-selector-trigger")
+
+			// Trigger MUST show GPT-6.1 Sol (the model actually running and resuming), NOT Qwen3.8 Max
+			expect(trigger).toHaveTextContent("GPT-6.1 Sol")
+			expect(trigger).not.toHaveTextContent("Qwen3.8 Max")
+		})
+
+		test("popover checkmark selects currentTaskItem.executionModelId and tooltip contains no misleading deferred badges", () => {
+			mockExtensionState.apiConfiguration = {
+				apiProvider: "xkiro",
+				apiModelId: "qwen/qwen3.8-max:free",
+				xkiroModelId: "qwen/qwen3.8-max:free",
+			}
+			mockExtensionState.currentTaskItem = {
+				id: "paused-task-123",
+				executionModelId: "openai/gpt-6.1-sol",
+				executionProvider: "xkiro",
+			}
+
+			render(<ModelSelector />)
+
+			// Tooltip / trigger contains no deceptive "Selected (next)" or deferred message
+			expect(screen.queryByText(/Selected \(next\)/i)).not.toBeInTheDocument()
+			expect(screen.queryByText(/Changes apply to the next execution turn/i)).not.toBeInTheDocument()
+
+			// Open popover
+			fireEvent.click(screen.getByTestId("model-selector-trigger"))
+
+			// Check that no amber deferred banner is rendered
+			expect(screen.queryByText(/Changes apply to the next execution turn/i)).not.toBeInTheDocument()
+		})
+
+		test("falls back to global selected model when no task is active", () => {
+			mockExtensionState.apiConfiguration = {
+				apiProvider: "xkiro",
+				apiModelId: "qwen/qwen3.8-max:free",
+				xkiroModelId: "qwen/qwen3.8-max:free",
+			}
+			mockSelectedModel = {
+				id: "qwen/qwen3.8-max:free",
+				info: { contextWindow: 1000000, maxTokens: 64000 },
+			}
+			mockExtensionState.currentTaskItem = undefined
+
+			render(<ModelSelector />)
+			const trigger = screen.getByTestId("model-selector-trigger")
+
+			// Without an active task, trigger displays the global selected model
+			expect(trigger).toHaveTextContent("Qwen 3.8 Max")
+		})
+	})
 })

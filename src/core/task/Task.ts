@@ -2926,7 +2926,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 	 * - Task exists and is not aborted/abandoned/completed
 	 * - No active request, no streaming, no first-chunk wait
 	 * - No tool currently executing
-	 * - Task is halted specifically because provider execution failed
+	 * - Task is halted specifically because provider execution failed OR paused/interrupted awaiting resume
 	 */
 	public canSwitchExecutionModel(): boolean {
 		if (this.abort || this.abandoned || this.isTaskCompleted) {
@@ -2938,11 +2938,27 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 		if (this.currentRequestAbortController !== undefined) {
 			return false
 		}
-		return this.isHaltedOnProviderError()
+		return this.isHaltedOnProviderError() || this.isPausedOrResumable()
+	}
+
+	public isPausedOrResumable(): boolean {
+		if (this.abort || this.abandoned || this.isTaskCompleted) {
+			return false
+		}
+		if (this.isStreaming || this.isWaitingForFirstChunk || this.currentRequestAbortController !== undefined) {
+			return false
+		}
+		return (
+			!this._started ||
+			this.currentStatus === "interrupted" ||
+			this.historyItem?.status === "interrupted" ||
+			this.currentAskType === "resume_task" ||
+			Boolean(this.resumableAsk)
+		)
 	}
 
 	/**
-	 * Switches the execution model after a provider failure halt and resumes the task in a new execution epoch.
+	 * Switches the execution model after a provider failure halt or paused state and resumes the task in a new execution epoch.
 	 *
 	 * Preserves: taskId, conversation history, tool results, todoList, workspace, clineMessages.
 	 * Updates: executionEpoch++, executionModelId, executionProvider, executionReasoningEffort, apiConfiguration, api.
@@ -2957,7 +2973,7 @@ You MUST continue the task using strictly compliant, read-only inspection or alt
 	): Promise<void> {
 		if (!this.canSwitchExecutionModel()) {
 			throw new Error(
-				"Cannot switch execution model: task is not in a halted provider error state or is actively executing.",
+				"Cannot switch execution model: task is not in a paused or halted provider error state or is actively executing.",
 			)
 		}
 

@@ -2941,6 +2941,10 @@ export class ClineProvider
 		return undefined
 	}
 
+	public getTaskFromStack(taskId: string): Task | undefined {
+		return this.runningTasks.get(taskId) ?? this.clineStack.find((t) => t.taskId === taskId)
+	}
+
 	public getRecentTasks(): string[] {
 		if (this.recentTasksCache) {
 			return this.recentTasksCache

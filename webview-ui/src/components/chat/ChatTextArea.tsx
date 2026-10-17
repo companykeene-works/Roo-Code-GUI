@@ -117,9 +117,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			lockApiConfigAcrossModes,
 			apiConfiguration,
 			openAiModelInfos,
+			currentTaskItem,
 		} = useExtensionState()
 
-		const { id: modelId, info: model } = useSelectedModel(apiConfiguration, openAiModelInfos)
+		const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration, openAiModelInfos)
+		const modelId = currentTaskItem?.executionModelId || selectedModelId
+		const model =
+			currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModelId
+				? openAiModelInfos?.[currentTaskItem.executionModelId] || selectedModelInfo
+				: selectedModelInfo
 		const customContextOverride =
 			(apiConfiguration as any)?.xkiroCustomContextWindow || (apiConfiguration as any)?.customContextWindow
 		const contextWindow = customContextOverride || model?.contextWindow || getModelContextWindow(modelId)
@@ -1376,7 +1382,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							onToggleLockApiConfig={handleToggleLockApiConfig}
 							onApiConfigChange={handleApiConfigChange}
 						/>
-						<ReasoningEffortButton disabled={Boolean(selectApiConfigDisabled)} />
+						<ReasoningEffortButton
+							disabled={Boolean(selectApiConfigDisabled)}
+							modelId={modelId}
+							modelInfo={model}
+						/>
 						<AutoApproveDropdown triggerClassName="min-w-[28px] text-ellipsis overflow-hidden shrink-0" />
 						<WebSearchButton
 							mode={webSearchMode}

@@ -436,11 +436,21 @@ export const ModelSelector = ({
 	const { id: activeModelId, info: activeModelInfo, isUnavailable } = useSelectedModel(apiConfiguration)
 	const activeProvider = (apiConfiguration?.apiProvider || "xkiro") as ProviderName
 
-	const isExecutionModelDifferent = Boolean(
-		currentTaskItem?.executionModelId &&
-		activeModelId &&
-		currentTaskItem.executionModelId !== activeModelId
-	)
+	const effectiveModelId = currentTaskItem?.executionModelId || activeModelId
+	const effectiveProvider = (currentTaskItem?.executionProvider || activeProvider) as ProviderName
+
+	const effectiveModelInfo = useMemo(() => {
+		if (effectiveModelId === activeModelId) {
+			return activeModelInfo
+		}
+		if (openAiModelInfos?.[effectiveModelId]) {
+			return openAiModelInfos[effectiveModelId]
+		}
+		if (MODELS_BY_PROVIDER[effectiveProvider]?.[effectiveModelId]) {
+			return MODELS_BY_PROVIDER[effectiveProvider][effectiveModelId]
+		}
+		return undefined
+	}, [effectiveModelId, activeModelId, activeModelInfo, openAiModelInfos, effectiveProvider])
 
 	const handleRefreshModels = useCallback(() => {
 		setIsRefreshingModels(true)
@@ -490,13 +500,14 @@ export const ModelSelector = ({
 		}
 	}, [activeProvider, openAiModels, apiConfiguration])
 
-	// Friendly name for the currently selected model
-	const activeDisplayName = useMemo(() => {
-		if (isUnavailable || !activeModelId) {
+	// Friendly name for the model displayed in the selector (prioritizes active task execution snapshot)
+	const effectiveDisplayName = useMemo(() => {
+		if (!effectiveModelId) {
 			return t("chat:modelSelector.selectModel") || "Select model"
 		}
-		return cleanModelDisplayName(activeModelId, activeModelInfo)
-	}, [activeModelId, activeModelInfo, isUnavailable, t])
+		return cleanModelDisplayName(effectiveModelId, effectiveModelInfo)
+	}, [effectiveModelId, effectiveModelInfo, t])
+	const activeDisplayName = effectiveDisplayName
 
 	// Available models for the current provider
 	const availableModels = useMemo<ModelItem[]>(() => {
@@ -1032,12 +1043,16 @@ export const ModelSelector = ({
 		bedrock: "AWS Bedrock",
 	}
 
-	const currentProviderLabel = providerDisplayNames[activeProvider] || activeProvider
+	const effectiveProviderLabel = providerDisplayNames[effectiveProvider] || effectiveProvider
+	const currentProviderLabel = effectiveProviderLabel
 
 	// Unified row renderer across all model sections
 	const renderModelRow = useCallback(
 		(m: ModelItem, sectionKey: string) => {
-			const isSelected = m.id === activeModelId
+			const isSelected =
+				m.id === effectiveModelId ||
+				getCanonicalModelKey(effectiveProvider, m.id) ===
+					getCanonicalModelKey(effectiveProvider, effectiveModelId)
 			const ctxStr = formatContextWindow(m.contextWindow)
 
 			return (
@@ -1098,7 +1113,7 @@ export const ModelSelector = ({
 				</div>
 			)
 		},
-		[activeModelId, handleSelectModel],
+		[effectiveModelId, effectiveProvider, handleSelectModel],
 	)
 
 	return (
@@ -1106,32 +1121,13 @@ export const ModelSelector = ({
 			<StandardTooltip
 				content={
 					<div className="flex flex-col gap-0.5 text-xs text-left">
-						{isExecutionModelDifferent ? (
-							<>
-								<div className="font-semibold text-vscode-foreground">
-									Current execution: {currentTaskItem?.executionModelId}
-								</div>
-								<div className="text-vscode-descriptionForeground text-[11px]">
-									Selected (next): {activeDisplayName}
-								</div>
-								<div className="text-vscode-descriptionForeground text-[11px]">
-									Provider: {currentProviderLabel}
-								</div>
-								<div className="text-[10px] text-amber-500/90 mt-0.5">
-									Model change will apply after current execution stops.
-								</div>
-							</>
-						) : (
-							<>
-								<div className="font-semibold text-vscode-foreground">{activeDisplayName}</div>
-								<div className="text-vscode-descriptionForeground font-mono text-[11px]">
-									Model: {activeModelId}
-								</div>
-								<div className="text-vscode-descriptionForeground text-[11px]">
-									Provider: {currentProviderLabel}
-								</div>
-							</>
-						)}
+						<div className="font-semibold text-vscode-foreground">{effectiveDisplayName}</div>
+						<div className="text-vscode-descriptionForeground font-mono text-[11px]">
+							Model: {effectiveModelId}
+						</div>
+						<div className="text-vscode-descriptionForeground text-[11px]">
+							Provider: {effectiveProviderLabel}
+						</div>
 					</div>
 				}>
 				<PopoverTrigger
@@ -1146,11 +1142,11 @@ export const ModelSelector = ({
 							: "opacity-90 hover:opacity-100 hover:bg-vscode-toolbar-hoverBackground/60 hover:border-border/70 cursor-pointer",
 						triggerClassName,
 					)}>
-					<ProviderIcon provider={activeProvider} />
-					<span className="truncate font-medium">{activeDisplayName}</span>
+					<ProviderIcon provider={effectiveProvider} />
+					<span className="truncate font-medium">{effectiveDisplayName}</span>
 					<span className="opacity-40 select-none text-[11px] shrink-0">·</span>
 					<span className="truncate text-vscode-descriptionForeground opacity-80 shrink-0">
-						{currentProviderLabel}
+						{effectiveProviderLabel}
 					</span>
 					<ChevronDown className="size-3 text-vscode-descriptionForeground opacity-60 flex-shrink-0 -mr-0.5" />
 				</PopoverTrigger>
@@ -1166,7 +1162,7 @@ export const ModelSelector = ({
 					<div className="p-2 border-b border-vscode-dropdown-border/60 bg-vscode-dropdown-background space-y-2">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-1.5">
-								<ProviderIcon provider={activeProvider} />
+								<ProviderIcon provider={effectiveProvider} />
 								<span className="text-xs font-semibold text-vscode-foreground">
 									{t("chat:modelSelector.title") || "AI Models"}
 								</span>
@@ -1200,16 +1196,10 @@ export const ModelSelector = ({
 									</StandardTooltip>
 								)}
 								<span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[rgba(167,139,250,0.12)] text-[#a78bfa] border border-[rgba(167,139,250,0.25)]">
-									{currentProviderLabel}
+									{effectiveProviderLabel}
 								</span>
 							</div>
 						</div>
-
-						{isExecutionModelDifferent && (
-							<div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[11px] text-amber-500/90 leading-tight">
-								Active task is running on <span className="font-mono font-medium">{currentTaskItem?.executionModelId}</span>. Changes apply to the next execution turn or recovery.
-							</div>
-						)}
 
 						{/* Search Bar */}
 						<div className="relative flex items-center">

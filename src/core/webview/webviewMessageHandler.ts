@@ -695,8 +695,9 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				}
 
 				const targetTask =
-					(message.taskId ? provider.runningTasks.get(message.taskId) : undefined) ??
-					provider.getCurrentTask()
+					(message.taskId
+						? provider.getTaskFromStack(message.taskId)
+						: undefined) ?? provider.getCurrentTask()
 				if (targetTask) {
 					console.log(
 						`[askResponse] routing to task ${targetTask.taskId}, response=${message.askResponse}, switchModel=${Boolean(message.switchModel)}, started=${targetTask.isStarted}`,

@@ -76,11 +76,17 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 		apiConfiguration,
 		currentApiConfigName,
 		setApiConfiguration,
+		currentTaskItem,
+		openAiModelInfos,
 	} = useExtensionState()
 
-	const selectedModel = useSelectedModel(apiConfiguration)
-	const activeModelId = propModelId ?? selectedModel?.id ?? ""
-	const activeModelInfo = propModelInfo ?? selectedModel?.info
+	const selectedModel = useSelectedModel(apiConfiguration, openAiModelInfos)
+	const activeModelId = propModelId ?? (currentTaskItem?.executionModelId || selectedModel?.id || "")
+	const activeModelInfo =
+		propModelInfo ??
+		(currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModel?.id
+			? openAiModelInfos?.[currentTaskItem.executionModelId] || selectedModel?.info
+			: selectedModel?.info)
 
 	// Check if the selected model supports reasoning
 	const activeModelSupportsReasoning = useMemo(() => {
@@ -127,7 +133,7 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 		) {
 			return "Off"
 		}
-		const effort = (apiConfiguration?.reasoningEffort || activeModelInfo?.reasoningEffort)?.toLowerCase()
+		const effort = (currentTaskItem?.executionReasoningEffort || apiConfiguration?.reasoningEffort || activeModelInfo?.reasoningEffort)?.toLowerCase()
 		if (effort === "none") return "Off"
 
 		if (effort) {

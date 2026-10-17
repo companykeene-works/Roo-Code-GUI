@@ -74,7 +74,12 @@ const TaskHeader = ({
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
 	const { apiConfiguration, currentTaskItem, clineMessages, openAiModelInfos } = useExtensionState()
-	const { id: modelId, info: model } = useSelectedModel(apiConfiguration, openAiModelInfos)
+	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration, openAiModelInfos)
+	const modelId = currentTaskItem?.executionModelId || selectedModelId
+	const model =
+		currentTaskItem?.executionModelId && currentTaskItem.executionModelId !== selectedModelId
+			? openAiModelInfos?.[currentTaskItem.executionModelId] || selectedModelInfo
+			: selectedModelInfo
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
 	const displayPrompt = latestUserPrompt ?? task
