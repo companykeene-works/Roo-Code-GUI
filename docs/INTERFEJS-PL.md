@@ -55,9 +55,9 @@ Build jest lokalny i nie ma podpisu cyfrowego wydawcy.
 
 ## Panel modeli
 
-Panel używa jednej listy z wierszami o wysokości co najmniej 64 px. Nazwa i subtelne oznaczenie możliwości są oddzielone od dostawcy i wyrównanego kontekstu. Ostatnio używane modele nie powtarzają się w pozostałych sekcjach. Wyszukiwarka otrzymuje fokus przy otwarciu; strzałki, Home i End przechodzą między modelami, Enter wybiera, a Escape zamyka panel. Filtry uwzględniają modele mające kilka możliwości jednocześnie.
+Panel używa jednej listy z wierszami o wysokości co najmniej 64 px. Nazwa i subtelne oznaczenie możliwości są oddzielone od dostawcy i wyrównanego kontekstu. Każdy model występuje raz, we właściwej rodzinie. Wyszukiwarka otrzymuje fokus przy otwarciu; strzałki, Home i End przechodzą między widocznymi modelami, Enter wybiera, a Escape zamyka panel. Filtry uwzględniają modele mające kilka możliwości jednocześnie.
 
-Główna lista jest podzielona na rodziny GPT, Claude, Gemini, Qwen, Grok, Llama (Meta), DeepSeek i inne. Nagłówki zawierają firmę, lokalny monochromatyczny znak lub monogram i liczbę modeli. Grupy startują zwinięte; wyszukiwanie i filtry rozwijają wyniki. Ostatnie i polecane modele są osobnymi, również zwijanymi sekcjami. Klawiatura pomija ukryte wiersze.
+Lista jest podzielona wyłącznie na rodziny GPT, Claude, Gemini, Qwen, Grok, Llama (Meta), DeepSeek i inne. Nagłówki zawierają firmę, lokalny monochromatyczny znak lub monogram i liczbę modeli. Grupy startują zwinięte; wyszukiwanie i filtry rozwijają wyniki. Dawne sekcje ostatnich i polecanych modeli usunięto, a ich modele włączono do rodzin. Ręcznie dodane modele zapisane w historii również pozostają dostępne w rodzinach bieżącego dostawcy. Klawiatura pomija ukryte wiersze.
 
 Sortowanie porównuje osobno liczby w generacji (np. 5.10 i 5.9), potem wariant modelu i identyfikator. Zwykły model pojawia się przed jego wariantem `:batch`; sufiksy `:batch`, `:free` itd. są widoczne przy nazwie. Wybrany model otrzymuje podpis, znacznik i subtelny kolor akcentu. Dostawca API, główna możliwość i kontekst mają stałe miejsca w drugim wierszu.
 

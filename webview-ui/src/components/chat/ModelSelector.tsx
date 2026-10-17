@@ -15,7 +15,6 @@ import {
 	RefreshCw,
 	Code2,
 	Eye,
-	History,
 } from "lucide-react"
 
 import {
@@ -886,93 +885,29 @@ export const ModelSelector = ({
 			}
 		}
 
-		// 6. Dynamic Flagship Promotion
+		// Preserve custom models from history in their own families, without a separate recent section.
+		for (const recent of extRecentModels || []) {
+			if (!recent.isCustom || (recent.provider && recent.provider.toLowerCase() !== activeProvider.toLowerCase()))
+				continue
+			if (canonicalMap.has(getCanonicalModelKey(activeProvider, recent.id))) continue
+			const isReasoning = isReasoningModel(recent.id)
+			addOrMergeModel({
+				id: recent.id,
+				name: recent.name || cleanModelDisplayName(recent.id),
+				contextWindow: getModelContextWindow(recent.id),
+				isReasoning,
+				isFast: isFastModel(recent.id, isReasoning),
+				isCoder: isCoderModel(recent.id),
+				isVision: isVisionModel(recent.id),
+			})
+		}
 		const result = Array.from(canonicalMap.values())
-		const flagshipIds = promoteDynamicFlagships(result)
-		result.forEach((m) => {
-			m.isFlagship = m.isFlagship || flagshipIds.has(m.id)
-		})
 
 		// 7. Hierarchical sort: family priority + generation descending
 		result.sort(compareModels)
 
 		return result
-	}, [activeProvider, routerModels, openAiModels, openAiModelInfos, activeModelId, activeModelInfo])
-
-	// Recently used models for current provider (max 5, MRU order, pruned of stale catalog models)
-	const recentlyUsedModels = useMemo<ModelItem[]>(() => {
-		if (!extRecentModels || extRecentModels.length === 0) return []
-
-		const recentsForProvider = extRecentModels.filter(
-			(r) => !r.provider || r.provider.toLowerCase() === activeProvider.toLowerCase(),
-		)
-
-		const items: ModelItem[] = []
-		const seenRecentKeys = new Set<string>()
-
-		for (const recent of recentsForProvider) {
-			const canonKey = getCanonicalModelKey(activeProvider, recent.id)
-			if (seenRecentKeys.has(canonKey)) continue
-
-			const catalogModel = availableModels.find((m) => getCanonicalModelKey(activeProvider, m.id) === canonKey)
-
-			if (catalogModel) {
-				seenRecentKeys.add(canonKey)
-				items.push(catalogModel)
-			} else if (recent.isCustom) {
-				seenRecentKeys.add(canonKey)
-				const isReasoning = isReasoningModel(recent.id)
-				const isFast = isFastModel(recent.id, isReasoning)
-				const isCoder = isCoderModel(recent.id)
-				const isVision = isVisionModel(recent.id)
-				items.push({
-					id: recent.id,
-					name: recent.name || cleanModelDisplayName(recent.id),
-					isReasoning,
-					isFast,
-					isCoder,
-					isVision,
-					badge: isReasoning
-						? "Rozumowanie"
-						: isFast
-							? "Szybkość"
-							: isCoder
-								? "Programowanie"
-								: isVision
-									? "Obrazy"
-									: undefined,
-					contextWindow: getModelContextWindow(recent.id),
-				})
-			}
-
-			if (items.length >= 5) break
-		}
-
-		let filtered = items
-		if (selectedCategory === "reasoning") {
-			filtered = filtered.filter((m) => m.isReasoning)
-		} else if (selectedCategory === "fast") {
-			filtered = filtered.filter((m) => m.isFast)
-		} else if (selectedCategory === "coder") {
-			filtered = filtered.filter((m) => m.isCoder)
-		} else if (selectedCategory === "vision") {
-			filtered = filtered.filter((m) => m.isVision)
-		} else if (selectedCategory === "default") {
-			filtered = filtered.filter((m) => !m.isReasoning && !m.isFast && !m.isCoder && !m.isVision)
-		}
-
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase().trim()
-			filtered = filtered.filter(
-				(m) =>
-					m.name.toLowerCase().includes(q) ||
-					m.id.toLowerCase().includes(q) ||
-					(m.description && m.description.toLowerCase().includes(q)),
-			)
-		}
-
-		return filtered
-	}, [extRecentModels, activeProvider, availableModels, selectedCategory, searchQuery])
+	}, [activeProvider, routerModels, openAiModels, openAiModelInfos, activeModelId, activeModelInfo, extRecentModels])
 
 	// Filter models by category and search query
 	const filteredModels = useMemo(() => {
@@ -1026,33 +961,15 @@ export const ModelSelector = ({
 		}
 	}, [availableModels])
 
-	// Separate flagship/recommended models and other models
-	const { flagshipModels, allOtherModels } = useMemo(() => {
-		const flagship: ModelItem[] = []
-		const other: ModelItem[] = []
-		const recentKeys = new Set(recentlyUsedModels.map((m) => getCanonicalModelKey(activeProvider, m.id)))
-
-		filteredModels.forEach((m) => {
-			if (recentKeys.has(getCanonicalModelKey(activeProvider, m.id))) return
-			if (m.isFlagship) {
-				flagship.push(m)
-			} else {
-				other.push(m)
-			}
-		})
-
-		return { flagshipModels: flagship, allOtherModels: other }
-	}, [filteredModels, recentlyUsedModels, activeProvider])
-
 	const familyGroups = useMemo(
 		() =>
 			modelFamilyOrder
 				.map((family) => ({
 					family,
-					models: allOtherModels.filter((m) => extractModelFamily(m.id) === family).sort(compareModels),
+					models: filteredModels.filter((m) => extractModelFamily(m.id) === family).sort(compareModels),
 				}))
 				.filter((group) => group.models.length > 0),
-		[allOtherModels],
+		[filteredModels],
 	)
 
 	useEffect(() => {
@@ -1256,7 +1173,7 @@ export const ModelSelector = ({
 	const effectiveProviderLabel = providerDisplayNames[effectiveProvider] || effectiveProvider
 	const currentProviderLabel = effectiveProviderLabel
 
-	// One compact row layout for recent, recommended and remaining models.
+	// One compact row layout for every model family.
 	const renderModelRow = useCallback(
 		(m: ModelItem, sectionKey: string) => {
 			const isSelected =
@@ -1494,7 +1411,7 @@ export const ModelSelector = ({
 				</div>
 
 				<div className="model-selector-list" aria-label="Dostępne modele">
-					{filteredModels.length === 0 && recentlyUsedModels.length === 0 ? (
+					{filteredModels.length === 0 ? (
 						<div className="model-selector-empty">
 							<p>{t("chat:modelSelector.noResults")}</p>
 							{searchQuery.trim() ? (
@@ -1507,57 +1424,13 @@ export const ModelSelector = ({
 						</div>
 					) : (
 						<>
-							{[
-								{
-									key: "recent",
-									heading: "models-recent-heading",
-									label: "Ostatnio używane",
-									models: recentlyUsedModels,
-									Icon: History,
-								},
-								{
-									key: "recommended",
-									heading: "models-recommended-heading",
-									label: "Polecane modele",
-									models: flagshipModels,
-									Icon: Sparkles,
-								},
-							]
-								.filter((section) => section.models.length > 0)
-								.map((section) => (
-									<section
-										key={section.key}
-										className="model-selector-section model-quick-section"
-										aria-labelledby={section.heading}>
-										<h4 id={section.heading} className="model-section-title">
-											<button
-												type="button"
-												className="model-section-toggle"
-												aria-expanded={!collapsedSections.has(section.key)}
-												aria-controls={"models-" + section.key + "-list"}
-												onClick={() => toggleSection(section.key)}>
-												<section.Icon aria-hidden="true" />
-												<span>{section.label}</span>
-												<span className="model-group-count" aria-hidden="true">
-													{section.models.length}
-												</span>
-												<ChevronDown aria-hidden="true" />
-											</button>
-										</h4>
-										<div
-											id={"models-" + section.key + "-list"}
-											hidden={collapsedSections.has(section.key)}>
-											{section.models.map((m) => renderModelRow(m, section.key))}
-										</div>
-									</section>
-								))}
 							{familyGroups.length > 0 && (
 								<section
 									className="model-selector-section model-family-section"
 									aria-labelledby="models-all-heading">
 									<div className="model-section-heading">
 										<h4 id="models-all-heading">Modele według rodzin</h4>
-										<span>{allOtherModels.length}</span>
+										<span>{filteredModels.length}</span>
 									</div>
 									{familyGroups.map(({ family, models }) => (
 										<section
@@ -1600,9 +1473,6 @@ export const ModelSelector = ({
 							)}
 							{searchQuery.trim() &&
 								!filteredModels.some((m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase()) &&
-								!recentlyUsedModels.some(
-									(m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase(),
-								) &&
 								renderCustomSearchOption()}
 						</>
 					)}

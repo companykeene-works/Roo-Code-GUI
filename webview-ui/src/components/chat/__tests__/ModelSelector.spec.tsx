@@ -220,6 +220,9 @@ describe("ModelSelector", () => {
 		render(<ModelSelector />)
 		fireEvent.click(screen.getByTestId("model-selector-trigger"))
 		const input = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
+		document
+			.querySelectorAll<HTMLButtonElement>(".model-family-heading button")
+			.forEach((button) => fireEvent.click(button))
 		const rows = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-model-option]")).filter(
 			(row) => !row.closest("[hidden]"),
 		)
@@ -310,7 +313,7 @@ describe("ModelSelector", () => {
 		fireEvent.click(trigger)
 
 		// Section headers
-		expect(screen.getByText("Polecane modele")).toBeInTheDocument()
+		expect(screen.queryByText("Polecane modele")).not.toBeInTheDocument()
 		expect(screen.getByText("Modele według rodzin")).toBeInTheDocument()
 
 		// Dynamic model rendered
@@ -827,118 +830,66 @@ describe("ModelSelector", () => {
 		})
 	})
 
-	describe("Recently Used Models", () => {
-		test("displays recently used models under 'Ostatnio używane' header", () => {
-			mockExtensionState.apiConfiguration = {
-				apiProvider: "xkiro",
-				apiModelId: "deepseek/deepseek-chat",
-				xkiroModelId: "deepseek/deepseek-chat",
-			}
+	describe("Models consolidated into families", () => {
+		test("keeps recent and recommended catalog models exactly once in their families", () => {
 			mockExtensionState.recentModels = [
-				{
-					id: "anthropic/claude-3.7-sonnet",
-					provider: "xkiro",
-					name: "Claude 3.7 Sonnet",
-					timestamp: Date.now(),
-				},
-				{
-					id: "openai/gpt-6-astra",
-					provider: "xkiro",
-					name: "GPT-6 Astra",
-					timestamp: Date.now() - 1000,
-				},
+				{ id: "anthropic/claude-3.7-sonnet", provider: "xkiro", name: "Claude 3.7 Sonnet", timestamp: 1 },
 			]
-
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
-
-			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
+			expect(screen.queryByText("Ostatnio używane")).not.toBeInTheDocument()
+			expect(screen.queryByText("Polecane modele")).not.toBeInTheDocument()
+			const claude = document.querySelectorAll('[data-model-id="anthropic/claude-3.7-sonnet"]')
+			expect(claude).toHaveLength(1)
+			expect(claude[0].closest("[data-model-family]")).toHaveAttribute("data-model-family", "claude")
 			expect(
-				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
-			).toHaveLength(2)
-			// Recent models take one row each, without duplicates in the catalog sections.
-			expect(document.querySelectorAll('[data-model-id="anthropic/claude-3.7-sonnet"]')).toHaveLength(1)
+				document.querySelector('[data-model-id="deepseek/deepseek-reasoner"]')!.closest("[data-model-family]"),
+			).toHaveAttribute("data-model-family", "deepseek")
 		})
 
-		test("caps recently used models at maximum 5 items in MRU order", () => {
-			mockExtensionState.apiConfiguration = {
-				apiProvider: "xkiro",
-				apiModelId: "deepseek/deepseek-chat",
-				xkiroModelId: "deepseek/deepseek-chat",
-			}
+		test("preserves custom history models and ignores another provider's models", () => {
 			mockExtensionState.recentModels = [
-				{ id: "anthropic/claude-3.7-sonnet", provider: "xkiro", name: "Claude 3.7 Sonnet", timestamp: 50 },
-				{ id: "anthropic/claude-3.5-sonnet", provider: "xkiro", name: "Claude 3.5 Sonnet", timestamp: 40 },
-				{ id: "openai/gpt-6-astra", provider: "xkiro", name: "GPT-6 Astra", timestamp: 30 },
-				{ id: "openai/gpt-5", provider: "xkiro", name: "GPT-5", timestamp: 20 },
-				{ id: "openai/gpt-4o", provider: "xkiro", name: "GPT-4o", timestamp: 10 },
-				{ id: "google/gemini-2.5-pro", provider: "xkiro", name: "Gemini 2.5 Pro", timestamp: 5 },
+				{ id: "qwen/custom-coder", provider: "xkiro", name: "Custom Coder", isCustom: true, timestamp: 2 },
+				{
+					id: "qwen/other-provider-model",
+					provider: "openai",
+					name: "Other Provider",
+					isCustom: true,
+					timestamp: 1,
+				},
 			]
-
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
-
 			expect(
-				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
-			).toHaveLength(5)
+				document.querySelector('[data-model-id="qwen/custom-coder"]')!.closest("[data-model-family]"),
+			).toHaveAttribute("data-model-family", "qwen")
+			expect(screen.queryByText("Other Provider")).not.toBeInTheDocument()
 		})
 
-		test("prunes stale catalog models not present in available models list", () => {
-			mockExtensionState.apiConfiguration = {
-				apiProvider: "xkiro",
-				apiModelId: "deepseek/deepseek-chat",
-				xkiroModelId: "deepseek/deepseek-chat",
-			}
+		test("does not resurrect retired catalog entries from history", () => {
 			mockExtensionState.recentModels = [
-				{
-					id: "non-existent-retired-model",
-					provider: "xkiro",
-					name: "Retired Model",
-					timestamp: 10,
-				},
-				{
-					id: "anthropic/claude-3.7-sonnet",
-					provider: "xkiro",
-					name: "Claude 3.7 Sonnet",
-					timestamp: 20,
-				},
+				{ id: "retired-model", provider: "xkiro", name: "Retired Model", timestamp: 1 },
 			]
-
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
-
-			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
-			expect(
-				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
-			).toHaveLength(1)
 			expect(screen.queryByText("Retired Model")).not.toBeInTheDocument()
 		})
 
-		test("filters recently used models when user searches", () => {
-			mockExtensionState.apiConfiguration = {
-				apiProvider: "xkiro",
-				apiModelId: "deepseek/deepseek-chat",
-				xkiroModelId: "deepseek/deepseek-chat",
-			}
+		test("custom history models participate in search and capability filters", () => {
 			mockExtensionState.recentModels = [
-				{
-					id: "anthropic/claude-3.7-sonnet",
-					provider: "xkiro",
-					name: "Claude 3.7 Sonnet",
-					timestamp: 10,
-				},
+				{ id: "qwen/custom-coder", provider: "xkiro", name: "Custom Coder", isCustom: true, timestamp: 1 },
 			]
-
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
-
-			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
-
-			const searchInput = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
-			fireEvent.change(searchInput, { target: { value: "gemini" } })
-
-			// When query doesn't match, Ostatnio używane header should be completely hidden
-			expect(screen.queryByText("Ostatnio używane")).not.toBeInTheDocument()
+			fireEvent.change(screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" }), {
+				target: { value: "custom-coder" },
+			})
+			fireEvent.click(screen.getByRole("button", { name: "Kod" }))
+			expect(screen.getByText("Custom Coder")).toBeVisible()
+			fireEvent.change(screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" }), {
+				target: { value: "gemini" },
+			})
+			expect(screen.queryByText("Custom Coder")).not.toBeInTheDocument()
 		})
 	})
 

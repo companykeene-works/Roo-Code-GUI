@@ -7,6 +7,7 @@ const results = []
 try {
 	const page = (await browser.pages()).find((p) => /^http:\/\/127\.0\.0\.1:\d+\/$/.test(p.url()))
 	assert.ok(page)
+	await page.bringToFront()
 	await page.setViewport({ width: 1300, height: 900 })
 	const errors = []
 	page.on("pageerror", (e) => errors.push(e.message))
@@ -18,7 +19,10 @@ try {
 	})
 	if (await agent.$(".model-selector-panel")) await page.keyboard.press("Escape")
 	const open = async () => {
-		await agent.$eval(".composer-model", (el) => el.click())
+		await agent.$eval(".composer-model", (el) => {
+			el.focus()
+			el.click()
+		})
 		await agent.waitForSelector(".model-selector-panel")
 		await agent.waitForFunction(
 			() =>
@@ -36,9 +40,14 @@ try {
 	}))
 	assert.equal(dimensions.width, 456)
 	assert.equal(dimensions.overflow, false)
-	assert.ok(await agent.$eval(".model-option", (el) => el.getBoundingClientRect().height >= 64))
 	assert.equal(await agent.$eval(".model-selector-search input", (el) => el === document.activeElement), true)
+	assert.equal(await agent.$(".model-quick-section"), null)
 	await page.screenshot({ path: ".design-qa/model-picker-dark.png" })
+	await agent.$eval("[data-model-family] .model-section-toggle", (el) => {
+		if (el.getAttribute("aria-expanded") === "false") el.click()
+	})
+	assert.ok(await agent.$eval(".model-option", (el) => el.getBoundingClientRect().height >= 64))
+	await agent.$eval(".model-selector-search input", (el) => el.focus())
 	results.push("456px panel, readable rows, autofocus and no horizontal overflow")
 	await page.keyboard.press("ArrowDown")
 	assert.equal(await agent.evaluate(() => document.activeElement?.hasAttribute("data-model-option")), true)
@@ -54,9 +63,18 @@ try {
 		{ polling: 100 },
 		chosen,
 	)
-	assert.ok(await agent.$('[aria-labelledby="models-recent-heading"]'))
-	await page.screenshot({ path: ".design-qa/model-picker-dark.png" })
-	results.push("Keyboard selection closes panel, persists active model and shows recent models")
+	assert.equal(await agent.$('[aria-labelledby="models-recent-heading"]'), null)
+	assert.equal(await agent.$('[aria-labelledby="models-recommended-heading"]'), null)
+	assert.equal(
+		await agent.$$eval(
+			"[data-model-option]",
+			(rows) => new Set(rows.map((row) => row.dataset.modelId)).size === rows.length,
+		),
+		true,
+	)
+	results.push(
+		"Keyboard selection persists the active model; all models belong to families with no duplicates or quick sections",
+	)
 	await agent.$eval(".model-selector-search input", (el) => el.focus())
 	await page.keyboard.type("no-such-model-qa")
 	await agent.waitForSelector(".model-selector-empty")
@@ -70,11 +88,6 @@ try {
 		await agent.$eval(".model-selector-filters button", (el) => el.click())
 	}
 	results.push("Search empty state, clear action and capability filters work")
-	const collapseQuickSections = async () =>
-		agent.$$eval('.model-quick-section .model-section-toggle[aria-expanded="true"]', (buttons) =>
-			buttons.forEach((button) => button.click()),
-		)
-	await collapseQuickSections()
 	const families = await agent.$$eval("[data-model-family]", (groups) =>
 		groups.map((group) => ({
 			family: group.dataset.modelFamily,
@@ -109,7 +122,7 @@ try {
 		)
 		await agent.$eval("[data-model-family]:nth-of-type(2) .model-section-toggle", (el) => el.click())
 	}
-	results.push("Family groups contain models; quick sections and families collapse; keyboard skips hidden rows")
+	results.push("Family groups contain models; families collapse; keyboard skips hidden rows")
 	await page.keyboard.press("Escape")
 	await page.$eval("#open-settings-btn", (el) => el.click())
 	await page.waitForSelector("#settings-modal-backdrop:not(.hidden)")
@@ -124,12 +137,13 @@ try {
 	await new Promise((resolve) => setTimeout(resolve, 500))
 	await open()
 	await page.screenshot({ path: ".design-qa/model-picker-light.png" })
-	await collapseQuickSections()
 	await agent.$eval(".model-selector-list", (el) => {
 		el.scrollTop = 0
 	})
 	await page.screenshot({ path: ".design-qa/model-families-light.png" })
+	await page.keyboard.press("Escape")
 	await page.setViewport({ width: 900, height: 720 })
+	await open()
 	await agent.waitForFunction(
 		() => {
 			const r = document.querySelector(".model-selector-panel").getBoundingClientRect()
