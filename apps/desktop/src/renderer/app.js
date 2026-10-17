@@ -3163,6 +3163,14 @@
 				if (msg.message?.type === "taskHistoryUpdated") {
 					fetchSidebarData()
 				}
+				if (msg.message?.type === "chatSessionsList" && Array.isArray(msg.message.chatSessions)) {
+					chatSessionsList = msg.message.chatSessions
+					renderChatSidebar()
+				}
+				if (msg.message?.type === "chatSessionData" && msg.message.chatSession) {
+					activeChatSessionId = msg.message.chatSession.id
+					renderChatSidebar()
+				}
 				if (msg.message?.type === "showTaskWithId" && msg.message.text) {
 					const epoch = msg.message.selectionEpoch
 					if (epoch === undefined || epoch >= currentSelectionEpoch) {

@@ -23,8 +23,11 @@ export interface ChatSessionManagerOptions {
 	storageDir: string
 	getGlobalSettings?: () => any
 	getSecret?: (key: string) => string | undefined
+	getProviderProfiles?: () => any
 	saveChatPreferences?: (pref: ChatPreferences) => Promise<void>
 	loadChatPreferences?: () => Promise<ChatPreferences | undefined>
+	onSessionSaved?: (session: ChatSession, summaries: ChatSessionSummary[]) => void | Promise<void>
+	onTurnStart?: (session: ChatSession) => void | Promise<void>
 }
 
 export class ChatSessionManager {
@@ -34,8 +37,11 @@ export class ChatSessionManager {
 	private activeStreams: Map<string, AbortController> = new Map()
 	private getGlobalSettings?: () => any
 	private getSecret?: (key: string) => string | undefined
+	private getProviderProfiles?: () => any
 	private saveChatPreferencesCustom?: (pref: ChatPreferences) => Promise<void>
 	private loadChatPreferencesCustom?: () => Promise<ChatPreferences | undefined>
+	private onSessionSaved?: (session: ChatSession, summaries: ChatSessionSummary[]) => void | Promise<void>
+	private onTurnStart?: (session: ChatSession) => void | Promise<void>
 
 	// Lock to serialize disk writes to _index.json
 	private indexLock = Promise.resolve()
@@ -53,8 +59,11 @@ export class ChatSessionManager {
 		this.indexPath = path.join(this.sessionsDir, "_index.json")
 		this.getGlobalSettings = options.getGlobalSettings
 		this.getSecret = options.getSecret
+		this.getProviderProfiles = options.getProviderProfiles
 		this.saveChatPreferencesCustom = options.saveChatPreferences
 		this.loadChatPreferencesCustom = options.loadChatPreferences
+		this.onSessionSaved = options.onSessionSaved
+		this.onTurnStart = options.onTurnStart
 
 		this.ensureDirectory()
 	}
@@ -155,14 +164,26 @@ export class ChatSessionManager {
 				}
 			} catch {}
 
-			const lastMsg = session.messages[session.messages.length - 1]
+			let lastMessagePreview: string | undefined = undefined
+			for (let i = session.messages.length - 1; i >= 0; i--) {
+				const m = session.messages[i]
+				if (m.content && m.content.trim().length > 0) {
+					lastMessagePreview = m.content.trim().slice(0, 100)
+					break
+				}
+				if (m.error && m.error.trim().length > 0) {
+					lastMessagePreview = m.error.trim().slice(0, 100)
+					break
+				}
+			}
+
 			const summary: ChatSessionSummary = {
 				id: session.id,
 				title: session.title,
 				createdAt: session.createdAt,
 				updatedAt: session.updatedAt,
 				messageCount: session.messages.length,
-				lastMessagePreview: lastMsg?.content ? lastMsg.content.slice(0, 100) : undefined,
+				lastMessagePreview,
 				modelPreference: session.modelPreference,
 			}
 
@@ -174,6 +195,12 @@ export class ChatSessionManager {
 			}
 
 			fs.writeFileSync(this.indexPath, JSON.stringify({ entries }, null, 2), "utf-8")
+
+			try {
+				this.onSessionSaved?.(session, entries)
+			} catch (err) {
+				console.warn("[ChatSessionManager] onSessionSaved hook error:", err)
+			}
 		})
 	}
 
@@ -294,6 +321,7 @@ export class ChatSessionManager {
 		images?: string[]
 		webSearchMode?: "off" | "auto" | "required"
 		onChunk?: (chunk: ChatStreamChunk) => void
+		onTurnStart?: () => void
 	}): Promise<ChatMessage> {
 		const { sessionId, text, images, onChunk } = params
 		const session = await this.getSession(sessionId)
@@ -338,14 +366,23 @@ export class ChatSessionManager {
 		await this.saveSession(session)
 
 		try {
+			params.onTurnStart?.()
+			this.onTurnStart?.(session)
+		} catch (err) {
+			console.warn("[ChatSessionManager] onTurnStart notification error:", err)
+		}
+
+		let targetProvider: ProviderName = "xkiro"
+		try {
 			// Resolve provider settings
 			const preferences = await this.getPreferences()
-			const targetProvider = (session.modelPreference?.apiProvider || preferences.apiProvider || "xkiro") as ProviderName
+			targetProvider = (session.modelPreference?.apiProvider || preferences.apiProvider || "xkiro") as ProviderName
 			const targetModelId = session.modelPreference?.modelId || preferences.modelId || "openai/gpt-5.6-terra"
 			const targetReasoningEffort = session.modelPreference?.reasoningEffort || preferences.reasoningEffort
 			const effectiveWebSearchMode = params.webSearchMode || session.modelPreference?.webSearchMode || preferences.webSearchMode || "auto"
 
 			const providerSettings = this.buildIsolatedProviderSettings(targetProvider, targetModelId, targetReasoningEffort)
+			this.validateProviderCredentials(targetProvider, providerSettings)
 			const apiHandler = buildApiHandler(providerSettings)
 
 			// Web Search grounding
@@ -429,7 +466,11 @@ export class ChatSessionManager {
 			if (abortController.signal.aborted) {
 				// Aborted by user - preserve partial output cleanly
 			} else {
-				const errMsg = error?.message || String(error)
+				let errMsg = error?.message || String(error)
+				const is401 = errMsg.includes("401") || errMsg.includes("Invalid or disabled ClientApiKey") || errMsg.toLowerCase().includes("unauthorized")
+				if (is401) {
+					errMsg = `Authentication failed (401): Invalid or disabled API key for ${targetProvider}. Please verify your API key in Settings.`
+				}
 				assistantMessage.error = errMsg
 				onChunk?.({ type: "error", error: errMsg })
 			}
@@ -497,6 +538,62 @@ export class ChatSessionManager {
 		})
 	}
 
+	private validateProviderCredentials(provider: ProviderName, settings: ProviderSettings): void {
+		let hasKey = false
+		const providerDisplayName = provider === "xkiro" ? "xKiro" : provider
+
+		switch (provider) {
+			case "xkiro":
+				hasKey = Boolean(
+					(settings.xkiroApiKey && settings.xkiroApiKey.trim().length > 0 && settings.xkiroApiKey !== "not-provided") ||
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				)
+				break
+			case "openrouter":
+				hasKey = Boolean(
+					(settings.openRouterApiKey && settings.openRouterApiKey.trim().length > 0 && settings.openRouterApiKey !== "not-provided") ||
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				)
+				break
+			case "anthropic":
+				hasKey = Boolean(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				break
+			case "openai-native":
+				hasKey = Boolean(
+					(settings.openAiNativeApiKey && settings.openAiNativeApiKey.trim().length > 0 && settings.openAiNativeApiKey !== "not-provided") ||
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				)
+				break
+			case "deepseek":
+				hasKey = Boolean(
+					(settings.deepSeekApiKey && settings.deepSeekApiKey.trim().length > 0 && settings.deepSeekApiKey !== "not-provided") ||
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				)
+				break
+			case "gemini":
+				hasKey = Boolean(
+					(settings.geminiApiKey && settings.geminiApiKey.trim().length > 0 && settings.geminiApiKey !== "not-provided") ||
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided")
+				)
+				break
+			case "ollama":
+			case "lmstudio":
+			case "vscode-lm":
+				hasKey = true
+				break
+			default:
+				hasKey = Boolean(
+					(settings.apiKey && settings.apiKey.trim().length > 0 && settings.apiKey !== "not-provided") ||
+					(settings.openAiApiKey && settings.openAiApiKey.trim().length > 0 && settings.openAiApiKey !== "not-provided"),
+				)
+				break
+		}
+
+		if (!hasKey) {
+			throw new Error(`Missing API key for ${providerDisplayName}. Please configure your API key in Settings.`)
+		}
+	}
+
 	private buildIsolatedProviderSettings(
 		provider: ProviderName,
 		modelId: string,
@@ -507,22 +604,119 @@ export class ChatSessionManager {
 			apiProvider: provider,
 		}
 
-		// Inject credentials for the target provider without modifying global settings
+		// Helper to safely inspect profiles from roo_cline_config_api_config secret or getProviderProfiles
+		let profileConfig: any = undefined
+		try {
+			if (this.getProviderProfiles) {
+				const prof = this.getProviderProfiles()
+				if (prof && prof.apiConfigs) {
+					profileConfig = prof
+				}
+			}
+		} catch {}
+
+		if (!profileConfig) {
+			try {
+				const rawProfiles = this.getSecret?.("roo_cline_config_api_config")
+				if (rawProfiles) {
+					profileConfig = JSON.parse(rawProfiles)
+				}
+			} catch {}
+		}
+
+		let matchedProfile: any = undefined
+		if (profileConfig?.apiConfigs) {
+			const configs = profileConfig.apiConfigs
+			const currentName = profileConfig.currentApiConfigName
+			// Prefer current active profile if it matches target provider
+			if (currentName && configs[currentName]?.apiProvider === provider) {
+				matchedProfile = configs[currentName]
+			}
+			// If active profile does not match or lacks credentials, search for matching profile with valid key
+			if (!matchedProfile || (!matchedProfile.xkiroApiKey && !matchedProfile.openRouterApiKey && !matchedProfile.apiKey && !matchedProfile.openAiNativeApiKey && !matchedProfile.deepSeekApiKey && !matchedProfile.geminiApiKey)) {
+				for (const key of Object.keys(configs)) {
+					const candidate = configs[key]
+					if (candidate?.apiProvider === provider) {
+						if (candidate.xkiroApiKey || candidate.openRouterApiKey || candidate.apiKey || candidate.openAiNativeApiKey || candidate.deepSeekApiKey || candidate.geminiApiKey) {
+							matchedProfile = candidate
+							break
+						} else if (!matchedProfile) {
+							matchedProfile = candidate
+						}
+					}
+				}
+			}
+		}
+
+		// Inject credentials for target provider without modifying global settings and avoiding cross-provider key leaks
 		if (provider === "xkiro") {
-			settings.xkiroApiKey = this.getSecret?.("xkiroApiKey") || globalSettings.xkiroApiKey
+			const isGlobalXkiro = globalSettings.apiProvider === "xkiro"
+			settings.xkiroApiKey =
+				this.getSecret?.("xkiroApiKey") ||
+				matchedProfile?.xkiroApiKey ||
+				matchedProfile?.apiKey ||
+				globalSettings.xkiroApiKey ||
+				(isGlobalXkiro ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
+			settings.xkiroBaseUrl =
+				matchedProfile?.xkiroBaseUrl ||
+				globalSettings.xkiroBaseUrl ||
+				"https://api.xkiro.com/v1"
+			if (matchedProfile?.xkiroCustomModelInfo) {
+				settings.xkiroCustomModelInfo = matchedProfile.xkiroCustomModelInfo
+			}
+			if (matchedProfile?.xkiroCustomContextWindow) {
+				settings.xkiroCustomContextWindow = matchedProfile.xkiroCustomContextWindow
+			}
 		} else if (provider === "openrouter") {
-			settings.openRouterApiKey = this.getSecret?.("openRouterApiKey") || globalSettings.openRouterApiKey
+			const isGlobalOpenRouter = globalSettings.apiProvider === "openrouter"
+			settings.openRouterApiKey =
+				this.getSecret?.("openRouterApiKey") ||
+				matchedProfile?.openRouterApiKey ||
+				matchedProfile?.apiKey ||
+				globalSettings.openRouterApiKey ||
+				(isGlobalOpenRouter ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
+			if (matchedProfile?.openRouterBaseUrl) {
+				settings.openRouterBaseUrl = matchedProfile.openRouterBaseUrl
+			}
 		} else if (provider === "anthropic") {
-			settings.apiKey = this.getSecret?.("apiKey") || globalSettings.apiKey
+			const isGlobalAnthropic = globalSettings.apiProvider === "anthropic" || !globalSettings.apiProvider
+			settings.apiKey =
+				(isGlobalAnthropic ? this.getSecret?.("apiKey") : undefined) ||
+				matchedProfile?.apiKey ||
+				globalSettings.apiKey
+			if (matchedProfile?.anthropicBaseUrl) {
+				settings.anthropicBaseUrl = matchedProfile.anthropicBaseUrl
+			}
 		} else if (provider === "openai-native") {
-			settings.openAiNativeApiKey = this.getSecret?.("openAiNativeApiKey") || globalSettings.openAiNativeApiKey
+			const isGlobalOai = globalSettings.apiProvider === "openai-native"
+			settings.openAiNativeApiKey =
+				this.getSecret?.("openAiNativeApiKey") ||
+				matchedProfile?.openAiNativeApiKey ||
+				matchedProfile?.apiKey ||
+				globalSettings.openAiNativeApiKey ||
+				(isGlobalOai ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
 		} else if (provider === "deepseek") {
-			settings.deepSeekApiKey = this.getSecret?.("deepSeekApiKey") || globalSettings.deepSeekApiKey
+			const isGlobalDeepSeek = globalSettings.apiProvider === "deepseek"
+			settings.deepSeekApiKey =
+				this.getSecret?.("deepSeekApiKey") ||
+				matchedProfile?.deepSeekApiKey ||
+				matchedProfile?.apiKey ||
+				globalSettings.deepSeekApiKey ||
+				(isGlobalDeepSeek ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
 		} else if (provider === "gemini") {
-			settings.geminiApiKey = this.getSecret?.("geminiApiKey") || globalSettings.geminiApiKey
+			const isGlobalGemini = globalSettings.apiProvider === "gemini"
+			settings.geminiApiKey =
+				this.getSecret?.("geminiApiKey") ||
+				matchedProfile?.geminiApiKey ||
+				matchedProfile?.apiKey ||
+				globalSettings.geminiApiKey ||
+				(isGlobalGemini ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
 		} else {
 			// Generic fallback
-			settings.apiKey = this.getSecret?.("apiKey") || globalSettings.apiKey
+			const isGlobalCurrent = globalSettings.apiProvider === provider
+			settings.apiKey =
+				matchedProfile?.apiKey ||
+				(isGlobalCurrent ? (this.getSecret?.("apiKey") || globalSettings.apiKey) : undefined)
 		}
 
 		setModelId(settings, provider, modelId)

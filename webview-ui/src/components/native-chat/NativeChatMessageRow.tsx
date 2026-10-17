@@ -14,6 +14,7 @@ import {
 	Sparkles,
 } from "lucide-react"
 import type { ChatMessage } from "@roo-code/types"
+import { openSettings } from "@src/utils/settingsNavigation"
 import MarkdownBlock from "@src/components/common/MarkdownBlock"
 import Thumbnails from "@src/components/common/Thumbnails"
 
@@ -249,9 +250,25 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 
 					{/* Error Notification */}
 					{message.error && (
-						<div className="mt-2.5 p-2.5 rounded-lg border border-red-500/30 bg-red-950/20 text-xs text-red-300 flex items-start gap-2">
-							<AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-							<span>{message.error}</span>
+						<div className="mt-2.5 p-2.5 rounded-lg border border-red-500/30 bg-red-950/20 text-xs text-red-300 flex flex-col gap-2">
+							<div className="flex items-start gap-2">
+								<AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+								<span className="flex-1 leading-relaxed">{message.error}</span>
+							</div>
+							{(message.error.includes("401") ||
+								message.error.includes("API key") ||
+								message.error.includes("Authentication") ||
+								message.error.includes("ClientApiKey")) && (
+								<div className="flex items-center gap-2 pl-6">
+									<button
+										type="button"
+										onClick={() => openSettings({ section: "providers", source: "native_chat_error" })}
+										className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] transition-colors cursor-pointer"
+									>
+										Open Provider Settings
+									</button>
+								</div>
+							)}
 						</div>
 					)}
 

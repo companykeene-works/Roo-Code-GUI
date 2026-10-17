@@ -245,6 +245,38 @@ export class ClineProvider
 				}
 			},
 			getSecret: (key: string) => this.contextProxy.getSecret(key as any),
+			getProviderProfiles: async () => {
+				try {
+					return await this.providerSettingsManager.export()
+				} catch {
+					return undefined
+				}
+			},
+			onTurnStart: async (session) => {
+				try {
+					const summaries = await this.chatSessionManager.listSessions()
+					await this.postMessageToWebview({
+						type: "chatSessionsList",
+						chatSessions: summaries,
+					})
+					await this.postMessageToWebview({
+						type: "chatSessionData",
+						chatSession: session,
+					})
+				} catch (err) {
+					this.log(`Error updating chat session on turn start: ${err instanceof Error ? err.message : String(err)}`)
+				}
+			},
+			onSessionSaved: async (session, summaries) => {
+				try {
+					await this.postMessageToWebview({
+						type: "chatSessionsList",
+						chatSessions: summaries,
+					})
+				} catch (err) {
+					this.log(`Error updating chat sessions list: ${err instanceof Error ? err.message : String(err)}`)
+				}
+			},
 			saveChatPreferences: async (pref) => {
 				await this.updateGlobalState("chatPreferences", pref)
 			},

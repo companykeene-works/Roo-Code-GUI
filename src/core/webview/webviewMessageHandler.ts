@@ -3780,6 +3780,15 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						images: message.images,
 						webSearchMode: message.chatDraft?.webSearchMode,
 						onChunk,
+						onTurnStart: async () => {
+							try {
+								const sessions = await provider.chatSessionManager.listSessions()
+								await provider.postMessageToWebview({
+									type: "chatSessionsList",
+									chatSessions: sessions,
+								})
+							} catch {}
+						},
 					})
 					.then(async () => {
 						const updatedSession = await provider.chatSessionManager.getSession(sessionId)
@@ -3795,8 +3804,22 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 							chatSessions: sessions,
 						})
 					})
-					.catch((err: unknown) => {
+					.catch(async (err: unknown) => {
 						provider.log(`Error in chatSendMessage: ${err instanceof Error ? err.message : String(err)}`)
+						try {
+							const updatedSession = await provider.chatSessionManager.getSession(sessionId)
+							if (updatedSession) {
+								await provider.postMessageToWebview({
+									type: "chatSessionData",
+									chatSession: updatedSession,
+								})
+							}
+							const sessions = await provider.chatSessionManager.listSessions()
+							await provider.postMessageToWebview({
+								type: "chatSessionsList",
+								chatSessions: sessions,
+							})
+						} catch {}
 					})
 			} catch (error) {
 				provider.log(`Error starting chatSendMessage: ${error instanceof Error ? error.message : String(error)}`)

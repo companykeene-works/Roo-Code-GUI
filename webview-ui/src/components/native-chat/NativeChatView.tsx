@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
-import { ArrowDown, MessageSquarePlus, Bot, Sparkles } from "lucide-react"
+import { ArrowDown, MessageSquarePlus, Sparkles } from "lucide-react"
 import type {
 	ChatMessage,
 	ChatSession,
@@ -275,18 +275,6 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 						<MessageSquarePlus className="w-3.5 h-3.5" />
 						<span>New Chat</span>
 					</button>
-
-					{onSwitchToAgent && (
-						<button
-							type="button"
-							onClick={onSwitchToAgent}
-							className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md font-medium bg-[var(--vscode-badge-background,rgba(255,255,255,0.06))] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.1))] text-[var(--vscode-editor-foreground)] border border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-							title="Switch back to Agent Mode"
-						>
-							<Bot className="w-3.5 h-3.5 text-emerald-400" />
-							<span>Agent Mode</span>
-						</button>
-					)}
 				</div>
 			</div>
 
