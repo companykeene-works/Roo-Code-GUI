@@ -243,7 +243,14 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 							{message.content ? (
 								<MarkdownBlock markdown={message.content} />
 							) : message.isStreaming ? (
-								<span className="inline-block w-2 h-4 bg-indigo-400 animate-pulse rounded-sm" />
+								message.status ? (
+									<div className="flex items-center gap-2 text-xs text-[var(--vscode-descriptionForeground)] py-1 select-none">
+										<Globe className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+										<span>{message.status}</span>
+									</div>
+								) : (
+									<span className="inline-block w-2 h-4 bg-indigo-400 animate-pulse rounded-sm" />
+								)
 							) : null}
 						</div>
 					)}

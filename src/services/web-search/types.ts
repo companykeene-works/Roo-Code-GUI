@@ -10,6 +10,7 @@ export interface SearchOptions {
 	maxResults?: number
 	allowedDomains?: string[]
 	excludedDomains?: string[]
+	signal?: AbortSignal
 }
 
 export interface SearchBackend {

@@ -35,6 +35,7 @@ export class BraveSearchBackend implements SearchBackend {
 				"Accept-Encoding": "gzip",
 				"X-Subscription-Token": this.apiKey,
 			},
+			signal: options.signal,
 		})
 
 		if (!response.ok) {

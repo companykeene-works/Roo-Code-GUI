@@ -388,37 +388,101 @@ export class ChatSessionManager {
 			// Web Search grounding
 			let searchContext = ""
 			if (effectiveWebSearchMode === "required" || (effectiveWebSearchMode === "auto" && this.shouldTriggerSearch(text))) {
+				const globalSettings = this.getGlobalSettings ? this.getGlobalSettings() : {}
+				const searchConfig = {
+					enabled: globalSettings?.webSearchEnabled ?? true,
+					provider: globalSettings?.webSearchProvider ?? "brave",
+					apiKey: (this.getSecret ? this.getSecret("webSearchApiKey") : undefined) || globalSettings?.webSearchApiKey,
+					searxngUrl: globalSettings?.webSearchSearxngUrl ?? "",
+					maxResults: globalSettings?.webSearchMaxResults ?? 5,
+				}
+
+				const webSearchService = WebSearchService.getInstance()
+				if (!webSearchService.isConfigured(searchConfig)) {
+					let reason = "provider not configured"
+					if (searchConfig.enabled === false) {
+						reason = "web search is disabled in settings"
+					} else if (searchConfig.provider === "searxng" && !searchConfig.searxngUrl) {
+						reason = "SearXNG URL is missing"
+					} else if (!searchConfig.apiKey) {
+						reason = `${searchConfig.provider === "tavily" ? "Tavily" : "Brave"} Search API key is missing`
+					}
+
+					const configErrMsg = `Web search is not configured (${reason}). Please configure your search provider in Settings -> Web Access.`
+					assistantMessage.error = configErrMsg
+					assistantMessage.content = configErrMsg
+					onChunk?.({ type: "error", error: configErrMsg })
+					this.activeStreams.delete(sessionId)
+					assistantMessage.isStreaming = false
+					session.updatedAt = Date.now()
+					await this.saveSession(session)
+					onChunk?.({ type: "complete", messageId: assistantMessage.id })
+					return assistantMessage
+				}
+
 				try {
-					const webSearchService = WebSearchService.getInstance()
-					const globalSettings = this.getGlobalSettings ? this.getGlobalSettings() : {}
-					const searchConfig = {
-						enabled: globalSettings?.webSearchEnabled ?? true,
-						provider: globalSettings?.webSearchProvider ?? "brave",
-						apiKey: this.getSecret ? this.getSecret("webSearchApiKey") : undefined,
-						searxngUrl: globalSettings?.webSearchSearxngUrl ?? "",
-						maxResults: globalSettings?.webSearchMaxResults ?? 5,
+					onChunk?.({ type: "status", status: "Searching the web..." })
+					const searchQuery = this.extractSearchQuery(text, session.messages.slice(0, -2))
+					const searchResults = await webSearchService.search(
+						searchQuery,
+						{
+							maxResults: searchConfig.maxResults,
+							signal: abortController.signal,
+						},
+						searchConfig,
+					)
+
+					if (abortController.signal.aborted) {
+						return assistantMessage
 					}
 
-					if (webSearchService.isConfigured(searchConfig)) {
-						const searchQuery = this.extractSearchQuery(text)
-						const searchResults = await webSearchService.search(searchQuery, searchConfig)
-						if (searchResults && searchResults.length > 0) {
-							assistantMessage.webSearch = {
-								query: searchQuery,
-								results: searchResults.map((r) => ({
-									title: r.title,
-									url: r.url,
-									snippet: r.snippet,
-								})),
-							}
-							onChunk?.({ type: "webSearch", search: assistantMessage.webSearch })
-
-							searchContext = `\n\n[Web Search Results for: "${searchQuery}"]\n` +
-								searchResults.map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}`).join("\n\n")
-						}
+					assistantMessage.webSearch = {
+						query: searchQuery,
+						results: (searchResults || []).map((r) => ({
+							title: r.title,
+							url: r.url,
+							snippet: r.snippet,
+							domain: r.domain,
+							publishedAt: r.publishedAt,
+						})),
 					}
-				} catch (searchErr) {
+					onChunk?.({ type: "webSearch", search: assistantMessage.webSearch })
+
+					if (searchResults && searchResults.length > 0) {
+						searchContext =
+							`\n\n<web_search_context>\n` +
+							`The application performed a live web search for: "${searchQuery}".\n` +
+							`Verified search results (${searchResults.length}):\n\n` +
+							searchResults
+								.map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}`)
+								.join("\n\n") +
+							`\n\nInstructions for using search results:\n` +
+							`- Ground your response in these verified live web sources.\n` +
+							`- Reference and cite the actual URLs when presenting information.\n` +
+							`- Do NOT state that you lack internet access, cannot browse the web, or don't know what the topic is, because the live search results above have been retrieved for you by the application.\n` +
+							`</web_search_context>`
+					} else {
+						searchContext =
+							`\n\n<web_search_context>\n` +
+							`The application performed a live web search for: "${searchQuery}", but 0 results were found.\n` +
+							`Inform the user honestly that web search returned no results for this query.\n` +
+							`</web_search_context>`
+					}
+				} catch (searchErr: any) {
+					if (abortController.signal.aborted) {
+						return assistantMessage
+					}
+					const searchErrMsg = `Web search failed: ${searchErr?.message || String(searchErr)}`
 					console.warn("[ChatSessionManager] Web search execution error:", searchErr)
+					assistantMessage.error = searchErrMsg
+					assistantMessage.content = searchErrMsg
+					onChunk?.({ type: "error", error: searchErrMsg })
+					this.activeStreams.delete(sessionId)
+					assistantMessage.isStreaming = false
+					session.updatedAt = Date.now()
+					await this.saveSession(session)
+					onChunk?.({ type: "complete", messageId: assistantMessage.id })
+					return assistantMessage
 				}
 			}
 
@@ -426,7 +490,7 @@ export class ChatSessionManager {
 			const systemPrompt =
 				"You are a helpful, brilliant, concise, and accurate AI programming and general assistant in Roo Code GUI. " +
 				"Answer the user's questions clearly, accurately, and thoughtfully. Use Markdown for formatting code, lists, and tables." +
-				(searchContext ? `\n\nReference the following web search information if relevant:\n${searchContext}` : "")
+				(searchContext ? `\n\n${searchContext}` : "")
 
 			const anthropicMessages = this.formatMessagesForApi(session.messages.slice(0, -1))
 
@@ -749,27 +813,100 @@ export class ChatSessionManager {
 	}
 
 	private shouldTriggerSearch(text: string): boolean {
-		const lower = text.toLowerCase()
-		return (
-			lower.includes("wyszukaj") ||
-			lower.includes("sprawdź w internecie") ||
-			lower.includes("search online") ||
-			lower.includes("search the web") ||
-			lower.includes("latest news") ||
-			lower.includes("co nowego") ||
-			lower.includes("changelog") ||
-			lower.includes("release notes") ||
-			lower.startsWith("/web ")
-		)
+		if (!text) return false
+		const trimmed = text.trim()
+		const lower = trimmed.toLowerCase()
+
+		// Slash command prefix
+		if (/^\/web(?:\s+|$)/i.test(trimmed)) {
+			return true
+		}
+
+		// Polish explicit search directives & keywords
+		if (
+			/(?:je[zż]eli|je[sś]li)?\s*nie\s*wiesz.*?(?:przeszukaj|poszukaj|wyszukaj|sprawd[zź])/i.test(lower) ||
+			/\b(?:przeszukaj|wyszukaj|poszukaj|znajd[zź]|sprawd[zź])\s+(?:w\s+)?(?:internecie|internet|sieci|sie[cć]|online|google|www|web)\b/i.test(lower) ||
+			/\b(?:przeszukaj|poszukaj|wyszukaj)\s+(?:informacj[ie]|pod\s+k[aą]tem|na\s+temat|w\s+poszukiwaniu|stron[eęy]|dokumentacj[eęi])\b/i.test(lower) ||
+			/\b(?:przeszukaj|wyszukaj)\s+(?:internet|sie[cć]|www)\b/i.test(lower) ||
+			/\b(?:wyszukaj|przeszukaj)\b/i.test(lower) ||
+			/\b(?:sprawd[zź]|poszukaj)\s+(?:to|tego)\s+(?:w\s+)?(?:internecie|internet|sieci|sie[cć]|online)\b/i.test(lower) ||
+			/\b(?:zr[oó]b|zrob)\s+research\b/i.test(lower) ||
+			/\boficjaln[aey]\s+stron[aęy]\b/i.test(lower) ||
+			/\baktualn[aey]\s+informacj[eaęy]\b/i.test(lower) ||
+			/\bnajnowsz[aey]\s+(?:wersj[eaę]|release|changelog|informacj[eaęy]|dokumentacj[eaęi])\b/i.test(lower) ||
+			/\bco nowego\b/i.test(lower)
+		) {
+			return true
+		}
+
+		// English explicit search directives & keywords
+		if (
+			/\bif\s+you\s+don'?t\s+know.*?(?:search|look\s*up|check|browse)\b/i.test(lower) ||
+			/\b(?:search|look\s*up|browse|find)\s+(?:the\s+)?(?:web|internet|online)\b/i.test(lower) ||
+			/\b(?:search|look\s*up)\s+(?:this|it|that)\s+(?:online|on\s+the\s+web|in\s+the\s+internet)\b/i.test(lower) ||
+			/\b(?:search\s+for|look\s*up|find)\s+(?:the\s+)?(?:latest|recent|official)\b/i.test(lower) ||
+			/\b(?:latest\s+news|release\s+notes|changelog|latest\s+documentation|official\s+website)\b/i.test(lower) ||
+			/\bgoogle\s+(?:it|this|that)\b/i.test(lower) ||
+			/\bsearch\s+online\b/i.test(lower) ||
+			/\b(?:search|look\s*up)\s+for\b/i.test(lower)
+		) {
+			return true
+		}
+
+		return false
 	}
 
-	private extractSearchQuery(text: string): string {
+	private extractSearchQuery(text: string, previousMessages?: ChatMessage[]): string {
 		let cleaned = text.replace(/^\/web\s+/i, "").trim()
-		const match = cleaned.match(/(?:wyszukaj|search the web for|search for|look up)\s+(.+)/i)
-		if (match && match[1]) {
-			return match[1].trim()
+
+		// Match patterns where query is explicitly after keywords
+		const explicitMatch = cleaned.match(
+			/^(?:prosz[eę]\s+)?(?:wyszukaj|przeszukaj|poszukaj|znajd[zź]|sprawd[zź]|search(?:\s+the\s+web|\s+online)?\s+for|search|look\s+up)\s+(?:w\s+internecie\s+|w\s+sieci\s+|online\s+)?(?:czym\s+jest\s+|co\s+to\s+jest\s+|informacj[ie]\s+(?:o|na\s+temat)\s+)?(.+)/i,
+		)
+		if (explicitMatch && explicitMatch[1]) {
+			cleaned = explicitMatch[1].trim()
+		} else {
+			// Strip common leading trigger commands
+			cleaned = cleaned
+				.replace(
+					/^(?:(?:je[zż]eli|je[sś]li)?\s*nie\s*wiesz\s*(?:o\s+co\s+chodzi)?[,\s]*(?:to\s+)?)?(?:przeszukaj|poszukaj|wyszukaj|sprawd[zź])\s+(?:w\s+)?(?:internecie|internet|sieci|sie[cć]|online|google|www|web)?(?:\s+(?:informacj[ie]|pod\s+k[aą]tem|na\s+temat|w\s+poszukiwaniu|o))?\s*/i,
+					"",
+				)
+				.replace(/^(?:search|look\s*up|browse|find)\s+(?:the\s+)?(?:web|internet|online)?(?:\s+(?:for|about))?\s*/i, "")
+				.trim()
 		}
-		return cleaned.slice(0, 100)
+
+		// Strip trailing filler
+		cleaned = cleaned
+			.replace(/\s+(?:w\s+internecie|w\s+sieci|online|in\s+the\s+web|on\s+the\s+web|internet|sie[cć])$/i, "")
+			.replace(/[?!.]+$/, "")
+			.trim()
+
+		// If the cleaned text is empty or purely reference pronoun/phrase ("to", "tego", "it", "this", "o co chodzi", "internet", etc.)
+		const isReferential =
+			!cleaned ||
+			/^(?:to|tego|tamto|it|this|that|them|o\s+co\s+chodzi|o\s+czym\s+mowa|internet|internecie|w\s+internecie|sie[cć]|sieci|w\s+sieci|online)$/i.test(cleaned)
+
+		if (isReferential && previousMessages && previousMessages.length > 0) {
+			// Look backwards for the most recent user prompt
+			for (let i = previousMessages.length - 1; i >= 0; i--) {
+				const prev = previousMessages[i]
+				if (prev.role === "user" && prev.content && prev.content.trim()) {
+					let prevCleaned = prev.content
+						.replace(
+							/^(?:czym\s+(?:w[łl]a[sś]ciwie\s+)?jest(?:\s+us[łl]uga|\s+to|\s+narz[ęe]dzie)?|co\s+to\s+jest|opowiedz\s+mi\s+o|jak\s+dzia[łl]a|what\s+is(?:\s+the)?|tell\s+me\s+about)\s+/i,
+							"",
+						)
+						.replace(/[?!.]+$/, "")
+						.trim()
+					if (prevCleaned) {
+						return prevCleaned.slice(0, 100)
+					}
+				}
+			}
+		}
+
+		return (cleaned || text.trim()).slice(0, 100)
 	}
 
 	private formatMessagesForApi(messages: ChatMessage[]): Anthropic.Messages.MessageParam[] {

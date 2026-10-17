@@ -34,6 +34,7 @@ export class TavilySearchBackend implements SearchBackend {
 				Accept: "application/json",
 			},
 			body: JSON.stringify(payload),
+			signal: options.signal,
 		})
 
 		if (!response.ok) {

@@ -239,7 +239,9 @@ export class ClineProvider
 			storageDir: this.contextProxy.globalStorageUri.fsPath,
 			getGlobalSettings: () => {
 				try {
-					return this.contextProxy.getProviderSettings()
+					const providerSettings = this.contextProxy.getProviderSettings()
+					const globalSettings = this.contextProxy.getGlobalSettings()
+					return { ...providerSettings, ...globalSettings }
 				} catch {
 					return {}
 				}

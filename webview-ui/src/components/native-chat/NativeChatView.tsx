@@ -81,18 +81,23 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 					if (lastMessage.role !== "assistant") return prev
 
 					if (chunk.type === "text") {
+						lastMessage.status = undefined
 						lastMessage.content = (lastMessage.content || "") + chunk.text
 					} else if (chunk.type === "reasoning") {
 						lastMessage.reasoning = (lastMessage.reasoning || "") + chunk.text
+					} else if (chunk.type === "status") {
+						lastMessage.status = chunk.status
 					} else if (chunk.type === "webSearch") {
 						lastMessage.webSearch = chunk.search
 					} else if (chunk.type === "usage") {
 						lastMessage.tokenUsage = chunk.usage
 					} else if (chunk.type === "error") {
+						lastMessage.status = undefined
 						lastMessage.error = chunk.error
 						lastMessage.isStreaming = false
 						setIsStreaming(false)
 					} else if (chunk.type === "complete") {
+						lastMessage.status = undefined
 						lastMessage.isStreaming = false
 						setIsStreaming(false)
 					}

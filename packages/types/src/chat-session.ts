@@ -7,6 +7,8 @@ export const chatSearchResultItemSchema = z.object({
 	title: z.string(),
 	url: z.string(),
 	snippet: z.string(),
+	domain: z.string().optional(),
+	publishedAt: z.string().optional(),
 })
 export type ChatSearchResultItem = z.infer<typeof chatSearchResultItemSchema>
 
@@ -33,6 +35,7 @@ export const chatMessageSchema = z.object({
 	tokenUsage: chatMessageTokenUsageSchema.optional(),
 	timestamp: z.number(),
 	isStreaming: z.boolean().optional(),
+	status: z.string().optional(),
 	error: z.string().optional(),
 })
 export type ChatMessage = z.infer<typeof chatMessageSchema>
@@ -87,6 +90,7 @@ export type ChatPreferences = z.infer<typeof chatPreferencesSchema>
 export type ChatStreamChunk =
 	| { type: "text"; text: string }
 	| { type: "reasoning"; text: string }
+	| { type: "status"; status: string }
 	| { type: "webSearch"; search: ChatWebSearchData }
 	| { type: "usage"; usage: ChatMessageTokenUsage }
 	| { type: "error"; error: string }

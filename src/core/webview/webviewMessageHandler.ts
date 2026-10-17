@@ -3778,7 +3778,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						sessionId,
 						text: message.text,
 						images: message.images,
-						webSearchMode: message.chatDraft?.webSearchMode,
+						webSearchMode: message.webSearchMode || message.chatDraft?.webSearchMode,
 						onChunk,
 						onTurnStart: async () => {
 							try {
