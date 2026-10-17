@@ -88,7 +88,7 @@ async function runBuild() {
 		})
 	}
 
-	// 3. Copy renderer files
+	// 3. Copy renderer files and validate JavaScript syntax
 	const rendererSrc = path.join(__dirname, "src/renderer")
 	const rendererDist = path.join(outDir, "renderer")
 	if (!fs.existsSync(rendererDist)) {
@@ -99,6 +99,14 @@ async function runBuild() {
 	for (const file of files) {
 		const srcPath = path.join(rendererSrc, file)
 		if (fs.statSync(srcPath).isFile()) {
+			if (file.endsWith(".js")) {
+				try {
+					execSync(`node -c "${srcPath}"`, { stdio: "pipe" })
+				} catch (err) {
+					console.error(`\n❌ Syntax validation failed for renderer file: ${file}`)
+					throw new Error(`Renderer script ${file} contains syntax errors: ${err.stderr?.toString() || err.message}`)
+				}
+			}
 			fs.copyFileSync(srcPath, path.join(rendererDist, file))
 		}
 	}

@@ -65,7 +65,7 @@ describe("Chat Hydration & Selection Synchronization Regression Suite", () => {
 
 	describe("3. Task Hydration & History Preservation (ClineProvider.ts)", () => {
 		it("unconditionally creates task with full history in showTaskWithId regardless of interrupted status", () => {
-			expect(clineProviderCode).toContain("await this.createTaskWithHistoryItem(historyItem)")
+			expect(clineProviderCode).toMatch(/await this\.createTaskWithHistoryItem\(historyItem(ToOpen)?\)/)
 			// Must NOT pass startTask: !requiresManualContinue which blocked message loading
 			expect(clineProviderCode).not.toContain("createTaskWithHistoryItem(historyItem, { startTask: !requiresManualContinue })")
 		})

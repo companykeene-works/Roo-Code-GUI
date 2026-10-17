@@ -205,6 +205,13 @@ export async function startDesktopApp(options: DesktopRunOptions = {}) {
 					if (typeof app.setName === "function") {
 						app.setName("Roo Code")
 					}
+					if (process.env.ROO_CONFIG_DIR) {
+						const isolatedUserData = path.join(process.env.ROO_CONFIG_DIR, "userData")
+						if (!fs.existsSync(isolatedUserData)) {
+							fs.mkdirSync(isolatedUserData, { recursive: true })
+						}
+						app.setPath("userData", isolatedUserData)
+					}
 				}
 			} catch {}
 
@@ -627,6 +634,29 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
 			workspacePath = wsEqualArg.split("=").slice(1).join("=")
 		}
 	}
+	let port: number | undefined
+	const portIdx = args.indexOf("-p") !== -1 ? args.indexOf("-p") : args.indexOf("--port")
+	if (portIdx !== -1 && args[portIdx + 1]) {
+		const parsedPort = parseInt(args[portIdx + 1]!, 10)
+		if (!isNaN(parsedPort)) port = parsedPort
+	} else {
+		const portEqualArg = args.find((a) => a.startsWith("-p=") || a.startsWith("--port="))
+		if (portEqualArg) {
+			const parsedPort = parseInt(portEqualArg.split("=")[1]!, 10)
+			if (!isNaN(parsedPort)) port = parsedPort
+		}
+	}
+
+	let storageDir: string | undefined
+	const storageIdx = args.indexOf("-s") !== -1 ? args.indexOf("-s") : args.indexOf("--storage-dir")
+	if (storageIdx !== -1 && args[storageIdx + 1]) {
+		storageDir = args[storageIdx + 1]!
+	} else {
+		const storageEqualArg = args.find((a) => a.startsWith("-s=") || a.startsWith("--storage-dir="))
+		if (storageEqualArg) {
+			storageDir = storageEqualArg.split("=").slice(1).join("=")
+		}
+	}
 
 	if (workspacePath && workspacePath.trim()) {
 		const resolvedArg = path.normalize(path.resolve(workspacePath.trim()))
@@ -657,9 +687,11 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
 		}
 	}
 
-	logStartupDebug(`Electron auto-start resolved workspacePath: ${workspacePath || "(none)"}`)
+	logStartupDebug(`Electron auto-start resolved workspacePath: ${workspacePath || "(none)"}, port: ${port || 4500}, storageDir: ${storageDir || "(default)"}`)
 	startDesktopApp({
 		workspacePath: workspacePath || "",
+		port,
+		storageDir,
 		isElectron: true,
 	}).catch((err) => {
 		const msg = `Failed to start Roo Code Desktop in Electron: ${err?.stack || err}`

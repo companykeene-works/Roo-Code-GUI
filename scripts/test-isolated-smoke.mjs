@@ -161,6 +161,14 @@ async function run() {
 	if (appJsRes.status !== 200 || !appJsRes.data.includes("renderChatSidebar")) {
 		throw new Error("app.js missing chat sidebar logic")
 	}
+	// Parse and validate syntax of served app.js to guarantee no runtime parse crash in browser/Electron
+	const vm = await import("vm")
+	try {
+		new vm.Script(appJsRes.data, { filename: "served-app.js" })
+		log("UI-ASSETS", "app.js V8 JavaScript syntax validation passed cleanly: OK")
+	} catch (syntaxErr) {
+		throw new Error(`CRITICAL: app.js contains syntax error: ${syntaxErr.message}`)
+	}
 	log("UI-ASSETS", "app.js served with dual sidebar logic: OK")
 
 	// Phase 5: Test REST APIs

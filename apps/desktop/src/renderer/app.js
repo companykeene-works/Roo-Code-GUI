@@ -474,11 +474,11 @@
 
 		// 1. Loading & Error elements
 		if (webviewLoadingTitle) webviewLoadingTitle.textContent = tDesktop("loadingTitle")
-		if (webviewLoadingDesc && (!webviewLoadingDesc.dataset.custom || webviewLoadingDesc.textContent === desktopTranslations.en.loadingDesc || webviewLoadingDesc.textContent === desktopTranslations.pl.loadingDesc)) {
+		if (webviewLoadingDesc && (!webviewLoadingDesc.dataset?.custom || webviewLoadingDesc.textContent === desktopTranslations.en.loadingDesc || webviewLoadingDesc.textContent === desktopTranslations.pl.loadingDesc)) {
 			webviewLoadingDesc.textContent = tDesktop("loadingDesc")
 		}
 		if (webviewErrorTitle) webviewErrorTitle.textContent = tDesktop("errorTitle")
-		if (webviewErrorDesc && (!webviewErrorDesc.dataset.custom || webviewErrorDesc.textContent === desktopTranslations.en.errorDesc || webviewErrorDesc.textContent === desktopTranslations.pl.errorDesc)) {
+		if (webviewErrorDesc && (!webviewErrorDesc.dataset?.custom || webviewErrorDesc.textContent === desktopTranslations.en.errorDesc || webviewErrorDesc.textContent === desktopTranslations.pl.errorDesc)) {
 			webviewErrorDesc.textContent = tDesktop("errorDesc")
 		}
 		if (webviewRetryText) webviewRetryText.textContent = tDesktop("retryBtn")
@@ -1132,6 +1132,8 @@
 			projectList?.focus?.()
 		}
 		lastFocusedElement = null
+	}
+
 	// =========================================================================
 	// Native AI Chat Mode - Sidebar Controller
 	// =========================================================================
@@ -2685,7 +2687,7 @@
 			const desc = webviewLoadingDesc || webviewLoadingState.querySelector(".placeholder-desc")
 			if (desc && statusText) {
 				desc.textContent = statusText
-				desc.dataset.custom = "true"
+				if (desc.dataset) desc.dataset.custom = "true"
 			}
 		}
 		if (webviewErrorState) webviewErrorState.style.display = "none"
@@ -2700,7 +2702,7 @@
 			if (webviewErrorTitle) webviewErrorTitle.textContent = tDesktop("errorTitle")
 			if (webviewErrorDesc && message) {
 				webviewErrorDesc.textContent = message
-				webviewErrorDesc.dataset.custom = "true"
+				if (webviewErrorDesc.dataset) webviewErrorDesc.dataset.custom = "true"
 			}
 			if (webviewRetryText) webviewRetryText.textContent = tDesktop("retryBtn")
 		}
