@@ -482,10 +482,12 @@ export class DesktopAgentHost extends EventEmitter {
 			appRoot,
 			storageDir: this.storageDir,
 		})
-		// Apply the Polish edition once, including existing installations.
+		// Apply the Polish edition once for new installations without overwriting existing preferences.
 		// Later explicit language choices remain available in Settings.
 		if (!this.vscode.context.globalState.get("polishWorkspaceEdition")) {
-			await this.vscode.context.globalState.update("language", "pl")
+			if (!this.vscode.context.globalState.get("language")) {
+				await this.vscode.context.globalState.update("language", "pl")
+			}
 			await this.vscode.context.globalState.update("polishWorkspaceEdition", true)
 		}
 

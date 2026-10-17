@@ -1,6 +1,20 @@
 @import "../../apps/desktop/src/renderer/design-tokens.css";
 @import "./ui-surfaces.css";
 
+:root {
+	--bg-canvas: var(--vscode-editor-background, #202123);
+	--bg-header: var(--vscode-editor-background, #191a1c);
+	--bg-surface: var(--vscode-sideBar-background, var(--vscode-editor-background, #28292c));
+	--bg-surface-elevated: var(--vscode-editorWidget-background, #303135);
+	--text-primary: var(--vscode-editor-foreground, #edeef0);
+	--text-secondary: var(--vscode-descriptionForeground, #b2b3b9);
+	--text-muted: var(--vscode-disabledForeground, #93959d);
+	--accent: var(--vscode-textLink-foreground, #a8c7fa);
+	--border-subtle: var(--vscode-editorGroup-border, #ffffff0e);
+	--border-light: var(--vscode-editorWidget-border, #ffffff20);
+	--border-focus: var(--vscode-focusBorder, #8aaef0);
+}
+
 body {
 	font-family: var(--font-sans);
 	font-size: 14px;

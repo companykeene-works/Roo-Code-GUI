@@ -60,7 +60,13 @@
 	--text-primary: #e1f0f2; --text-secondary: #abc2c8; --text-muted: #8ba6ae;
 	--accent: #83c9d5; --border-focus: #83c9d5;
 }
-:root, :root[data-theme], body[data-theme] {
+/* Fallback --vscode-* definitions for standalone desktop shell */
+[data-desktop-shell],
+[data-desktop-shell] [data-theme],
+body.standalone-desktop,
+body.standalone-desktop [data-theme],
+#desktop-app,
+:root:not([class*="vscode"]):not([data-vscode-theme-kind]) {
 	--font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
 	--font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
 	--vscode-font-family: var(--font-sans);

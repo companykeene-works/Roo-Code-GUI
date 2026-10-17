@@ -2431,7 +2431,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					<div className="agent-home-inner">
 						<div>
 							<RooHero />
-							<AgentStarters onSelect={(prompt) => { setInputValue(prompt); textAreaRef.current?.focus() }} />
+							{taskHistory.length < 6 && (
+								<div data-testid="roo-tips">
+									<AgentStarters onSelect={(prompt) => { setInputValue(prompt); textAreaRef.current?.focus() }} />
+								</div>
+							)}
 							{/* Everyone should see their task history if any */}
 							{taskHistory.length > 0 && <HistoryPreview />}
 						</div>

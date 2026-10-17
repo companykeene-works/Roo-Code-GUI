@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { XKiro } from "../providers/XKiro"
 
-vi.mock("@src/i18n/TranslationContext", () => ({ useAppTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock("@src/i18n/TranslationContext", () => ({ useAppTranslation: () => ({ t: (key: string, def?: string) => def || key }) }))
 
 describe("xKiro settings", () => {
 	it("has no promo field or description with legacy settings", () => {

@@ -188,7 +188,7 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid="reasoning-effort-trigger"
-					className={cn("agent-toolbar-control shrink-0", className)}>
+					className={cn("agent-toolbar-control shrink-0 cursor-pointer", className)}>
 					<Brain className="size-3.5 text-vscode-descriptionForeground flex-shrink-0" />
 					<span className="font-medium">
 						{t("chat:effort.label", { level: getEffortLabel(currentEffort) })}

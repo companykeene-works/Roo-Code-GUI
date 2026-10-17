@@ -147,10 +147,10 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 				onInput={handleCustomContextWindowChange}
 				placeholder="np. 1000000"
 				className="w-full">
-				<label className="block font-medium mb-1">Własny rozmiar kontekstu (opcjonalnie)</label>
+				<label className="block font-medium mb-1">{t("settings:providers.customContextWindow", "Custom Context Window (Optional)")}</label>
 			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground -mt-1">
-				Ustaw rozmiar kontekstu w tokenach dla własnych lub nowo udostępnionych modeli.
+				{t("settings:providers.customContextWindowDescription", "Ustaw rozmiar kontekstu w tokenach dla własnych lub nowo udostępnionych modeli.")}
 			</div>
 
 			<div className="flex flex-wrap items-center gap-3 pt-1">
@@ -161,10 +161,10 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 					{testStatus === "testing" ? (
 						<span className="flex items-center gap-1.5">
 							<Loader2 className="w-3.5 h-3.5 animate-spin" />
-							Sprawdzam połączenie…
+							{t("settings:providers.testingConnection", "Sprawdzam połączenie…")}
 						</span>
 					) : (
-						"Sprawdź połączenie"
+						t("settings:providers.testConnection", "Test Connection")
 					)}
 				</VSCodeButton>
 

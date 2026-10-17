@@ -1129,7 +1129,7 @@ export const ChatRowContent = ({
 								<div className="px-3 py-2 border-t border-border/20 flex flex-col gap-2 text-xs">
 									{slashCommandInfo.args && (
 										<div>
-											<span className="font-medium">Parametry: </span>
+											<span className="font-medium">Arguments: </span>
 											<span className="text-muted-foreground">
 												{slashCommandInfo.args}
 											</span>
@@ -1482,7 +1482,7 @@ export const ChatRowContent = ({
 													e.stopPropagation()
 													handleEditClick()
 												}}>
-												<Edit className="w-4 shrink-0" aria-label="Edycja wiadomości" />
+												<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
 											</div>
 											<div
 												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1491,7 +1491,7 @@ export const ChatRowContent = ({
 													e.stopPropagation()
 													vscode.postMessage({ type: "deleteMessage", value: message.ts })
 												}}>
-												<Trash2 className="w-4 shrink-0" aria-label="Usuwanie wiadomości" />
+												<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
 											</div>
 										</div>
 									</div>

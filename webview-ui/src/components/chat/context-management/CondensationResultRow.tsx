@@ -30,7 +30,7 @@ export function CondensationResultRow({ data }: CondensationResultRowProps) {
 					onClick={() => setIsExpanded(!isExpanded)}>
 					<div className="flex items-center gap-1.5 flex-wrap">
 						<span className="text-amber-400">⚡</span>
-						<span className="font-medium text-vscode-foreground">Skrócono kontekst:</span>
+						<span className="font-medium text-vscode-foreground">Context compacted:</span>
 						<span className="text-vscode-descriptionForeground font-mono text-[11px]">
 							{`${prevTokens.toLocaleString()} → ${newTokens.toLocaleString()} tokens (-${percentage}%)`}
 						</span>

@@ -1332,7 +1332,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								})()}
 							</div>
 
-							{isEditMode && !inputValue && (
+							{!inputValue && (
 								<div
 									className={cn(
 										"absolute left-2 z-30 flex items-center h-8 font-display text-base leading-normal",

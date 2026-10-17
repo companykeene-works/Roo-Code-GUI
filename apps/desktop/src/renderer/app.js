@@ -447,8 +447,7 @@
 		},
 	}
 
-	let currentLanguage = "pl"
-	localStorage.setItem("roo-language", "pl")
+	let currentLanguage = localStorage.getItem("roo-language") || "pl"
 
 	function tDesktop(key, ...args) {
 		const lang = currentLanguage === "pl" ? "pl" : "en"
@@ -654,13 +653,15 @@
 	})
 
 	// Theme Synchronization (5 themes)
-	function applyDesktopTheme(theme) {
+	function applyDesktopTheme(theme, persist = false) {
 		if (!theme) return
 		const isLight = theme === "clean-light" || theme === "light"
 		document.body.classList.toggle("light-theme", isLight)
 		document.body.classList.toggle("dark-theme", !isLight)
 		document.body.setAttribute("data-theme", theme)
-		localStorage.setItem("roo-theme", theme)
+		if (persist) {
+			localStorage.setItem("roo-theme", theme)
+		}
 		webviewFrame?.contentWindow?.postMessage({ type: "themeChange", theme }, "*")
 		settingsWebviewFrame?.contentWindow?.postMessage({ type: "themeChange", theme }, "*")
 	}
@@ -2881,6 +2882,9 @@
 				}
 				if (data.type === "state" && data.state) {
 					latestExtensionState = { ...(latestExtensionState || {}), ...data.state }
+					if (data.state.theme) {
+						applyDesktopTheme(data.state.theme, true)
+					}
 					if (data.state.language) {
 						const newLang = (data.state.language === "pl" || data.state.language.startsWith("pl")) ? "pl" : "en"
 						if (newLang !== currentLanguage) {
@@ -2891,7 +2895,7 @@
 					}
 				}
 				if (data.type === "themeChange" && data.theme) {
-					applyDesktopTheme(data.theme)
+					applyDesktopTheme(data.theme, false)
 				}
 				if (data.type === "openSettings") {
 					const targetSection = data.section || data.values?.section || "providers"
@@ -5140,6 +5144,8 @@
 	function closeSettingsModal() {
 		if (!settingsModalBackdrop) return
 		settingsModalBackdrop.classList.add("hidden")
+		const savedTheme = localStorage.getItem("roo-theme") || "linear-dark"
+		applyDesktopTheme(savedTheme, false)
 	}
 
 	function openSettingsTab() {

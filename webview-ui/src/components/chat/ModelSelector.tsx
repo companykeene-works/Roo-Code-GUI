@@ -327,7 +327,8 @@ export const isCoderModel = (id: string): boolean => {
 	return lower.includes("coder") || lower.includes("code") || lower.includes("dev")
 }
 
-export const isVisionModel = (id: string): boolean => {
+export const isVisionModel = (id: string, info?: ModelInfo): boolean => {
+	if (info?.supportsImages !== undefined) return Boolean(info.supportsImages)
 	const lower = id.toLowerCase()
 	return lower.includes("vision") || lower.includes("vl") || lower.includes("omni") || lower.includes("multimodal")
 }
@@ -335,18 +336,20 @@ export const isVisionModel = (id: string): boolean => {
 export const sanitizeCustomModelId = (rawModelId: string): string => {
 	if (!rawModelId) return ""
 
-	// Sanitize: strip whitespace, newlines, and special characters (#, ?, &)
-	let sanitized = rawModelId.replace(/[\s\r\n\t#?&]+/g, "")
+	// Sanitize: strip control characters, whitespace, newlines, and special characters (#, ?, &)
+	let sanitized = rawModelId
+		.replace(/[\u0000-\u001f\u007f-\u009f\s#?&]+/g, "")
+		.replace(/\.\.+[/\\]/g, "")
 	if (!sanitized) return ""
 
-	// Apply encodeURIComponent for URL fragments/segments (preserving path delimiters / and :)
+	// Apply encodeURIComponent for URL fragments/segments (preserving path delimiters /, :, and @)
 	try {
 		sanitized = sanitized
 			.split("/")
 			.map((segment) =>
 				segment
 					.split(":")
-					.map((part) => encodeURIComponent(decodeURIComponent(part)))
+					.map((part) => encodeURIComponent(decodeURIComponent(part)).replace(/%40/g, "@"))
 					.join(":"),
 			)
 			.join("/")
@@ -356,7 +359,7 @@ export const sanitizeCustomModelId = (rawModelId: string): string => {
 			.map((segment) =>
 				segment
 					.split(":")
-					.map((part) => encodeURIComponent(part))
+					.map((part) => encodeURIComponent(part).replace(/%40/g, "@"))
 					.join(":"),
 			)
 			.join("/")
@@ -572,7 +575,7 @@ export const ModelSelector = ({
 				const isReasoning = isReasoningModel(id, info)
 				const isFast = isFastModel(id, isReasoning)
 				const isCoder = isCoderModel(id)
-				const isVision = isVisionModel(id)
+				const isVision = isVisionModel(id, info)
 				addOrMergeModel({
 					id,
 					name: cleanModelDisplayName(id, info),
@@ -606,7 +609,7 @@ export const ModelSelector = ({
 					const isReasoning = isReasoningModel(id, dynamicInfo)
 					const isFast = isFastModel(id, isReasoning)
 					const isCoder = isCoderModel(id)
-					const isVision = isVisionModel(id)
+					const isVision = isVisionModel(id, dynamicInfo)
 
 					const badge = isReasoning
 						? "Rozumowanie"
@@ -767,7 +770,7 @@ export const ModelSelector = ({
 					const isReasoning = isReasoningModel(id, info)
 					const isFast = isFastModel(id, isReasoning)
 					const isCoder = isCoderModel(id)
-					const isVision = isVisionModel(id)
+					const isVision = isVisionModel(id, info)
 					addOrMergeModel({
 						id,
 						name: cleanModelDisplayName(id, info),
@@ -799,10 +802,10 @@ export const ModelSelector = ({
 						isFast: false,
 						badge: "Rozumowanie",
 					},
-					{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: false, isFast: false },
-					{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false },
-					{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false },
-					{ id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", isReasoning: false, isFast: false },
+					{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: false, isFast: false, isVision: true },
+					{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false, isVision: true },
+					{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false, isVision: true },
+					{ id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", isReasoning: false, isFast: false, isVision: true },
 				]
 				orPresets.forEach((p) => {
 					addOrMergeModel(p)
@@ -813,8 +816,8 @@ export const ModelSelector = ({
 		// 3. OpenAI Compatible presets
 		if (activeProvider === "openai") {
 			const openaiPresets = [
-				{ id: "gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false },
-				{ id: "gpt-4o-mini", name: "GPT-4o Mini", isReasoning: false, isFast: true, badge: "Szybkość" },
+				{ id: "gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false, isVision: true },
+				{ id: "gpt-4o-mini", name: "GPT-4o Mini", isReasoning: false, isFast: true, isVision: true, badge: "Szybkość" },
 				{ id: "o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 				{ id: "deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false },
 				{
@@ -862,7 +865,7 @@ export const ModelSelector = ({
 				const isReasoning = isReasoningModel(activeModelId, activeModelInfo)
 				const isFast = isFastModel(activeModelId, isReasoning)
 				const isCoder = isCoderModel(activeModelId)
-				const isVision = isVisionModel(activeModelId)
+				const isVision = isVisionModel(activeModelId, activeModelInfo)
 				addOrMergeModel({
 					id: activeModelId,
 					name: cleanModelDisplayName(activeModelId, activeModelInfo),
@@ -1259,6 +1262,15 @@ export const ModelSelector = ({
 		if (!options.length) return
 		event.preventDefault()
 		const index = options.indexOf(target as HTMLButtonElement)
+		if (isSearch && event.key === "ArrowDown") {
+			options[0]?.focus({ preventScroll: true })
+			options[0]?.scrollIntoView?.({ block: "nearest" })
+			return
+		}
+		if (!isSearch && index === 0 && event.key === "ArrowUp") {
+			searchInputRef.current?.focus()
+			return
+		}
 		const next =
 			event.key === "Home"
 				? 0
@@ -1276,6 +1288,8 @@ export const ModelSelector = ({
 	const renderCustomSearchOption = () => (
 		<button
 			type="button"
+			data-model-option=""
+			data-model-id={searchQuery.trim()}
 			className="model-custom-result"
 			onClick={() => handleSelectCustomModel(searchQuery.trim())}>
 			<Plus aria-hidden="true" />
@@ -1373,6 +1387,22 @@ export const ModelSelector = ({
 							aria-label={t("chat:modelSelector.searchPlaceholder")}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									const options = Array.from(
+										e.currentTarget
+											.closest(".model-selector-popover")
+											?.querySelectorAll<HTMLButtonElement>("[data-model-option]") || [],
+									).filter((opt) => !opt.closest("[hidden]"))
+									if (options.length > 0) {
+										e.preventDefault()
+										options[0].click()
+									} else if (searchQuery.trim()) {
+										e.preventDefault()
+										handleSelectCustomModel(searchQuery.trim())
+									}
+								}
+							}}
 							placeholder="Szukaj po nazwie lub identyfikatorze…"
 						/>
 						{searchQuery && (
