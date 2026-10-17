@@ -49,23 +49,37 @@ async function run() {
 		fs.mkdirSync(ISOLATED_WORKSPACE, { recursive: true })
 		fs.writeFileSync(path.join(ISOLATED_WORKSPACE, "test.txt"), "Isolated workspace content", "utf-8")
 
-		// 3. Resolve Electron binary from apps/desktop
-		const electronBinary = req("electron")
-		log("LAUNCH", `Resolved Electron binary: ${electronBinary}`)
-
+		// 3. Resolve Electron binary (either dev electron or packaged win-unpacked binary)
 		const appDir = path.join(rootDir, "apps/desktop")
+		const isPackaged = process.argv.includes("--packaged")
+		let electronBinary = req("electron")
+		let spawnArgs = [
+			appDir,
+			"--electron",
+			"-p", String(PORT),
+			"-w", ISOLATED_WORKSPACE,
+			"-s", ISOLATED_STORAGE,
+		]
+
+		if (isPackaged) {
+			electronBinary = path.join(rootDir, "apps/desktop/release/win-unpacked/Roo Code.exe")
+			if (!fs.existsSync(electronBinary)) {
+				throw new Error(`Packaged binary not found at: ${electronBinary}`)
+			}
+			spawnArgs = [
+				"-p", String(PORT),
+				"-w", ISOLATED_WORKSPACE,
+				"-s", ISOLATED_STORAGE,
+			]
+		}
+		log("LAUNCH", `Resolved Electron binary: ${electronBinary} (packaged=${isPackaged})`)
+
 		const isolatedLogFile = path.join(ISOLATED_APPDATA, "Roo Code", "startup-debug.log")
 
 		log("LAUNCH", `Spawning Electron with isolated storage & config on port ${PORT}...`)
 		const child = spawn(
 			String(electronBinary),
-			[
-				appDir,
-				"--electron",
-				"-p", String(PORT),
-				"-w", ISOLATED_WORKSPACE,
-				"-s", ISOLATED_STORAGE,
-			],
+			spawnArgs,
 			{
 				cwd: rootDir,
 				env: {
