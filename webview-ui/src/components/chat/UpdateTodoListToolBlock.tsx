@@ -154,13 +154,13 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 							style={{ color: "var(--vscode-charts-yellow)" }}
 						/>
 						<span className="font-bold mr-2" style={{ fontWeight: "bold" }}>
-							User Edit
+							Zmiana użytkownika
 						</span>
 						<div className="flex-grow" />
 					</div>
 				</ToolUseBlockHeader>
 				<div className="overflow-x-auto max-w-full" style={{ padding: "12px 0 8px 0" }}>
-					<span className="text-vscode-descriptionForeground">User Edits</span>
+					<span className="text-vscode-descriptionForeground">Zmiany użytkownika</span>
 				</div>
 			</ToolUseBlock>
 		)
@@ -176,7 +176,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 							style={{ color: "var(--vscode-foreground)" }}
 						/>
 						<span className="font-bold mr-2" style={{ fontWeight: "bold" }}>
-							Todo List Updated
+							Zaktualizowano listę zadań
 						</span>
 						<div className="flex-grow" />
 						{editable && (
@@ -269,7 +269,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 											<input
 												type="text"
 												value={todo.content}
-												placeholder="Enter todo item"
+												placeholder="Wpisz zadanie"
 												onChange={(e) => handleContentChange(todo.id!, e.target.value)}
 												style={{
 													flex: 1,
@@ -343,7 +343,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 													padding: 0,
 													lineHeight: 1,
 												}}
-												title="Remove">
+												title="Usuń">
 												×
 											</button>
 										)}
@@ -357,7 +357,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 										ref={newInputRef}
 										type="text"
 										value={newContent}
-										placeholder="Enter todo item, press Enter to add"
+										placeholder="Wpisz zadanie i naciśnij Enter"
 										onChange={(e) => setNewContent(e.target.value)}
 										onKeyDown={handleNewInputKeyDown}
 										style={{
@@ -403,7 +403,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 											cursor: "pointer",
 											fontSize: 12,
 										}}>
-										Cancel
+										Anuluj
 									</button>
 								</li>
 							) : (
@@ -420,7 +420,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 												cursor: "pointer",
 												fontSize: 12,
 											}}>
-											+ Add Todo
+											+ Dodaj zadanie
 										</button>
 									)}
 								</li>
@@ -457,7 +457,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 							}}
 							onClick={(e) => e.stopPropagation()}>
 							<div style={{ marginBottom: 12, fontSize: 14, color: "#333" }}>
-								Are you sure you want to delete this todo item?
+								Czy na pewno chcesz usunąć to zadanie?
 							</div>
 							<div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
 								<button
@@ -471,7 +471,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 										cursor: "pointer",
 										fontSize: 12,
 									}}>
-									Cancel
+									Anuluj
 								</button>
 								<button
 									onClick={confirmDelete}
@@ -484,7 +484,7 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 										cursor: "pointer",
 										fontSize: 12,
 									}}>
-									Delete
+									Usuń
 								</button>
 							</div>
 						</div>

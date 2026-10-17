@@ -40,10 +40,10 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 			}
 			if (message.success) {
 				setTestStatus("success")
-				setTestMessage(message.text || "Connected successfully to xKiro API!")
+				setTestMessage(message.text || "Połączono z API xKiro.")
 			} else {
 				setTestStatus("error")
-				setTestMessage(message.error || message.text || "Connection test failed.")
+				setTestMessage(message.error || message.text || "Nie udało się nawiązać połączenia.")
 			}
 		}
 	}, [])
@@ -90,12 +90,12 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 
 		if (!apiKey) {
 			setTestStatus("error")
-			setTestMessage("Please enter an API key before testing connection.")
+			setTestMessage("Wpisz klucz API, aby sprawdzić połączenie.")
 			return
 		}
 
 		setTestStatus("testing")
-		setTestMessage("Testing connection to xKiro API...")
+		setTestMessage("Sprawdzam połączenie z API xKiro…")
 
 		if (testTimeoutRef.current) {
 			clearTimeout(testTimeoutRef.current)
@@ -103,7 +103,7 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 
 		testTimeoutRef.current = setTimeout(() => {
 			setTestStatus("error")
-			setTestMessage("Connection test timed out waiting for backend response.")
+			setTestMessage("Przekroczono czas oczekiwania na odpowiedź serwera.")
 			testTimeoutRef.current = null
 		}, 12000)
 
@@ -123,12 +123,12 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 				value={apiConfiguration?.xkiroApiKey || apiConfiguration?.apiKey || ""}
 				type="password"
 				onInput={handleApiKeyChange}
-				placeholder="Enter xKiro API key (e.g. xkiro-...)"
+				placeholder="Wpisz klucz API xKiro (np. xkiro-…)"
 				className="w-full">
-				<label className="block font-medium mb-1">xKiro API Key</label>
+				<label className="block font-medium mb-1">Klucz API xKiro</label>
 			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground -mt-1">
-				API key is securely stored in local secret storage.
+				Klucz API jest zapisywany w lokalnym magazynie danych uwierzytelniających.
 			</div>
 
 			<VSCodeTextField
@@ -136,21 +136,21 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 				onInput={handleBaseUrlChange}
 				placeholder="https://api.xkiro.com/v1"
 				className="w-full">
-				<label className="block font-medium mb-1">Base URL (Optional)</label>
+				<label className="block font-medium mb-1">Adres API (opcjonalnie)</label>
 			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground -mt-1">
-				Default xKiro endpoint: <code>https://api.xkiro.com/v1</code>
+				Domyślny adres xKiro: <code>https://api.xkiro.com/v1</code>
 			</div>
 
 			<VSCodeTextField
 				value={apiConfiguration?.xkiroCustomContextWindow?.toString() || ""}
 				onInput={handleCustomContextWindowChange}
-				placeholder="e.g. 1000000"
+				placeholder="np. 1000000"
 				className="w-full">
-				<label className="block font-medium mb-1">Custom Context Window (Optional)</label>
+				<label className="block font-medium mb-1">{t("settings:providers.customContextWindow", "Custom Context Window (Optional)")}</label>
 			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground -mt-1">
-				Override the context window size (in tokens) for custom or newly released models.
+				{t("settings:providers.customContextWindowDescription", "Ustaw rozmiar kontekstu w tokenach dla własnych lub nowo udostępnionych modeli.")}
 			</div>
 
 			<div className="flex flex-wrap items-center gap-3 pt-1">
@@ -161,16 +161,16 @@ export const XKiro = ({ apiConfiguration, setApiConfigurationField }: XKiroProps
 					{testStatus === "testing" ? (
 						<span className="flex items-center gap-1.5">
 							<Loader2 className="w-3.5 h-3.5 animate-spin" />
-							Testing...
+							{t("settings:providers.testingConnection", "Sprawdzam połączenie…")}
 						</span>
 					) : (
-						"Test Connection"
+						t("settings:providers.testConnection", "Test Connection")
 					)}
 				</VSCodeButton>
 
 				{!apiConfiguration?.xkiroApiKey && !apiConfiguration?.apiKey && (
 					<VSCodeButtonLink href="https://xkiro.com" appearance="secondary">
-						🎁 Get free tokens at xkiro.com
+						Otwórz xkiro.com
 					</VSCodeButtonLink>
 				)}
 			</div>

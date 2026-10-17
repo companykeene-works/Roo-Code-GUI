@@ -357,7 +357,7 @@ export class CrashBoundary extends Component<CrashBoundaryProps, CrashBoundarySt
 									{errorStack && (
 										<div>
 											<strong style={{ color: "var(--vscode-foreground, #f8fafc)" }}>
-												Error Stack:
+												Stos błędu:
 											</strong>
 											<pre style={{ margin: "4px 0 10px 0", whiteSpace: "pre-wrap" }}>
 												{errorStack}
@@ -367,7 +367,7 @@ export class CrashBoundary extends Component<CrashBoundaryProps, CrashBoundarySt
 									{componentStack && (
 										<div>
 											<strong style={{ color: "var(--vscode-foreground, #f8fafc)" }}>
-												Component Stack:
+												Stos komponentów:
 											</strong>
 											<pre style={{ margin: "4px 0 0 0", whiteSpace: "pre-wrap" }}>
 												{componentStack}

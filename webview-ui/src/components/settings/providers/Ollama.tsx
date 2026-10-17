@@ -124,7 +124,7 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 						}
 					}
 				}}
-				placeholder="e.g., 4096"
+				placeholder="np. 4096"
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.ollama.numCtx")}</label>
 				<div className="text-xs text-vscode-descriptionForeground mt-1">

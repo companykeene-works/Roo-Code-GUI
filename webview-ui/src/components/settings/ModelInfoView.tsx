@@ -37,13 +37,13 @@ export const ModelInfoView = ({
 		typeof modelInfo?.contextWindow === "number" && modelInfo.contextWindow > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.contextWindow")}</span>{" "}
-				{modelInfo.contextWindow?.toLocaleString()} tokens
+				{modelInfo.contextWindow?.toLocaleString()} tokenów
 			</>
 		),
 		typeof modelInfo?.maxTokens === "number" && modelInfo.maxTokens > 0 && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.maxOutput")}:</span>{" "}
-				{modelInfo.maxTokens?.toLocaleString()} tokens
+				{modelInfo.maxTokens?.toLocaleString()} tokenów
 			</>
 		),
 		<ModelInfoSupportsItem
@@ -74,25 +74,25 @@ export const ModelInfoView = ({
 		modelInfo?.inputPrice !== undefined && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
-				{formatPrice(modelInfo.inputPrice)} / 1M tokens
+				{formatPrice(modelInfo.inputPrice)} / 1 mln tokenów
 			</>
 		),
 		modelInfo?.outputPrice !== undefined && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
-				{formatPrice(modelInfo.outputPrice)} / 1M tokens
+				{formatPrice(modelInfo.outputPrice)} / 1 mln tokenów
 			</>
 		),
 		modelInfo?.supportsPromptCache && modelInfo.cacheReadsPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheReadsPrice")}:</span>{" "}
-				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1M tokens
+				{formatPrice(modelInfo.cacheReadsPrice || 0)} / 1 mln tokenów
 			</>
 		),
 		modelInfo?.supportsPromptCache && modelInfo.cacheWritesPrice && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.cacheWritesPrice")}:</span>{" "}
-				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1M tokens
+				{formatPrice(modelInfo.cacheWritesPrice || 0)} / 1 mln tokenów
 			</>
 		),
 	].filter(Boolean)

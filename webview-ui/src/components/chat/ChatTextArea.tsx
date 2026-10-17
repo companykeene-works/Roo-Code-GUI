@@ -998,7 +998,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			<div
 				className={cn(
 					"flex flex-col gap-1 bg-editor-background outline-none border border-none box-border",
-					isEditMode ? "p-2 w-full" : "relative pb-1 w-full canvas-narrative",
+					isEditMode ? "p-2 w-full" : "agent-composer relative w-full canvas-narrative",
 				)}>
 				<div className={cn(!isEditMode && "relative")}>
 					<div
@@ -1363,8 +1363,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					/>
 				)}
 
-				<div className="flex items-center justify-between gap-1.5 w-full min-w-0 overflow-hidden">
-					<div className="flex items-center gap-1.5 min-w-0 overflow-hidden flex-1">
+				<div className="composer-toolbar flex items-center justify-between gap-1.5 w-full min-w-0">
+					<div className="composer-controls flex items-center gap-1.5 min-w-0 flex-1">
 						<ModeSelector
 							value={mode}
 							title={t("chat:selectMode")}
@@ -1377,7 +1377,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<ModelSelector
 							disabled={Boolean(selectApiConfigDisabled)}
 							triggerTestId="dropdown-trigger"
-							triggerClassName="min-w-0 max-w-[280px] sm:max-w-[320px] w-auto inline-flex items-center text-ellipsis overflow-hidden px-2.5 py-1"
+							triggerClassName="composer-model min-w-0 max-w-[280px] sm:max-w-[320px] w-auto inline-flex items-center text-ellipsis overflow-hidden px-2.5 py-1"
 							currentConfigId={currentConfigId}
 							displayName={displayName}
 							listApiConfigMeta={listApiConfigMeta || []}

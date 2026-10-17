@@ -51,7 +51,7 @@ describe("ContextWindowProgress", () => {
 	})
 
 	it("calculates percentages correctly", () => {
-		renderComponent({ contextTokens: 1000, contextWindow: 4000 })
+		renderComponent({ contextTokens: 1000, contextWindow: 4000, maxTokens: 1000 })
 
 		// Verify that the token count and window size are displayed correctly
 		const tokenCount = screen.getByTestId("context-tokens-count")
@@ -63,12 +63,7 @@ describe("ContextWindowProgress", () => {
 		expect(windowSize).toBeInTheDocument()
 		expect(windowSize).toHaveTextContent("4000")
 
-		// The progress bar is now wrapped in tooltips, but we can verify the structure exists
-		// by checking for the progress bar container
-		const progressBarContainer = screen.getByTestId("context-tokens-count").parentElement
-		expect(progressBarContainer).toBeInTheDocument()
-
-		// Verify the flex container has the expected structure
-		expect(progressBarContainer?.querySelector(".flex-1.relative")).toBeInTheDocument()
+		expect(screen.getByText("(25%)")).toBeInTheDocument()
+		expect(screen.getByTestId("context-tokens-used")).toHaveStyle({ width: "25%" })
 	})
 })

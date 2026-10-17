@@ -166,7 +166,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 						</div>
 					)
 				} else {
-					return <span>Git Commits</span>
+					return <span>Commity Git</span>
 				}
 			case ContextMenuOptionType.File:
 			case ContextMenuOptionType.OpenedFile:
@@ -294,7 +294,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 					<div className="p-2 flex items-start gap-4 justify-between">
 						{searchQuery.length === 1 && (
 							<div className="text-sm">
-								<p className="font-bold text-base text-vscode-foreground mt-1 mb-0.5">Slash Commands</p>
+								<p className="font-bold text-base text-vscode-foreground mt-1 mb-0.5">Polecenia /</p>
 								<p className="text-xs mt-0.5 -mb-1">
 									<Trans
 										i18nKey="settings:slashCommands.description"

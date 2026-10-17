@@ -57,7 +57,7 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 				<div className="flex items-center gap-2">
 					{isStreaming && isLast ? (
 						<span className="relative flex h-2 w-2">
-							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+							<span className="hidden"></span>
 							<span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
 						</span>
 					) : (
@@ -66,11 +66,7 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 					<span className={cn(isStreaming && isLast ? "font-semibold text-primary" : "font-medium")}>
 						{t("chat:reasoning.thinking")}
 					</span>
-					{elapsed > 0 && (
-						<span className="text-[11px] opacity-80 font-mono">
-							{secondsLabel}
-						</span>
-					)}
+					{elapsed > 0 && <span className="text-[11px] opacity-80 font-mono">{secondsLabel}</span>}
 				</div>
 				<div className="flex items-center gap-2">
 					<ChevronUp

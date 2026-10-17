@@ -1599,121 +1599,6 @@ html, body {
 	width: 100%;
 }
 
-/* ==========================================================================
-   Luxury Desktop Controls Sizing (Generous Buttons & Input Boxes)
-   ========================================================================== */
-button, [role="button"] {
-	border-radius: 8px !important;
-	font-family: var(--vscode-font-family) !important;
-	transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-/* Primary buttons with modern gradient & elevation */
-button[class*="bg-primary"],
-button.primary-btn {
-	min-height: 38px !important;
-	padding: 8px 18px !important;
-	font-size: 13.5px !important;
-	font-weight: 600 !important;
-	background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
-	color: #ffffff !important;
-	border: 1px solid rgba(255, 255, 255, 0.15) !important;
-	box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-	border-radius: 8px !important;
-}
-button[class*="bg-primary"]:hover {
-	background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
-	box-shadow: 0 3px 8px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-}
-
-/* Secondary buttons */
-button[class*="bg-secondary"] {
-	min-height: 38px !important;
-	padding: 8px 16px !important;
-	font-size: 13.5px !important;
-	font-weight: 500 !important;
-	background: #191c28 !important;
-	color: #e2e8f0 !important;
-	border: 1px solid rgba(255, 255, 255, 0.1) !important;
-	border-radius: 8px !important;
-}
-button[class*="bg-secondary"]:hover {
-	background: #24293a !important;
-	color: #ffffff !important;
-	border-color: rgba(255, 255, 255, 0.18) !important;
-}
-
-/* Small/Icon buttons in toolbars */
-button[class*="size-"], button[class*="h-7 w-7"], button[class*="h-6"] {
-	min-height: 30px !important;
-	min-width: 30px !important;
-	border-radius: 6px !important;
-	padding: 4px !important;
-}
-
-/* Luxurious modern desktop input, textarea, and select boxes */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="number"],
-input[type="search"],
-select {
-	min-height: 38px !important;
-	height: 38px !important;
-	padding: 8px 12px !important;
-	font-size: 13.5px !important;
-	border-radius: 8px !important;
-	border: 1px solid rgba(255, 255, 255, 0.12) !important;
-	background-color: #12141d !important;
-	color: #f8fafc !important;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-	transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
-}
-
-textarea {
-	min-height: 48px !important;
-	padding: 10px 14px !important;
-	font-size: 14px !important;
-	line-height: 1.5 !important;
-	border-radius: 10px !important;
-	border: 1px solid rgba(255, 255, 255, 0.12) !important;
-	background-color: #12141d !important;
-	color: #f8fafc !important;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-	border-color: #3b82f6 !important;
-	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
-	outline: none !important;
-}
-
-/* Combobox / Dropdown triggers */
-button[class*="combobox"], [role="combobox"] {
-	min-height: 38px !important;
-	padding: 8px 12px !important;
-	border-radius: 8px !important;
-	border: 1px solid rgba(255, 255, 255, 0.12) !important;
-	background-color: #12141d !important;
-	font-size: 13.5px !important;
-}
-
-/* Light theme overrides */
-body.vscode-light button[class*="bg-secondary"] {
-	background: #f1f5f9 !important;
-	color: #1e293b !important;
-	border: 1px solid #cbd5e1 !important;
-}
-body.vscode-light input[type="text"],
-body.vscode-light input[type="password"],
-body.vscode-light select,
-body.vscode-light textarea {
-	background-color: #ffffff !important;
-	color: #0f172a !important;
-	border: 1px solid #cbd5e1 !important;
-}
-
 /* Polished custom scrollbars */
 ::-webkit-scrollbar {
 	width: 6px;
@@ -1751,6 +1636,7 @@ window.acquireVsCodeApi = function() {
 window.addEventListener("message", function(e) {
 	if (e.data && e.data.type === "state" && e.data.state) {
 		e.data.state.showWelcome = false;
+		e.data.state.shouldShowAnnouncement = false;
 		if (!e.data.state.apiConfiguration || (!e.data.state.apiConfiguration.apiKey && !e.data.state.apiConfiguration.xkiroApiKey)) {
 			e.data.state.apiConfiguration = e.data.state.apiConfiguration || {};
 			if (!e.data.state.apiConfiguration.apiProvider) {

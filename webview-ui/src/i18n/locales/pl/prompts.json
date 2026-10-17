@@ -53,7 +53,7 @@
 	},
 	"exportMode": {
 		"title": "Eksportuj tryb",
-		"description": "Eksportuj ten tryb do pliku YAML ze wszystkimi regułami w celu łatwego udostępniania innym.",
+		"description": "Wyeksportuj tryb wraz z regułami z folderu .roo/rules-{{slug}}/ do jednego pliku YAML, który możesz udostępnić innym. Pliki źródłowe pozostaną bez zmian.",
 		"export": "Eksportuj tryb",
 		"exporting": "Eksportowanie..."
 	},

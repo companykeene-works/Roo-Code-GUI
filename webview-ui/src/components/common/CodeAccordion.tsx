@@ -73,7 +73,7 @@ const CodeAccordion = ({
 						<div className="flex items-center gap-1.5 min-w-0">
 							<span className={`codicon codicon-${isFeedback ? "feedback" : "codicon-output"} mr-1 text-vscode-descriptionForeground`} />
 							<span className="whitespace-nowrap overflow-hidden text-ellipsis mr-2 rtl text-vscode-foreground/90 font-medium text-xs">
-								{isFeedback ? "User Edits" : "Console Logs"}
+								{isFeedback ? "Zmiany użytkownika" : "Console Logs"}
 							</span>
 						</div>
 					) : (

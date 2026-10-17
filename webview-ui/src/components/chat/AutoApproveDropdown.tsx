@@ -1,5 +1,5 @@
 import React from "react"
-import { ListChecks, LayoutList, Settings, CheckCheck, X, Lock, Zap, Sliders, ShieldCheck } from "lucide-react"
+import { ListChecks, LayoutList, Settings, Check, CheckCheck, X, Lock, Zap, Sliders, ShieldCheck } from "lucide-react"
 
 import { isSafetyModelConfigured } from "@roo-code/types"
 
@@ -49,7 +49,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 
 	const isAutoMode = approvalMode === "auto"
 	const isSafetyConfigured = isSafetyModelConfigured(state)
-	const approvalModel = commandSafetyConfig?.modelId || "Not configured (fail-closed)"
+	const approvalModel = commandSafetyConfig?.modelId || "Brak modelu — wymagane potwierdzenie"
 
 	const toggles = useAutoApprovalToggles()
 
@@ -152,7 +152,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 	const { effectiveAutoApprovalEnabled } = useAutoApprovalState(toggles, autoApprovalEnabled)
 
 	const tooltipText = isAutoMode
-		? `Autonomous Auto-Approve: Active | Approval Model: ${approvalModel} | Fail-Closed: Enabled`
+		? `Samodzielna praca agenta. Model oceniający: ${approvalModel}. Brak oceny wymaga potwierdzenia.`
 		: !effectiveAutoApprovalEnabled || enabledCount === 0
 			? t("chat:autoApprove.tooltipManage")
 			: t("chat:autoApprove.tooltipStatus", {
@@ -167,23 +167,13 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 			<StandardTooltip content={tooltipText}>
 				<PopoverTrigger
 					disabled={disabled}
+					data-active={isAutoMode}
 					data-testid="auto-approve-dropdown-trigger"
-					className={cn(
-						"h-8 inline-flex items-center gap-1.5 relative whitespace-nowrap px-2 text-xs",
-						isAutoMode
-							? "bg-amber-500/10 border-amber-500/40 text-amber-400 font-semibold hover:bg-amber-500/20 hover:border-amber-500/60"
-							: "bg-transparent border border-border/40 text-vscode-foreground hover:bg-vscode-toolbar-hoverBackground/60 hover:border-border/70",
-						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
-						"max-[300px]:shrink-0",
-						disabled
-							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 cursor-pointer",
-						triggerClassName,
-					)}>
+					className={cn("agent-toolbar-control shrink-0", triggerClassName)}>
 					{isAutoMode ? (
 						<>
-							<Zap className="size-3 text-amber-400 fill-amber-400 shrink-0" />
-							<span className="font-semibold tracking-wide">AUTO</span>
+							<Zap className="size-3 text-current shrink-0" />
+							<span className="font-medium">Auto</span>
 						</>
 					) : (
 						<>
@@ -215,15 +205,16 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 				align="start"
 				sideOffset={4}
 				container={portalContainer}
-				className="p-0 overflow-hidden w-[min(440px,calc(100vw-2rem))]"
+				className="agent-approval-menu p-0 overflow-hidden w-[min(400px,calc(100vw-2rem))]"
 				onOpenAutoFocus={(e) => e.preventDefault()}>
 				<div className="flex flex-col w-full">
 					{/* Mode Switcher */}
-					<div className="p-2.5 border-b border-vscode-dropdown-border bg-black/10">
-						<div className="flex bg-vscode-input-background p-0.5 rounded-lg border border-vscode-input-border">
+					<div className="p-3 border-b border-vscode-dropdown-border">
+						<div className="approval-segment">
 							<button
 								type="button"
 								data-testid="dropdown-mode-manual-btn"
+								aria-pressed={!isAutoMode}
 								className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
 									!isAutoMode
 										? "bg-vscode-button-background text-vscode-button-foreground shadow-xs"
@@ -234,11 +225,12 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									vscode.postMessage({ type: "approvalMode", approvalMode: "manual" })
 								}}>
 								<Sliders className="size-3" />
-								<span>Manual</span>
+								<span>Ręcznie</span>
 							</button>
 							<button
 								type="button"
 								data-testid="dropdown-mode-auto-btn"
+								aria-pressed={isAutoMode}
 								className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
 									isAutoMode
 										? "bg-vscode-button-background text-vscode-button-foreground shadow-xs"
@@ -248,8 +240,8 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									setApprovalMode?.("auto")
 									vscode.postMessage({ type: "approvalMode", approvalMode: "auto" })
 								}}>
-								<Zap className="size-3 text-amber-400" />
-								<span>Auto</span>
+								<Zap className="size-3 text-vscode-descriptionForeground" />
+								<span>Automatycznie</span>
 							</button>
 						</div>
 					</div>
@@ -259,11 +251,11 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 						<div className="p-3.5 space-y-3">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
-									<div className="p-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+									<div className="p-1 rounded bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-vscode-descriptionForeground">
 										<Zap className="size-3.5" />
 									</div>
-									<h4 className="m-0 font-bold text-sm text-vscode-foreground">
-										Autonomous Auto-Approve
+									<h4 className="m-0 font-semibold text-sm text-vscode-foreground">
+										Samodzielna praca agenta
 									</h4>
 								</div>
 								<Settings
@@ -272,22 +264,25 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 								/>
 							</div>
 							<p className="m-0 text-xs text-vscode-descriptionForeground leading-relaxed">
-								Autonomous mode is active. Safe operations proceed immediately, while potentially destructive or host-impacting actions are adjudicated by the Approval Authority model.
+								Tryb samodzielny jest aktywny. Bezpieczne operacje są wykonywane od razu. Działania
+								mogące usunąć dane lub wpłynąć na komputer ocenia niezależny model.
 							</p>
-							<div className="p-2.5 rounded bg-black/30 border border-white/[0.06] text-xs space-y-1.5">
+							<div className="approval-facts space-y-2">
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Approval Authority:</span>
-									<span className="font-mono text-vscode-foreground font-medium text-[11px] truncate max-w-[180px]" title={approvalModel}>
+									<span className="text-vscode-descriptionForeground">Model oceniający:</span>
+									<span
+										className="font-mono text-vscode-foreground font-medium text-[11px] truncate max-w-[180px]"
+										title={approvalModel}>
 										{approvalModel}
 									</span>
 								</div>
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Safety Boundaries:</span>
-									<span className="text-green-400 font-medium">Always Enforced</span>
+									<span className="text-vscode-descriptionForeground">Zasady bezpieczeństwa:</span>
+									<span className="text-[var(--success)] font-medium">Zawsze obowiązują</span>
 								</div>
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Fail-Closed:</span>
-									<span className="text-vscode-foreground font-medium">Active</span>
+									<span className="text-vscode-descriptionForeground">W razie braku oceny:</span>
+									<span className="text-vscode-foreground font-medium">Wymagane potwierdzenie</span>
 								</div>
 							</div>
 							<Button
@@ -295,7 +290,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 								size="sm"
 								className="w-full h-7 text-xs"
 								onClick={handleOpenSettings}>
-								Open Safety Settings
+								Otwórz ustawienia bezpieczeństwa
 							</Button>
 						</div>
 					) : (
@@ -304,7 +299,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 							{/* Header with description */}
 							<div className="p-3 border-b border-vscode-dropdown-border">
 								<div className="flex items-center justify-between gap-1 pr-1 pb-2">
-									<h4 className="m-0 font-bold text-base text-vscode-foreground">
+									<h4 className="m-0 font-semibold text-sm text-vscode-foreground">
 										{t("chat:autoApprove.title")}
 									</h4>
 									<Settings
@@ -316,7 +311,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									{t("chat:autoApprove.description")}
 								</p>
 							</div>
-							<div className="grid grid-cols-1 min-[340px]:grid-cols-2 gap-x-2 gap-y-2 p-3">
+							<div className="approval-permissions">
 								{settingsArray.map(({ key, labelKey, descriptionKey, icon }) => {
 									const isEnabled = toggles[key]
 									const isExecute = key === "alwaysAllowExecute"
@@ -324,7 +319,9 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									const isDisabled = !effectiveAutoApprovalEnabled || isExecuteLocked
 
 									const tooltipContent = isExecuteLocked ? (
-										<div className="flex flex-col gap-1.5 p-1 max-w-[240px]" data-testid="execute-safety-tooltip">
+										<div
+											className="flex flex-col gap-1.5 p-1 max-w-[240px]"
+											data-testid="execute-safety-tooltip">
 											<span>{t("settings:autoApprove.requiresSafetyModel")}</span>
 											<button
 												type="button"
@@ -344,25 +341,29 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 										<StandardTooltip key={key} content={tooltipContent}>
 											<span className="inline-flex w-full">
 												<Button
-													variant={isEnabled && !isExecuteLocked ? "primary" : "secondary"}
+													variant="ghost"
+													aria-pressed={isEnabled && !isExecuteLocked}
 													onClick={() => onAutoApproveToggle(key, !isEnabled)}
 													className={cn(
-														"flex items-center gap-2 px-2 py-2 text-sm text-left justify-start h-auto w-full",
+														"approval-permission flex items-center gap-2 text-left justify-start h-auto w-full",
 														"transition-all duration-150",
-														isDisabled &&
-															"opacity-50 cursor-not-allowed hover:opacity-50",
-														(!isEnabled || isExecuteLocked) && "bg-vscode-button-background/15",
+														isDisabled && "opacity-50 cursor-not-allowed hover:opacity-50",
+														(!isEnabled || isExecuteLocked) &&
+															"bg-vscode-button-background/15",
 													)}
 													disabled={isDisabled}
 													data-testid={`auto-approve-${key}`}>
 													<span className={`codicon codicon-${icon} text-sm flex-shrink-0`} />
 													<span className="flex-1 truncate">{t(labelKey)}</span>
+													{isEnabled && !isExecuteLocked && (
+														<Check className="size-3.5 shrink-0" aria-hidden="true" />
+													)}
 													{isExecuteLocked && (
 														<span
-															className="flex items-center gap-1 text-[10px] bg-vscode-badge-background text-vscode-badge-foreground px-1.5 py-0.5 rounded flex-shrink-0"
+															className="approval-lock-label flex items-center gap-1 flex-shrink-0"
 															data-testid="requires-safety-model-badge">
 															<Lock className="size-2.5" />
-															<span>Requires Safety Model</span>
+															<span>Wymaga modelu oceniającego</span>
 														</span>
 													)}
 												</Button>
@@ -373,7 +374,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 							</div>
 
 							{/* Actions: All, None, Toggle */}
-							<div className="flex items-center justify-between p-3 border-t border-vscode-dropdown-border bg-vscode-dropdown-background">
+							<div className="approval-footer flex items-center justify-between">
 								<div className="flex flex-row gap-1">
 									<Button
 										variant="ghost"
@@ -383,7 +384,8 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 										disabled={!effectiveAutoApprovalEnabled}
 										className={cn(
 											"gap-1 px-2 py-1 text-base font-bold h-auto",
-											!effectiveAutoApprovalEnabled && "opacity-50 hover:opacity-50 cursor-not-allowed",
+											!effectiveAutoApprovalEnabled &&
+												"opacity-50 hover:opacity-50 cursor-not-allowed",
 										)}>
 										<ListChecks className="w-3.5 h-3.5" />
 										<span>{t("chat:autoApprove.all")}</span>
@@ -396,7 +398,8 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 										disabled={!effectiveAutoApprovalEnabled}
 										className={cn(
 											"gap-1 px-2 py-1 text-base font-bold h-auto",
-											!effectiveAutoApprovalEnabled && "opacity-50 hover:opacity-50 cursor-not-allowed",
+											!effectiveAutoApprovalEnabled &&
+												"opacity-50 hover:opacity-50 cursor-not-allowed",
 										)}>
 										<LayoutList className="w-3.5 h-3.5" />
 										<span>{t("chat:autoApprove.none")}</span>
@@ -414,10 +417,12 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									}}>
 									<ToggleSwitch
 										checked={effectiveAutoApprovalEnabled}
-										aria-label="Toggle auto-approval"
+										aria-label="Zmień tryb zatwierdzania"
 										onChange={handleAutoApprovalToggle}
 									/>
-									<span className={cn("text-sm font-bold select-none")}>Enabled</span>
+									<span className={cn("text-sm font-bold select-none")}>
+										{effectiveAutoApprovalEnabled ? "Włączone" : "Wyłączone"}
+									</span>
 								</label>
 							</div>
 						</>

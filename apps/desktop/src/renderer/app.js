@@ -196,6 +196,8 @@
 	// ==========================================
 	const desktopTranslations = {
 		en: {
+			cancel: "Cancel",
+			diffEmpty: "No changes to display.",
 			// Loading & Error States
 			loadingTitle: "Initializing Roo Code engine...",
 			loadingDesc: "Connecting to server and preparing agent view...",
@@ -213,7 +215,7 @@
 
 			// Navigation tabs
 			tabAgent: "Agent",
-			tabDiffs: "Diffs",
+			tabDiffs: "Zmiany",
 			tabTerminal: "Terminal",
 			tabFiles: "Files",
 			tabSettings: "Settings",
@@ -258,7 +260,7 @@
 			terminalTitle: "Terminal & Agent Command Logs",
 			terminalClear: "Clear",
 			terminalCopy: "Copy",
-			terminalCopied: "Copied!",
+			terminalCopied: "Skopiowano",
 			terminalEmpty: "Roo Code terminal command executions and logs will appear here.",
 			terminalSessionsTitle: "Command Sessions",
 			terminalSessionsCount: (count) => `${count} session${count === 1 ? "" : "s"}`,
@@ -273,7 +275,7 @@
 			addProject: "Add project",
 			newProject: "New Project",
 			newProjectDesc: "Open an existing folder on your disk",
-			quickProject: "Quick Project",
+			quickProject: "Szybki projekt",
 			quickProjectDesc: "Create instantly in your Roo Code projects folder",
 			quickProjectCreating: "Creating Quick Project...",
 			quickProjectError: "Failed to create Quick Project",
@@ -319,8 +321,10 @@
 			confirmRemoveProject: "Remove from Roo",
 		},
 		pl: {
+			cancel: "Anuluj",
+			diffEmpty: "Brak zmian do wyświetlenia.",
 			// Loading & Error States
-			loadingTitle: "Inicjalizacja silnika Roo Code...",
+			loadingTitle: "Przygotowuję środowisko pracy…",
 			loadingDesc: "Nawiązywanie połączenia z serwerem i przygotowywanie widoku agenta...",
 			loadingServerHealth: (attempt, max) => `Oczekiwanie na gotowość serwera... (próba ${attempt}/${max})`,
 			loadingConnectingServer: "Nawiązywanie połączenia z serwerem...",
@@ -336,7 +340,7 @@
 
 			// Navigation tabs
 			tabAgent: "Agent",
-			tabDiffs: "Diffs",
+			tabDiffs: "Zmiany",
 			tabTerminal: "Terminal",
 			tabFiles: "Pliki",
 			tabSettings: "Ustawienia",
@@ -345,13 +349,13 @@
 			statusConnected: "Połączono",
 			statusConnecting: "Łączenie...",
 			statusDisconnected: "Rozłączono (Ponowne łączenie...)",
-			statusThinking: "Myślenie...",
+			statusThinking: "Analizuję…",
 			statusExecuting: "Wykonywanie polecenia...",
 			statusWaitingApproval: "Oczekiwanie na zatwierdzenie",
 			statusError: "Błąd",
-			coreEngineConnected: "Rdzeń silnika: Połączono",
+			coreEngineConnected: "Agent jest gotowy do pracy",
 			coreEngineConnecting: "Rdzeń silnika: Ponowne łączenie...",
-			connectedToEngine: "Połączono z silnikiem",
+			connectedToEngine: "Agent gotowy",
 
 			// Explorer & File Preview
 			projectFiles: "Pliki projektu",
@@ -370,7 +374,7 @@
 
 			// Diffs
 			modifiedFiles: "Zmodyfikowane pliki",
-			filesCount: (count) => `${count} plik${count === 1 ? "" : count < 5 ? "i" : "ów"}`,
+			filesCount: (count) => `${count} ${new Intl.PluralRules("pl").select(count) === "one" ? "plik" : new Intl.PluralRules("pl").select(count) === "few" ? "pliki" : "plików"}`,
 			noChangesRecorded: "Brak zarejestrowanych zmian w plikach.",
 			noChangesAgent: "Brak zmian wprowadzonych dotąd przez agenta.",
 			diffsPlaceholder: "Gdy Roo Code zmodyfikuje pliki w tym obszarze, zobaczysz tutaj podgląd zmian (diff).",
@@ -384,45 +388,45 @@
 			terminalCopied: "Skopiowano!",
 			terminalEmpty: "Wyniki poleceń terminala i dzienniki wykonania Roo Code pojawią się tutaj.",
 			terminalSessionsTitle: "Sesje poleceń",
-			terminalSessionsCount: (count) => `${count} sesj${count === 1 ? "a" : count < 5 ? "e" : "i"}`,
+			terminalSessionsCount: (count) => `${count} ${new Intl.PluralRules("pl").select(count) === "one" ? "sesja" : new Intl.PluralRules("pl").select(count) === "few" ? "sesje" : "sesji"}`,
 			terminalSessionsEmpty: "Brak zarejestrowanych sesji terminala.",
 			sessionRunning: "W toku",
 			sessionCompleted: "Zakończono",
 			sessionError: "Błąd",
 
 			// Sidebar
-			workspaces: "Obszary robocze",
-			projectsSection: "PROJEKTY",
+			workspaces: "Przestrzeń robocza",
+			projectsSection: "Projekty",
 			addProject: "Dodaj projekt",
 			newProject: "Nowy projekt",
 			newProjectDesc: "Otwórz istniejący folder na dysku",
-			quickProject: "Quick Project",
+			quickProject: "Szybki projekt",
 			quickProjectDesc: "Utwórz natychmiast w folderze projektów Roo Code",
 			quickProjectCreating: "Tworzenie szybkiego projektu...",
 			quickProjectError: "Nie udało się utworzyć szybkiego projektu",
 			viewMoreChats: (count) => `Pokaż więcej (${count})`,
 			viewLessChats: "Pokaż mniej",
-			noConversations: "Brak konwersacji",
-			newChat: "Nowy czat",
+			noConversations: "Brak rozmów",
+			newChat: "Nowa rozmowa",
 			toggleSidebar: "Zwiń/Rozwiń panel (Ctrl+B)",
 			activeProject: "Aktywny",
 			removeRecent: "Usuń z listy",
-			newChatInProject: "Nowy czat w tym projekcie",
+			newChatInProject: "Nowa rozmowa w tym projekcie",
 			openWorkspaceFolder: "Otwórz folder",
-			toggleSidebarHint: "zwiń/rozwiń panel",
+			toggleSidebarHint: "panel boczny",
 			chatStatusRunning: "Zadanie działa w tle",
 			chatStatusNeedsAttention: "Wymagana reakcja użytkownika",
 			chatStatusCompletedUnread: "Zakończono z nieprzeczytaną odpowiedzią",
 			chatStatusCompleted: "Zakończono",
 
 			// Chat & Project Management
-			deleteChat: "Usuń chat",
-			deleteChatTitle: "Usuń chat",
-			deleteChatConfirmIdle: "Czy na pewno chcesz usunąć tę historię chatu z Roo Code?\n\nPliki projektu i folderu roboczego pozostaną nietknięte.",
-			deleteChatConfirmRunning: "Ten chat ma obecnie zadanie działające w tle.\n\nUsunięcie go wymaga wcześniejszego zatrzymania zadania. Pliki folderu roboczego pozostaną nietknięte.",
+			deleteChat: "Usuń rozmowę",
+			deleteChatTitle: "Usuń rozmowę",
+			deleteChatConfirmIdle: "Czy na pewno chcesz usunąć tę historię rozmowy z Roo Code?\n\nPliki projektu i folderu roboczego pozostaną nietknięte.",
+			deleteChatConfirmRunning: "W tej rozmowie jest zadanie działające w tle.\n\nUsunięcie go wymaga wcześniejszego zatrzymania zadania. Pliki folderu roboczego pozostaną nietknięte.",
 			stopTaskAndDelete: "Zatrzymaj zadanie i usuń",
-			confirmDelete: "Usuń chat",
-			chatMenu: "Opcje chatu",
+			confirmDelete: "Usuń rozmowę",
+			chatMenu: "Opcje rozmowy",
 			projectMenu: "Opcje projektu",
 			renameProject: "Zmień nazwę projektu",
 			resetProjectName: "Przywróć nazwę folderu",
@@ -443,20 +447,7 @@
 		},
 	}
 
-	let currentLanguage = (() => {
-		try {
-			const saved = localStorage.getItem("roo-language")
-			if (saved) return (saved === "pl" || saved.startsWith("pl")) ? "pl" : "en"
-			const vscodeState = localStorage.getItem("vscodeState")
-			if (vscodeState) {
-				const parsed = JSON.parse(vscodeState)
-				if (parsed?.language) {
-					return (parsed.language === "pl" || parsed.language.startsWith("pl")) ? "pl" : "en"
-				}
-			}
-		} catch (e) {}
-		return "en"
-	})()
+	let currentLanguage = localStorage.getItem("roo-language") || "pl"
 
 	function tDesktop(key, ...args) {
 		const lang = currentLanguage === "pl" ? "pl" : "en"
@@ -516,7 +507,7 @@
 		}
 		if (previewCopyText) previewCopyText.textContent = tDesktop("copy")
 		if (previewWrapText) previewWrapText.textContent = tDesktop("wrap")
-		if (previewSourceText) previewSourceText.textContent = isSvgSourceView ? "View Image" : tDesktop("sourceCode")
+		if (previewSourceText) previewSourceText.textContent = isSvgSourceView ? "Podgląd obrazu" : tDesktop("sourceCode")
 		if (previewInExplorerText) previewInExplorerText.textContent = tDesktop("inExplorer")
 		if (previewPlaceholderText) previewPlaceholderText.textContent = tDesktop("previewPlaceholder")
 
@@ -591,7 +582,7 @@
 		if (targetTab === "native-chat") {
 			if (agentSidebarEl) agentSidebarEl.style.display = "none"
 			if (chatSidebarEl) chatSidebarEl.style.display = "flex"
-			if (sidebarHeaderTitleEl) sidebarHeaderTitleEl.textContent = "Chats"
+			if (sidebarHeaderTitleEl) sidebarHeaderTitleEl.textContent = "Rozmowy"
 			renderChatSidebar()
 			if (origin === "user") {
 				forwardToWebview({
@@ -662,13 +653,17 @@
 	})
 
 	// Theme Synchronization (5 themes)
-	function applyDesktopTheme(theme) {
+	function applyDesktopTheme(theme, persist = false) {
 		if (!theme) return
 		const isLight = theme === "clean-light" || theme === "light"
 		document.body.classList.toggle("light-theme", isLight)
 		document.body.classList.toggle("dark-theme", !isLight)
 		document.body.setAttribute("data-theme", theme)
-		localStorage.setItem("roo-theme", theme)
+		if (persist) {
+			localStorage.setItem("roo-theme", theme)
+		}
+		webviewFrame?.contentWindow?.postMessage({ type: "themeChange", theme }, "*")
+		settingsWebviewFrame?.contentWindow?.postMessage({ type: "themeChange", theme }, "*")
 	}
 
 	const savedTheme = localStorage.getItem("roo-theme") || "linear-dark"
@@ -1170,7 +1165,7 @@
 
 		if (filtered.length === 0) {
 			listEl.innerHTML = `<div class="chat-sidebar-empty">${
-				chatSearchFilter.trim() ? "No conversations match your search" : "No conversations yet"
+				chatSearchFilter.trim() ? "Nie znaleziono pasujących rozmów" : "Nie masz jeszcze żadnych rozmów"
 			}</div>`
 			return
 		}
@@ -1200,8 +1195,8 @@
 			let groupHtml = `<div class="chat-group-heading">${escapeHtml(heading)}</div>`
 			for (const s of sessions) {
 				const isActive = s.id === activeChatSessionId
-				const preview = s.lastMessagePreview ? escapeHtml(s.lastMessagePreview) : "No messages yet"
-				const title = escapeHtml(s.title || "Untitled Chat")
+				const preview = s.lastMessagePreview ? escapeHtml(s.lastMessagePreview) : "Brak wiadomości"
+				const title = escapeHtml(s.title || "Rozmowa bez tytułu")
 				groupHtml += `
 					<div class="chat-session-item ${isActive ? "active" : ""}" data-session-id="${s.id}">
 						<div class="chat-session-info">
@@ -1209,12 +1204,12 @@
 							<span class="chat-session-preview">${preview}</span>
 						</div>
 						<div class="chat-session-actions">
-							<button class="chat-session-action-btn btn-rename" title="Rename" data-session-id="${s.id}">
+							<button class="chat-session-action-btn btn-rename" title="Zmień nazwę" data-session-id="${s.id}">
 								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
 								</svg>
 							</button>
-							<button class="chat-session-action-btn btn-delete" title="Delete" data-session-id="${s.id}">
+							<button class="chat-session-action-btn btn-delete" title="Usuń" data-session-id="${s.id}">
 								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<polyline points="3 6 5 6 21 6"></polyline>
 									<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1228,9 +1223,9 @@
 		}
 
 		let html = ""
-		html += renderSessionGroup("Today", todayList)
-		html += renderSessionGroup("Yesterday", yesterdayList)
-		html += renderSessionGroup("Previous", previousList)
+		html += renderSessionGroup("Dzisiaj", todayList)
+		html += renderSessionGroup("Wczoraj", yesterdayList)
+		html += renderSessionGroup("Wcześniej", previousList)
 		listEl.innerHTML = html
 
 		// Bind item click
@@ -1275,7 +1270,7 @@
 			const res = await fetch("/api/chat-sessions/create", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ title: "New Chat" }),
+				body: JSON.stringify({ title: "Nowa rozmowa" }),
 			})
 			if (res.ok) {
 				const data = await res.json()
@@ -1293,7 +1288,7 @@
 	function renameChatSession(sessionId) {
 		const session = chatSessionsList.find((s) => s.id === sessionId)
 		const currentTitle = session ? session.title : ""
-		const newTitle = prompt("Enter new conversation title:", currentTitle)
+		const newTitle = prompt("Podaj nowy tytuł rozmowy:", currentTitle)
 		if (newTitle !== null && newTitle.trim()) {
 			fetch("/api/chat-sessions/rename", {
 				method: "POST",
@@ -1307,13 +1302,13 @@
 
 	function deleteChatSession(sessionId) {
 		const session = chatSessionsList.find((s) => s.id === sessionId)
-		const title = session ? session.title : "this conversation"
+		const title = session ? session.title : "tę rozmowę"
 		showConfirmationModal({
-			title: "Delete Conversation",
-			subtitle: "This action cannot be undone.",
-			message: `Are you sure you want to permanently delete "${title}"?`,
+			title: "Usuń rozmowę",
+			subtitle: "Tej operacji nie można cofnąć.",
+			message: `Czy na pewno chcesz trwale usunąć rozmowę „${title}”?`,
 			icon: "🗑️",
-			confirmText: "Delete",
+			confirmText: "Usuń",
 			confirmClass: "btn-danger",
 			onConfirm: async () => {
 				try {
@@ -2887,6 +2882,9 @@
 				}
 				if (data.type === "state" && data.state) {
 					latestExtensionState = { ...(latestExtensionState || {}), ...data.state }
+					if (data.state.theme) {
+						applyDesktopTheme(data.state.theme, true)
+					}
 					if (data.state.language) {
 						const newLang = (data.state.language === "pl" || data.state.language.startsWith("pl")) ? "pl" : "en"
 						if (newLang !== currentLanguage) {
@@ -2897,7 +2895,7 @@
 					}
 				}
 				if (data.type === "themeChange" && data.theme) {
-					applyDesktopTheme(data.theme)
+					applyDesktopTheme(data.theme, false)
 				}
 				if (data.type === "openSettings") {
 					const targetSection = data.section || data.values?.section || "providers"
@@ -3411,7 +3409,7 @@
 			workspaceNameEl.title = ws.path
 		}
 		if (footerWorkspaceEl) {
-			footerWorkspaceEl.textContent = "Path: " + ws.path
+			footerWorkspaceEl.textContent = "Projekt: " + ws.path
 		}
 
 		if (ws.branch) {
@@ -3571,7 +3569,7 @@
 				const isDeleted = status === "deleted"
 				const statusClass = isCreated ? "created" : isDeleted ? "deleted" : "modified"
 				const statusChar = isCreated ? "A" : isDeleted ? "D" : "M"
-				const statusTitle = isCreated ? "Created" : isDeleted ? "Deleted" : "Modified"
+				const statusTitle = isCreated ? "Utworzony" : isDeleted ? "Usunięty" : "Zmieniony"
 				const isSelected = selectedDiffFile === file.filePath
 
 				itemsHtml += `
@@ -3617,7 +3615,7 @@
 		const isDeleted = status === "deleted"
 		const statusClass = isCreated ? "created" : isDeleted ? "deleted" : "modified"
 		const statusChar = isCreated ? "A" : isDeleted ? "D" : "M"
-		const statusTitle = isCreated ? "Created" : isDeleted ? "Deleted" : "Modified"
+		const statusTitle = isCreated ? "Utworzony" : isDeleted ? "Usunięty" : "Zmieniony"
 
 		if (diffViewerHeaderEl) {
 			diffViewerHeaderEl.innerHTML = `
@@ -3714,7 +3712,7 @@
 
 		// 0.5. Handle genuine 0-byte file
 		if (file.isActuallyEmpty) {
-			diffContentEl.innerHTML = `<div class="empty-state">Empty file (0 bytes)</div>`
+			diffContentEl.innerHTML = `<div class="empty-state">Pusty plik (0 bajtów)</div>`
 			return
 		}
 
@@ -3823,7 +3821,7 @@
 		// 3. Brand new file (all additions)
 		if (file.status === "added" || file.status === "created" || (!file.oldContent && file.newContent !== undefined)) {
 			if (!file.newContent) {
-				diffContentEl.innerHTML = `<div class="empty-state">Empty file (0 bytes)</div>`
+				diffContentEl.innerHTML = `<div class="empty-state">Pusty plik (0 bajtów)</div>`
 				return
 			}
 			const lines = (file.newContent || "").split("\n")
@@ -3831,18 +3829,18 @@
 			lines.forEach((line, idx) => {
 				html += `<div class="diff-line addition"><span class="diff-gutter">${idx + 1}</span><span class="diff-prefix">+</span><span class="diff-text">${escapeHtml(line)}</span></div>`
 			})
-			diffContentEl.innerHTML = html || `<div class="empty-state">Empty new file</div>`
+			diffContentEl.innerHTML = html || `<div class="empty-state">Nowy, pusty plik</div>`
 			return
 		}
 
-		// 4. Deleted file (all deletions)
+		// 4. Usunięty plik (all deletions)
 		if (file.status === "deleted" || (file.oldContent && !file.newContent)) {
 			const lines = (file.oldContent || "").split("\n")
 			let html = ""
 			lines.forEach((line, idx) => {
 				html += `<div class="diff-line deletion"><span class="diff-gutter">${idx + 1}</span><span class="diff-prefix">-</span><span class="diff-text">${escapeHtml(line)}</span></div>`
 			})
-			diffContentEl.innerHTML = html || `<div class="empty-state">Deleted file</div>`
+			diffContentEl.innerHTML = html || `<div class="empty-state">Usunięty plik</div>`
 			return
 		}
 
@@ -3850,7 +3848,7 @@
 		if (file.newContent !== undefined || file.oldContent !== undefined) {
 			const content = file.newContent !== undefined ? file.newContent : file.oldContent
 			if (content === "") {
-				diffContentEl.innerHTML = `<div class="empty-state">Empty file (0 bytes)</div>`
+				diffContentEl.innerHTML = `<div class="empty-state">Pusty plik (0 bajtów)</div>`
 				return
 			}
 			const lines = (content || "").split("\n")
@@ -4560,7 +4558,7 @@
 							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
 						</svg>
 						<div class="empty-title">${escapeHtml(tDesktop("noFilesFound"))}</div>
-						<div class="empty-subtitle">Try a different search query</div>
+						<div class="empty-subtitle">Spróbuj innej nazwy pliku</div>
 					</div>
 				`
 			} else {
@@ -4570,7 +4568,7 @@
 							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
 						</svg>
 						<div class="empty-title">${escapeHtml(currentWorkspace?.path ? tDesktop("noFilesFound") : tDesktop("noWorkspaceOpen"))}</div>
-						<div class="empty-subtitle">Workspace is empty or files are ignored</div>
+						<div class="empty-subtitle">Folder jest pusty lub jego pliki są pomijane</div>
 					</div>
 				`
 			}
@@ -4649,7 +4647,7 @@
 						</div>
 					</div>
 					<div class="image-meta-bar">
-						<span id="img-dim-text">Loading dimensions...</span>
+						<span id="img-dim-text">Odczytuję wymiary…</span>
 						<span class="meta-sep">•</span>
 						<span>${formatBytes(msg.size)}</span>
 						<span class="meta-sep">•</span>
@@ -4691,9 +4689,9 @@
 				<div class="binary-preview-card">
 					<div class="binary-icon-wrap">${iconInfo.icon}</div>
 					<h3 class="binary-title">${escapeHtml(msg.fileName || msg.filePath)}</h3>
-					<p class="binary-desc">Binary file (${formatBytes(msg.size)}). This file cannot be displayed directly as text.</p>
+					<p class="binary-desc">Plik binarny (${formatBytes(msg.size)}). Jego zawartości nie można wyświetlić jako tekst.</p>
 					<div class="binary-actions">
-						<button class="binary-open-btn" id="binary-reveal-btn">Reveal in File Explorer</button>
+						<button class="binary-open-btn" id="binary-reveal-btn">Pokaż w Eksploratorze</button>
 					</div>
 				</div>
 			`
@@ -4716,9 +4714,9 @@
 		if (!currentPreviewMsg) return
 		if (isSvgSourceView) {
 			renderCodeText(currentPreviewMsg.rawText || "", currentPreviewMsg.filePath)
-			previewToggleViewBtn.querySelector("span").textContent = "View Image"
+			previewToggleViewBtn.querySelector("span").textContent = "Podgląd obrazu"
 		} else {
-			previewToggleViewBtn.querySelector("span").textContent = "View Code"
+			previewToggleViewBtn.querySelector("span").textContent = "Pokaż kod"
 			previewContentAreaEl.innerHTML = `
 				<div class="image-preview-stage">
 					<div class="image-viewport">
@@ -4884,7 +4882,7 @@
 			const label = previewCopyBtn.querySelector("span")
 			if (label) {
 				const orig = label.textContent
-				label.textContent = "Copied!"
+				label.textContent = "Skopiowano"
 				setTimeout(() => { label.textContent = orig }, 1500)
 			}
 		})
@@ -4926,9 +4924,9 @@
 			defaultBaseUrl: "https://api.xkiro.com/v1",
 			defaultModel: "deepseek/deepseek-chat",
 			showBaseUrl: true,
-			baseUrlHint: "Default xKiro endpoint: https://api.xkiro.com/v1",
-			keyHint: 'For xKiro, sign up at <a href="https://xkiro.com" target="_blank" class="link-accent">xkiro.com</a> to get free tokens.',
-			keyPlaceholder: "Enter your xKiro API key...",
+			baseUrlHint: "Domyślny adres xKiro: https://api.xkiro.com/v1",
+			keyHint: 'Klucz xKiro uzyskasz na <a href="https://xkiro.com" target="_blank" class="link-accent">xkiro.com</a>.',
+			keyPlaceholder: "Wpisz klucz API xKiro…",
 			models: [
 				{ id: "deepseek/deepseek-chat", label: "xKiro DeepSeek-V3" },
 				{ id: "deepseek/deepseek-reasoner", label: "xKiro DeepSeek-R1" },
@@ -4947,8 +4945,8 @@
 			defaultBaseUrl: "https://openrouter.ai/api/v1",
 			defaultModel: "anthropic/claude-3.7-sonnet",
 			showBaseUrl: false,
-			baseUrlHint: "Default OpenRouter endpoint: https://openrouter.ai/api/v1",
-			keyHint: 'Get your key from <a href="https://openrouter.ai/keys" target="_blank" class="link-accent">openrouter.ai/keys</a>',
+			baseUrlHint: "Domyślny adres OpenRouter: https://openrouter.ai/api/v1",
+			keyHint: 'Klucz uzyskasz w <a href="https://openrouter.ai/keys" target="_blank" class="link-accent">openrouter.ai/keys</a>',
 			keyPlaceholder: "sk-or-v1-...",
 			models: [
 				{ id: "anthropic/claude-3.7-sonnet", label: "Claude 3.7 Sonnet" },
@@ -4963,8 +4961,8 @@
 			defaultBaseUrl: "",
 			defaultModel: "claude-3-7-sonnet-20250219",
 			showBaseUrl: false,
-			baseUrlHint: "Official Anthropic API endpoint",
-			keyHint: "Get your key from Anthropic Console (sk-ant-...)",
+			baseUrlHint: "Oficjalny adres API Anthropic",
+			keyHint: "Klucz uzyskasz w Anthropic Console (sk-ant-...)",
 			keyPlaceholder: "sk-ant-api03-...",
 			models: [
 				{ id: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
@@ -4977,8 +4975,8 @@
 			defaultBaseUrl: "",
 			defaultModel: "gpt-4o",
 			showBaseUrl: false,
-			baseUrlHint: "Official OpenAI API endpoint",
-			keyHint: "Get your key from OpenAI Platform (sk-...)",
+			baseUrlHint: "Oficjalny adres API OpenAI",
+			keyHint: "Klucz uzyskasz w OpenAI Platform (sk-...)",
 			keyPlaceholder: "sk-...",
 			models: [
 				{ id: "gpt-4o", label: "GPT-4o" },
@@ -4991,8 +4989,8 @@
 			defaultBaseUrl: "",
 			defaultModel: "gemini-2.5-pro",
 			showBaseUrl: false,
-			baseUrlHint: "Google Generative AI endpoint",
-			keyHint: "Get your key from Google AI Studio (AIza...)",
+			baseUrlHint: "Adres Google Generative AI",
+			keyHint: "Klucz uzyskasz w Google AI Studio (AIza...)",
 			keyPlaceholder: "AIzaSy...",
 			models: [
 				{ id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
@@ -5005,9 +5003,9 @@
 			defaultBaseUrl: "http://localhost:11434",
 			defaultModel: "llama3.1",
 			showBaseUrl: true,
-			baseUrlHint: "Default Ollama instance: http://localhost:11434",
-			keyHint: "Ollama runs locally on your machine. API key is not required.",
-			keyPlaceholder: "(Optional)",
+			baseUrlHint: "Domyślny adres Ollama: http://localhost:11434",
+			keyHint: "Ollama działa lokalnie na Twoim komputerze. Klucz API nie jest wymagany.",
+			keyPlaceholder: "(Opcjonalnie)",
 			models: [
 				{ id: "llama3.1", label: "Llama 3.1" },
 				{ id: "qwen2.5-coder:7b", label: "Qwen 2.5 Coder 7B" },
@@ -5019,9 +5017,9 @@
 			defaultBaseUrl: "http://localhost:8000/v1",
 			defaultModel: "default",
 			showBaseUrl: true,
-			baseUrlHint: "Enter full OpenAI-compatible endpoint (ending in /v1)",
-			keyHint: "Enter API key required by the server.",
-			keyPlaceholder: "API Key...",
+			baseUrlHint: "Wpisz pełny adres API zgodnego z OpenAI (z końcówką /v1)",
+			keyHint: "Wpisz klucz API wymagany przez serwer.",
+			keyPlaceholder: "Klucz API…",
 			models: [],
 		},
 	}
@@ -5029,7 +5027,7 @@
 	function updateApiPill(config) {
 		if (!apiPillLabel) return
 		if (!config) {
-			apiPillLabel.textContent = "API: Configure"
+			apiPillLabel.textContent = "Skonfiguruj API"
 			return
 		}
 		const provider = config.apiProvider || "xkiro"
@@ -5073,7 +5071,7 @@
 		}
 
 		if (!hasKey) {
-			apiPillLabel.textContent = `API: ${pName} (No key)`
+			apiPillLabel.textContent = `API: ${pName} (brak klucza)`
 		} else if (shortModel) {
 			apiPillLabel.textContent = `API: ${pName} (${shortModel})`
 		} else {
@@ -5146,6 +5144,8 @@
 	function closeSettingsModal() {
 		if (!settingsModalBackdrop) return
 		settingsModalBackdrop.classList.add("hidden")
+		const savedTheme = localStorage.getItem("roo-theme") || "linear-dark"
+		applyDesktopTheme(savedTheme, false)
 	}
 
 	function openSettingsTab() {

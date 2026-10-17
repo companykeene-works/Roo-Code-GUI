@@ -17,7 +17,8 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 	"aria-label": ariaLabel,
 	"data-testid": dataTestId,
 }) => {
-	const dimensions = size === "small" ? { width: 20, height: 10, dotSize: 8 } : { width: 26, height: 10, dotSize: 6 }
+	const dimensions =
+		size === "small" ? { width: 28, height: 16, dotSize: 12 } : { width: 32, height: 18, dotSize: 14 }
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" || e.key === " ") {
@@ -31,6 +32,8 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 	return (
 		<div
 			role="switch"
+			aria-disabled={disabled}
+			className="ui-toggle"
 			aria-checked={checked}
 			aria-label={ariaLabel}
 			tabIndex={disabled ? -1 : 0}
@@ -38,9 +41,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 			style={{
 				width: `${dimensions.width}px`,
 				height: `${dimensions.height}px`,
-				backgroundColor: checked
-					? "var(--vscode-button-background)"
-					: "var(--vscode-button-secondaryBackground)",
+				backgroundColor: checked ? "var(--text-primary)" : "var(--border-light)",
 				borderRadius: `${dimensions.height / 2}px`,
 				position: "relative",
 				cursor: disabled ? "not-allowed" : "pointer",
@@ -53,7 +54,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 				style={{
 					width: `${dimensions.dotSize}px`,
 					height: `${dimensions.dotSize}px`,
-					backgroundColor: "var(--vscode-foreground)",
+					backgroundColor: checked ? "var(--bg-canvas)" : "var(--text-primary)",
 					borderRadius: "50%",
 					position: "absolute",
 					top: `${(dimensions.height - dimensions.dotSize) / 2}px`,

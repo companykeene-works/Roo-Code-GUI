@@ -92,6 +92,7 @@ qdrant_storage/
 *.sqlite3-shm
 
 # Logs & debugging
+.design-qa/
 logs/
 startup-debug.log
 *.log

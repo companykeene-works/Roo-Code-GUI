@@ -105,7 +105,9 @@ export const CommandSafetySettings = ({
 						settingId="command-safety-provider"
 						section="autoApprove"
 						label={t("settings:commandSafety.providerLabel")}>
-						<label className="block text-sm font-medium mb-1">{t("settings:commandSafety.providerLabel")}</label>
+						<label className="block text-sm font-medium mb-1">
+							{t("settings:commandSafety.providerLabel")}
+						</label>
 						<Select
 							value={config.provider || "openai"}
 							onValueChange={(value) => updateField("provider", value)}>
@@ -129,7 +131,9 @@ export const CommandSafetySettings = ({
 						settingId="command-safety-model-id"
 						section="autoApprove"
 						label={t("settings:commandSafety.modelIdLabel")}>
-						<label className="block text-sm font-medium mb-1">{t("settings:commandSafety.modelIdLabel")}</label>
+						<label className="block text-sm font-medium mb-1">
+							{t("settings:commandSafety.modelIdLabel")}
+						</label>
 						<CommandSafetyModelCombobox
 							provider={config.provider || "openai"}
 							value={config.modelId || ""}
@@ -145,14 +149,20 @@ export const CommandSafetySettings = ({
 						section="autoApprove"
 						label={t("settings:commandSafety.apiKeyLabel")}>
 						<div className="flex items-center justify-between mb-1">
-							<label className="block text-sm font-medium">{t("settings:commandSafety.apiKeyLabel")}</label>
+							<label className="block text-sm font-medium">
+								{t("settings:commandSafety.apiKeyLabel")}
+							</label>
 							{!hasDedicatedApiKey && hasInheritedApiKey && (
 								<Badge
 									variant="outline"
-									className="flex items-center gap-1.5 text-xs text-green-500 border-green-500/30 bg-green-500/10 font-normal"
+									className="flex items-center gap-1.5 text-xs text-[var(--success)] border-[var(--border-light)] bg-[var(--success-subtle)] font-normal"
 									data-testid="command-safety-inherited-badge">
-									<Check className="size-3 text-green-500" />
-									<span>{t("settings:commandSafety.apiKeyInheritedBadge", { provider: providerDisplayName })}</span>
+									<Check className="size-3 text-[var(--success)]" />
+									<span>
+										{t("settings:commandSafety.apiKeyInheritedBadge", {
+											provider: providerDisplayName,
+										})}
+									</span>
 								</Badge>
 							)}
 						</div>
@@ -170,10 +180,12 @@ export const CommandSafetySettings = ({
 						/>
 						{!hasDedicatedApiKey && !hasInheritedApiKey && (
 							<div
-								className="flex items-center gap-1.5 text-amber-500 text-xs mt-1.5"
+								className="flex items-center gap-1.5 text-[var(--warning)] text-xs mt-1.5"
 								data-testid="command-safety-api-key-warning">
 								<AlertTriangle className="size-3.5 shrink-0" />
-								<span>{t("settings:commandSafety.apiKeyWarning", { provider: providerDisplayName })}</span>
+								<span>
+									{t("settings:commandSafety.apiKeyWarning", { provider: providerDisplayName })}
+								</span>
 							</div>
 						)}
 						<div className="text-vscode-descriptionForeground text-xs mt-1">
@@ -187,7 +199,9 @@ export const CommandSafetySettings = ({
 						section="autoApprove"
 						label={t("settings:commandSafety.promptTemplateLabel")}>
 						<div className="flex items-center justify-between mb-1">
-							<label className="text-sm font-medium">{t("settings:commandSafety.promptTemplateLabel")}</label>
+							<label className="text-sm font-medium">
+								{t("settings:commandSafety.promptTemplateLabel")}
+							</label>
 							<Button
 								type="button"
 								variant="secondary"

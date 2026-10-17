@@ -26,13 +26,13 @@
 		"discardButton": "Odrzuć zmiany"
 	},
 	"categories": {
-		"providers": "Dostawcy i Modele",
+		"providers": "Dostawcy i modele",
 		"limits": "Limity",
-		"modes_prompts": "Tryby i Prompty",
-		"context": "Zarządzanie Kontekstem",
-		"permissions": "Uprawnienia i Auto-Approve",
-		"tools": "Narzędzia i Terminal",
-		"appearance": "Wygląd i Środowisko"
+		"modes_prompts": "Tryby i instrukcje",
+		"context": "Kontekst",
+		"permissions": "Uprawnienia",
+		"tools": "Narzędzia",
+		"appearance": "Wygląd i zachowanie"
 	},
 	"categoryDescriptions": {
 		"providers": "Konfiguracja połączeń z modelami AI, profili API oraz dostawców (xKiro, OpenRouter i inni).",
@@ -59,7 +59,7 @@
 		"limits": "Limity",
 		"modes": "Tryby",
 		"mcp": "Serwery MCP",
-		"worktrees": "Worktrees",
+		"worktrees": "Drzewa robocze Git",
 		"autoApprove": "Auto-zatwierdzanie",
 		"checkpoints": "Punkty kontrolne",
 		"notifications": "Powiadomienia",
@@ -67,11 +67,12 @@
 		"terminal": "Terminal",
 		"slashCommands": "Polecenia Slash",
 		"prompts": "Podpowiedzi",
-		"ui": "UI",
+		"ui": "Wygląd",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Roo Code",
-		"skills": "Skills"
+		"skills": "Umiejętności",
+		"webAccess": "Dostęp do internetu"
 	},
 	"about": {
 		"bugReport": {
@@ -375,7 +376,9 @@
 		"balance": "Saldo",
 		"held": "Zablokowano",
 		"rateLimitUnavailable": "Pozostałe żądania oraz RPM/TPM nie są udostępniane przez ten endpoint.",
-		"updated": "Aktualizacja"
+		"updated": "Aktualizacja",
+		"abovePace": "Powyżej tempa · oczekiwano {{value}}%",
+		"withinPace": "W granicach tempa · oczekiwano {{value}}%"
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentacja {{provider}}",
@@ -399,7 +402,7 @@
 		"searchProviderPlaceholder": "Szukaj dostawców",
 		"noProviderMatchFound": "Nie znaleziono dostawców",
 		"noMatchFound": "Nie znaleziono pasujących profili",
-		"retiredProviderMessage": "This provider is no longer supported. Please select a different provider in your API profile settings.",
+		"retiredProviderMessage": "Ten dostawca nie jest już obsługiwany. Wybierz innego w ustawieniach profilu API.",
 		"vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
 		"awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
 		"awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
@@ -409,34 +412,34 @@
 		"getVercelAiGatewayApiKey": "Uzyskaj klucz API Vercel AI Gateway",
 		"apiKeyStorageNotice": "Klucze API są bezpiecznie przechowywane w Tajnym Magazynie VSCode",
 		"openAiCodexRateLimits": {
-			"title": "Usage Limits for Codex{{planLabel}}",
-			"loading": "Loading usage limits...",
-			"loadError": "Failed to load usage limits",
-			"retry": "Retry",
-			"usedPercent": "{{percent}}% used",
-			"resetsIn": "Resets in {{time}}",
+			"title": "Limity użycia Codex{{planLabel}}",
+			"loading": "Wczytywanie limitów…",
+			"loadError": "Nie udało się pobrać limitów użycia",
+			"retry": "Spróbuj ponownie",
+			"usedPercent": "Wykorzystano {{percent}}%",
+			"resetsIn": "Odnowienie za {{time}}",
 			"plan": {
 				"default": "",
 				"withType": " ({{planType}})"
 			},
 			"time": {
-				"now": "Now",
-				"notAvailable": "N/A"
+				"now": "Teraz",
+				"notAvailable": "Brak danych"
 			},
 			"duration": {
-				"daysHours": "{{days}}d {{hours}}h",
-				"hoursMinutes": "{{hours}}h {{minutes}}m",
-				"minutes": "{{minutes}}m"
+				"daysHours": "{{days}} dn. {{hours}} godz.",
+				"hoursMinutes": "{{hours}} godz. {{minutes}} min",
+				"minutes": "{{minutes}} min"
 			},
 			"window": {
-				"usage": "Usage",
-				"fiveHour": "5h limit",
-				"oneHour": "1h limit",
-				"daily": "Daily limit",
-				"weekly": "Weekly limit",
-				"days": "{{days}}d limit",
-				"hours": "{{hours}}h limit",
-				"minutes": "{{minutes}}m limit"
+				"usage": "Wykorzystanie",
+				"fiveHour": "Limit na 5 godzin",
+				"oneHour": "Limit na godzinę",
+				"daily": "Limit dzienny",
+				"weekly": "Limit tygodniowy",
+				"days": "Limit na {{days}} dni",
+				"hours": "Limit na {{hours}} godz.",
+				"minutes": "Limit na {{minutes}} min"
 			}
 		},
 		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
@@ -644,7 +647,7 @@
 			"maxTokensLabel": "Maksymalna liczba tokenów wyjściowych",
 			"maxTokensDescription": "Maksymalna liczba tokenów wyjściowych dla odpowiedzi Claude Code. Domyślnie 8000."
 		},
-		"retiredRooProviderMessage": "As part of our decision to sunset the Roo Code extension, we also ended the Roo Code Router, which only existed to support the extension. Sorry about the hassle."
+		"retiredRooProviderMessage": "Usługa Roo Code Router została wyłączona. Wybierz innego dostawcę w ustawieniach profilu API."
 	},
 	"checkpoints": {
 		"timeout": {
@@ -1084,6 +1087,30 @@
 			"nameInvalid": "Nazwa musi zawierać 1-64 małe litery, cyfry lub myślniki",
 			"descriptionRequired": "Opis jest wymagany",
 			"descriptionTooLong": "Opis musi mieć maksymalnie 1024 znaki"
+		}
+	},
+	"webAccess": {
+		"title": "Dostęp do internetu",
+		"enable": {
+			"label": "Wyszukiwanie i odczytywanie stron",
+			"description": "Pozwól agentowi wyszukiwać informacje i odczytywać strony niezależnie od dostawcy modelu."
+		},
+		"provider": {
+			"label": "Wyszukiwarka",
+			"description": "Wybierz usługę, która będzie obsługiwać wyszukiwanie w internecie."
+		},
+		"apiKey": {
+			"label": "Klucz API",
+			"placeholder": "Wpisz klucz API…",
+			"description": "Klucz jest zapisywany w magazynie danych uwierzytelniających i nie jest dołączany do rozmów."
+		},
+		"searxngUrl": {
+			"label": "Adres SearXNG",
+			"description": "Adres Twojej instancji SearXNG z włączonym formatem JSON."
+		},
+		"maxResults": {
+			"label": "Liczba wyników",
+			"description": "Liczba wyników wyszukiwania do pobrania (od 1 do 20)."
 		}
 	}
 }

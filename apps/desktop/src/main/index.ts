@@ -476,43 +476,43 @@ export async function startDesktopApp(options: DesktopRunOptions = {}) {
 			// Create application menu
 			const menuTemplate: Electron.MenuItemConstructorOptions[] = [
 				{
-					label: "File",
+					label: "Plik",
 					submenu: [
 						{
-							label: "Open Workspace Folder...",
+							label: "Otwórz folder projektu…",
 							accelerator: "CmdOrCtrl+O",
 							click: async () => {
 								await handleSelectFolder()
 							},
 						},
 						{ type: "separator" },
-						{ role: "quit" },
+						{ role: "quit", label: "Zakończ" },
 					],
 				},
 				{
-					label: "Edit",
+					label: "Edycja",
 					submenu: [
-						{ role: "undo" },
-						{ role: "redo" },
+						{ role: "undo", label: "Cofnij" },
+						{ role: "redo", label: "Ponów" },
 						{ type: "separator" },
-						{ role: "cut" },
-						{ role: "copy" },
-						{ role: "paste" },
-						{ role: "selectAll" },
+						{ role: "cut", label: "Wytnij" },
+						{ role: "copy", label: "Kopiuj" },
+						{ role: "paste", label: "Wklej" },
+						{ role: "selectAll", label: "Zaznacz wszystko" },
 					],
 				},
 				{
-					label: "View",
+					label: "Widok",
 					submenu: [
-						{ role: "reload" },
-						{ role: "forceReload" },
-						{ role: "toggleDevTools" },
+						{ role: "reload", label: "Odśwież" },
+						{ role: "forceReload", label: "Wymuś odświeżenie" },
+						{ role: "toggleDevTools", label: "Narzędzia programistyczne" },
 						{ type: "separator" },
-						{ role: "resetZoom" },
-						{ role: "zoomIn" },
-						{ role: "zoomOut" },
+						{ role: "resetZoom", label: "Rozmiar rzeczywisty" },
+						{ role: "zoomIn", label: "Powiększ" },
+						{ role: "zoomOut", label: "Pomniejsz" },
 						{ type: "separator" },
-						{ role: "togglefullscreen" },
+						{ role: "togglefullscreen", label: "Pełny ekran" },
 					],
 				},
 			]

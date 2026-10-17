@@ -106,8 +106,8 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 	}, [])
 
 	return (
-		<div className="p-3 sm:p-4 max-w-3xl mx-auto w-full select-none">
-			<div className="relative rounded-2xl border border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.1))] bg-[var(--vscode-input-background,rgba(255,255,255,0.03))] shadow-lg shadow-black/20 focus-within:border-[var(--vscode-focusBorder,#58a6ff)]/70 transition-all">
+		<div className="native-chat-composer p-3 sm:p-4 max-w-3xl mx-auto w-full select-none">
+			<div className="relative rounded-2xl border border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.1))] bg-[var(--vscode-input-background,rgba(255,255,255,0.03))] shadow-none focus-within:border-[var(--vscode-focusBorder,#58a6ff)]/70 transition-all">
 				{/* Images preview inside composer if attached */}
 				{images.length > 0 && (
 					<div className="p-2 border-b border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.06))]">
@@ -122,7 +122,7 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 						value={text}
 						onChange={(e) => setText(e.target.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="Message Roo AI... (Shift+Enter for newline)"
+						placeholder="Napisz wiadomość… (Shift+Enter: nowy wiersz)"
 						minRows={2}
 						maxRows={10}
 						className="w-full bg-transparent text-sm text-[var(--vscode-input-foreground,#cccccc)] placeholder-[var(--vscode-input-placeholderForeground,#888888)] resize-none outline-none leading-relaxed font-sans"
@@ -147,15 +147,16 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 							disabled={isStreaming}
 							className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md border transition-colors cursor-pointer ${
 								webSearchMode === "required"
-									? "bg-sky-500/20 text-sky-300 border-sky-500/40"
+									? "bg-[var(--accent-subtle)] text-[var(--text-secondary)] border-[var(--border-light)]"
 									: webSearchMode === "auto"
-										? "bg-[var(--vscode-badge-background,rgba(255,255,255,0.05))] text-sky-400/80 border-transparent hover:border-sky-500/30"
+										? "bg-[var(--vscode-badge-background,rgba(255,255,255,0.05))] text-[var(--text-secondary)] border-transparent hover:border-[var(--border-light)]"
 										: "bg-transparent text-[var(--vscode-descriptionForeground)] opacity-50 border-transparent hover:opacity-80"
 							}`}
-							title={`Web Search: ${webSearchMode.toUpperCase()} (Click to cycle)`}
-						>
+							title={`Wyszukiwanie: ${{ off: "wyłączone", auto: "automatyczne", required: "zawsze" }[webSearchMode]} (kliknij, aby zmienić)`}>
 							<Globe className="w-3.5 h-3.5 shrink-0" />
-							<span className="text-[11px] capitalize">Search: {webSearchMode}</span>
+							<span className="text-[11px] capitalize">
+								Internet: {{ off: "wyłączony", auto: "auto", required: "zawsze" }[webSearchMode]}
+							</span>
 						</button>
 
 						{/* Add Image Button */}
@@ -164,8 +165,7 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 							onClick={handleSelectImages}
 							disabled={isStreaming}
 							className="p-1.5 rounded-md text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-							title="Attach images"
-						>
+							title="Dodaj obrazy">
 							<ImagePlus className="w-3.5 h-3.5" />
 						</button>
 					</div>
@@ -176,9 +176,8 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 							<button
 								type="button"
 								onClick={onAbort}
-								className="flex items-center justify-center w-8 h-8 rounded-xl bg-red-600 hover:bg-red-500 text-white transition-transform active:scale-95 cursor-pointer shadow-sm"
-								title="Stop response"
-							>
+								className="flex items-center justify-center w-8 h-8 rounded-xl bg-[var(--danger)] hover:bg-[var(--danger)] text-[var(--bg-canvas)] transition-transform  cursor-pointer shadow-sm"
+								title="Zatrzymaj odpowiedź">
 								<Square className="w-3.5 h-3.5 fill-current" />
 							</button>
 						) : (
@@ -186,9 +185,8 @@ export const NativeChatComposer: React.FC<NativeChatComposerProps> = ({
 								type="button"
 								onClick={handleSend}
 								disabled={!text.trim() && images.length === 0}
-								className="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:hover:bg-indigo-600 text-white transition-all active:scale-95 cursor-pointer shadow-sm shadow-indigo-600/30 disabled:shadow-none"
-								title="Send message (Enter)"
-							>
+								className="flex items-center justify-center w-8 h-8 rounded-xl bg-[var(--text-primary)] text-[var(--bg-canvas)] hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-[var(--text-primary)] text-[var(--bg-canvas)] transition-all  cursor-pointer shadow-none disabled:shadow-none"
+								title="Wyślij wiadomość (Enter)">
 								<SendHorizontal className="w-4 h-4" />
 							</button>
 						)}

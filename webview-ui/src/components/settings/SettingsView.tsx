@@ -869,9 +869,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	)
 
 	return (
-		<Tab className="h-full flex flex-col bg-vscode-editor-background text-vscode-foreground select-none overflow-hidden">
+		<Tab className="settings-workspace h-full flex flex-col bg-vscode-editor-background text-vscode-foreground select-none overflow-hidden">
 			{/* Top Header */}
-			<TabHeader className="flex justify-between items-center px-4 py-2.5 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+			<TabHeader className="flex justify-between items-center px-4 py-2.5 border-b border-border bg-card shrink-0">
 				<div className="flex items-center gap-2">
 					<StandardTooltip content={t("settings:header.doneButtonTooltip")}>
 						<Button
@@ -966,7 +966,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				{/* Right Column: Content Workspace */}
 				<div className="flex-1 flex flex-col overflow-hidden bg-vscode-editor-background">
 					{/* Category Top Banner */}
-					<div className="px-6 py-4 border-b border-white/[0.06] bg-vscode-editor-background/90 backdrop-blur-sm shrink-0">
+					<div className="px-6 py-4 border-b border-[var(--border-subtle)] bg-vscode-editor-background shrink-0">
 						{searchQuery ? (
 							<div>
 								<h2 className="text-base font-bold text-vscode-foreground m-0">
@@ -1017,7 +1017,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 														{result.sectionLabel}
 													</span>
 												</div>
-												<span className="text-xs px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-vscode-descriptionForeground group-hover:text-vscode-foreground">
+												<span className="text-xs px-2.5 py-1 rounded-md bg-white/[0.04] border border-[var(--border-subtle)] text-vscode-descriptionForeground group-hover:text-vscode-foreground">
 													{t(`settings:categories.${resolveCategory(result.section)}`)}
 												</span>
 											</button>
@@ -1312,18 +1312,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				{/* Left: Dirty state indicator */}
 				<div className="flex items-center gap-2">
 					{isChangeDetected ? (
-						<div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+						<div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--warning-subtle)] border border-[var(--border-light)]">
 							<span className="relative flex h-2 w-2">
-								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-								<span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+								<span className="hidden"></span>
+								<span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--warning)]"></span>
 							</span>
-							<span className="text-xs font-medium text-amber-400">
+							<span className="text-xs font-medium text-[var(--warning)]">
 								{t("settings:footer.unsavedChanges")}
 							</span>
 						</div>
 					) : (
 						<div className="flex items-center gap-2 px-2 py-1 text-vscode-descriptionForeground">
-							<Check className="w-3.5 h-3.5 text-emerald-400" />
+							<Check className="w-3.5 h-3.5 text-[var(--success)]" />
 							<span className="text-xs">{t("settings:footer.allChangesSaved")}</span>
 						</div>
 					)}
@@ -1335,7 +1335,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						variant="secondary"
 						onClick={() => onConfirmDialogResult(true)}
 						disabled={!isChangeDetected}
-						className="text-xs h-8 px-3 gap-1.5 border border-white/[0.06] hover:bg-white/[0.06] disabled:opacity-40">
+						className="text-xs h-8 px-3 gap-1.5 border border-[var(--border-subtle)] hover:bg-white/[0.06] disabled:opacity-40">
 						<RotateCcw className="w-3 h-3" />
 						{t("settings:footer.discard")}
 					</Button>
