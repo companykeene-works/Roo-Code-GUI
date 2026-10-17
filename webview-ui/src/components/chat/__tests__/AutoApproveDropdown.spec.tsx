@@ -87,7 +87,7 @@ describe("AutoApproveDropdown", () => {
 		const executeToggle = screen.getByTestId("auto-approve-alwaysAllowExecute")
 		expect(executeToggle).toBeDisabled()
 		expect(screen.getByTestId("requires-safety-model-badge")).toBeInTheDocument()
-		expect(screen.getByText("Requires Safety Model")).toBeInTheDocument()
+		expect(screen.getByText("Wymaga modelu oceniającego")).toBeInTheDocument()
 	})
 
 	test("tooltip contains the warning requirement and settings button when safety model is not configured", () => {

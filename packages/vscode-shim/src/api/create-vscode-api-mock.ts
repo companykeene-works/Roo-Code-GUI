@@ -102,7 +102,7 @@ export function createVSCodeAPIMock(
 	const env = {
 		appName: `wrapper|cli|cli|${Package.version}`,
 		appRoot: options?.appRoot || import.meta.dirname,
-		language: "en",
+		language: "pl",
 		machineId: identity?.machineId || machineIdSync(),
 		sessionId: identity?.sessionId || "cli-session-id",
 		remoteName: undefined,

@@ -96,7 +96,7 @@ export const WebAccessSettings = ({
 										className="w-full">
 										<VSCodeOption value="brave">Brave Search API</VSCodeOption>
 										<VSCodeOption value="tavily">Tavily Search</VSCodeOption>
-										<VSCodeOption value="searxng">SearXNG (Self-hosted)</VSCodeOption>
+										<VSCodeOption value="searxng">SearXNG (własny serwer)</VSCodeOption>
 									</VSCodeDropdown>
 									<p className="text-vscode-descriptionForeground text-xs mt-1">
 										{t(
@@ -167,7 +167,7 @@ export const WebAccessSettings = ({
 										<VSCodeTextField
 											value={webSearchSearxngUrl || ""}
 											onInput={(e: any) => handleSearxngUrlChange(e.target.value)}
-											placeholder="http://localhost:8080 or https://searx.example.com"
+											placeholder="http://localhost:8080 lub https://searx.example.com"
 											className="w-full"
 										/>
 										<p className="text-vscode-descriptionForeground text-xs mt-1">

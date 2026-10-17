@@ -28,7 +28,7 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import RooHero from "@src/components/welcome/RooHero"
-import RooTips from "@src/components/welcome/RooTips"
+import { AgentStarters } from "@src/components/welcome/AgentStarters"
 import { StandardTooltip, Button } from "@src/components/ui"
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
@@ -2427,12 +2427,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					<span className="text-sm">{t("chat:loadingTask", "Loading conversation...")}</span>
 				</div>
 			) : (
-				<div className="flex flex-col h-full justify-center p-6 min-h-0 overflow-y-auto gap-4 relative">
-					<div className="flex flex-col items-start gap-2 justify-center h-full min-[400px]:px-6">
-						<div className="flex flex-col gap-4 w-full">
+				<div className="agent-home">
+					<div className="agent-home-inner">
+						<div>
 							<RooHero />
-							{/* Show RooTips when authenticated or when user is new */}
-							{taskHistory.length < 6 && <RooTips />}
+							<AgentStarters onSelect={(prompt) => { setInputValue(prompt); textAreaRef.current?.focus() }} />
 							{/* Everyone should see their task history if any */}
 							{taskHistory.length > 0 && <HistoryPreview />}
 						</div>

@@ -85,7 +85,7 @@ export const OpenAI = ({ apiConfiguration, setApiConfigurationField, selectedMod
 				return (
 					<div className="flex flex-col gap-1 mt-2" data-testid="openai-service-tier">
 						<div className="flex items-center gap-1">
-							<label className="block font-medium mb-1">Service tier</label>
+							<label className="block font-medium mb-1">Poziom usługi</label>
 							<StandardTooltip content="For faster processing of API requests, try the priority processing service tier. For lower prices with higher latency, try the flex processing tier.">
 								<i className="codicon codicon-info text-vscode-descriptionForeground text-xs" />
 							</StandardTooltip>

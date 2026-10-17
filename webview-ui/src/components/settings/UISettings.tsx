@@ -1,4 +1,4 @@
-import { HTMLAttributes, useMemo } from "react"
+import { HTMLAttributes, useEffect, useMemo } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { type ThemeType } from "@roo-code/types"
@@ -35,13 +35,17 @@ export const UISettings = ({
 	const handleThemeChange = (newTheme: ThemeType) => {
 		// Update cached state (adheres to AGENTS.md rule)
 		setCachedStateField("theme", newTheme)
-		// Live preview: immediately update data-theme and notify parent without waiting for Save
-		document.documentElement.setAttribute("data-theme", newTheme)
-		const isLight = newTheme === "clean-light"
+	}
+
+	// Preview follows the buffered value, so discarding edits also restores the theme.
+	useEffect(() => {
+		document.documentElement.setAttribute("data-theme", theme)
+		document.body.setAttribute("data-theme", theme)
+		const isLight = theme === "clean-light"
 		document.body.classList.toggle("vscode-light", isLight)
 		document.body.classList.toggle("vscode-dark", !isLight)
-		window.parent?.postMessage({ type: "themeChange", theme: newTheme }, "*")
-	}
+		window.parent?.postMessage({ type: "themeChange", theme }, "*")
+	}, [theme])
 
 	const handleReasoningBlockCollapsedChange = (value: boolean) => {
 		setCachedStateField("reasoningBlockCollapsed", value)
@@ -58,11 +62,11 @@ export const UISettings = ({
 
 			<Section>
 				<div className="space-y-6">
-					{/* Theme & Visual Palette Setting */}
+					{/* Motyw i kolory Setting */}
 					<SearchableSetting
 						settingId="ui-theme"
 						section="ui"
-						label="Theme & Visual Palette">
+						label="Motyw i kolory">
 						<ThemeSettings
 							selectedTheme={theme}
 							onThemeChange={handleThemeChange}

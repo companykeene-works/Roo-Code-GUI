@@ -51,6 +51,7 @@
 		"appId": "com.roocode.desktop",
 		"productName": "Roo Code",
 		"copyright": "Copyright © 2026 Roo Code",
+		"artifactName": "Roo-Code-PL-Setup-${version}-${arch}.${ext}",
 		"directories": {
 			"output": "release"
 		},
@@ -85,6 +86,9 @@
 			],
 			"icon": "assets/icon.ico"
 		},
+		"portable": {
+			"artifactName": "Roo-Code-PL-Portable-${version}-${arch}.${ext}"
+		},
 		"nsis": {
 			"oneClick": false,
 			"perMachine": false,
@@ -98,7 +102,7 @@
 				"en_US"
 			],
 			"language": "1045",
-			"displayLanguageSelector": true,
+			"displayLanguageSelector": false,
 			"deleteAppDataOnUninstall": false,
 			"include": "build/installer.nsh"
 		}

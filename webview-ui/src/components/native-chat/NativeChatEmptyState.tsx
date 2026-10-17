@@ -8,42 +8,42 @@ interface NativeChatEmptyStateProps {
 const STARTERS = [
 	{
 		icon: Code2,
-		title: "Code Analysis & Architecture",
-		desc: "Review design patterns, refactoring options, or trade-offs.",
-		prompt: "Can you analyze modern architectural patterns for separating background tasks from interactive UI, with pros and cons?",
+		title: "Analiza kodu i architektury",
+		desc: "Porównaj rozwiązania i zaplanuj refaktoryzację.",
+		prompt: "Porównaj wzorce architektoniczne oddzielające zadania w tle od interfejsu użytkownika. Opisz ich zalety i ograniczenia.",
 	},
 	{
 		icon: BrainCircuit,
-		title: "Model & Reasoning Capabilities",
-		desc: "Explore differences between reasoning and non-reasoning models.",
-		prompt: "How does test-time reasoning compute differ from pre-trained scale in solving complex software engineering tasks?",
+		title: "Modele i rozumowanie",
+		desc: "Poznaj możliwości i różnice między modelami.",
+		prompt: "Wyjaśnij, jak dodatkowe rozumowanie podczas generowania odpowiedzi wpływa na rozwiązywanie złożonych zadań programistycznych.",
 	},
 	{
 		icon: BookOpen,
-		title: "API Contracts & System Design",
-		desc: "Draft schemas, protocol specs, or type interfaces.",
-		prompt: "Help me design an idiomatic, strongly-typed TypeScript API contract for a resilient real-time streaming pipeline.",
+		title: "Projektowanie API",
+		desc: "Opracuj schematy, protokoły i typy.",
+		prompt: "Pomóż mi zaprojektować typowany kontrakt API w TypeScript dla odpornego na błędy strumieniowania danych w czasie rzeczywistym.",
 	},
 	{
 		icon: Compass,
-		title: "Algorithm & Concept Deep-Dive",
-		desc: "Break down complex math, algorithms, or computer science concepts.",
-		prompt: "Explain how CRDTs achieve conflict-free eventual consistency in distributed systems with code examples.",
+		title: "Algorytmy i koncepcje",
+		desc: "Zrozum trudne zagadnienia na przykładach.",
+		prompt: "Wyjaśnij, jak CRDT zapewniają spójność w systemach rozproszonych. Pokaż przykłady kodu.",
 	},
 ]
 
 export const NativeChatEmptyState: React.FC<NativeChatEmptyStateProps> = ({ onSelectStarter }) => {
 	return (
-		<div className="flex flex-col items-center justify-center flex-1 px-6 py-12 max-w-2xl mx-auto text-center select-none">
+		<div className="native-chat-empty flex flex-col items-center justify-center flex-1 px-6 py-12 max-w-2xl mx-auto text-center select-none">
 			<div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-purple-500/10 to-transparent flex items-center justify-center mb-5 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
 				<Sparkles className="w-7 h-7 text-indigo-400" />
 			</div>
 
 			<h2 className="text-xl font-semibold tracking-tight text-[var(--vscode-editor-foreground)] mb-2">
-				Roo AI Chat
+				O czym porozmawiamy?
 			</h2>
 			<p className="text-sm text-[var(--vscode-descriptionForeground)] max-w-md mb-8 leading-relaxed">
-				Fast, focused intelligence. Fully isolated from your agent workspace, file system, and task executions.
+				Porozmawiaj o pomysłach, kodzie i rozwiązaniach. Ten czat ma własny kontekst i nie wprowadza zmian w plikach projektu.
 			</p>
 
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">

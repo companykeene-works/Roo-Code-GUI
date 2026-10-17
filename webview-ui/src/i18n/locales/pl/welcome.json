@@ -9,19 +9,19 @@
 		}
 	},
 	"landing": {
-		"greeting": "Witaj w Roo Code!",
-		"introduction": "Dzięki szerokiej gamie wbudowanych i rozszerzalnych Trybów, Roo Code pozwala planować, projektować architekturę, kodować, debugować i zwiększać produktywność jak nigdy dotąd.",
-		"getStarted": "Get Started"
+		"greeting": "Twoje środowisko pracy z AI",
+		"introduction": "Połącz wybranego dostawcę AI, otwórz projekt i zacznij pracę z agentem. Planuj zmiany, pisz kod i sprawdzaj wyniki w jednym miejscu.",
+		"getStarted": "Skonfiguruj połączenie"
 	},
 	"providerSignup": {
-		"heading": "Wybierz swojego dostawcę",
-		"chooseProvider": "Roo potrzebuje dostawcy LLM, aby działać. Wybierz jeden, aby zacząć, możesz dodać więcej później.",
+		"heading": "Połącz dostawcę AI",
+		"chooseProvider": "Wybierz dostawcę i model, z którego chcesz korzystać. Ustawienia możesz później zmienić.",
 		"learnMore": "Dowiedz się więcej",
 		"useAnotherProvider": "Dostawca trzeciej strony",
 		"useAnotherProviderDescription": "Wprowadź klucz API i zacznij.",
 		"noApiKeys": "Nie chcesz radzić sobie z kluczami API i oddzielnymi kontami?",
 		"goBack": "Wróć",
-		"finish": "Zakończ"
+		"finish": "Zapisz i rozpocznij"
 	},
 	"startRouter": "Rekomendujemy użycie routera LLM:",
 	"startCustom": "Lub możesz przynieść swój własny klucz API:",

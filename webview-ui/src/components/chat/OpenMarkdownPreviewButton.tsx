@@ -30,7 +30,7 @@ export const OpenMarkdownPreviewButton = memo(({ markdown, className }: OpenMark
 			<button
 				onClick={handleClick}
 				className={`opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${className ?? ""}`}
-				aria-label="Open markdown in preview">
+				aria-label="Otwórz podgląd Markdown">
 				<SquareArrowOutUpRight className="w-4 h-4" />
 			</button>
 		</StandardTooltip>

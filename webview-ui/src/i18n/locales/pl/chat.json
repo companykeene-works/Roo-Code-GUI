@@ -23,7 +23,8 @@
 		"shareSuccessPublic": "Link publiczny skopiowany do schowka",
 		"openApiHistory": "Otwórz historię API",
 		"openUiHistory": "Otwórz historię UI",
-		"backToParentTask": "Zadanie nadrzędne"
+		"backToParentTask": "Zadanie nadrzędne",
+		"compactContext": "Skróć historię rozmowy i zwolnij miejsce w kontekście"
 	},
 	"unpin": "Odepnij",
 	"pin": "Przypnij",
@@ -175,7 +176,7 @@
 			"504": "Przekroczono limit czasu bramy (Gateway Timeout). Dostawca lub usługa nadrzędna nie odpowiedziała w wymaganym czasie. Spróbuj ponownie później.",
 			"docs": "Dokumentacja",
 			"goToSettings": "Ustawienia",
-			"unknown": "Unknown API error. Please report this on GitHub.",
+			"unknown": "Nieznany błąd API. Zgłoś go w GitHub, dołączając szczegóły błędu.",
 			"connection": "Błąd połączenia. Upewnij się, że masz działające połączenie internetowe.",
 			"claudeCodeNotAuthenticated": "Musisz się zalogować, aby korzystać z Claude Code. Przejdź do Ustawień i kliknij \"Zaloguj się do Claude Code\", aby się uwierzytelnić."
 		}
@@ -302,7 +303,7 @@
 		"noAssistantMessagesDetails": "Model językowy zwrócił pustą odpowiedź bez żadnego tekstu ani wywołań narzędzi. Może się to zdarzyć z powodu problemów z API, limitów szybkości lub problemów specyficznych dla modelu. Model został automatycznie poproszony o ponowną próbę."
 	},
 	"errorDetails": {
-		"link": "Details",
+		"link": "Szczegóły",
 		"title": "Szczegóły błędu",
 		"copyToClipboard": "Kopiuj do schowka",
 		"copied": "Skopiowano!",
@@ -323,12 +324,13 @@
 		"selectOptionsFirst": "Wybierz co najmniej jedną opcję poniżej, aby włączyć automatyczne zatwierdzanie",
 		"toggleAriaLabel": "Przełącz automatyczne zatwierdzanie",
 		"disabledAriaLabel": "Automatyczne zatwierdzanie wyłączone - najpierw wybierz opcje",
-		"triggerLabelOff": "Automatyczne zatwierdzanie wyłączone",
-		"triggerLabelOffShort": "Wyłączone",
+		"triggerLabelOff": "Zatwierdzaj ręcznie",
+		"triggerLabelOffShort": "Ręcznie",
 		"triggerLabel_zero": "0 automatycznie zatwierdzone",
 		"triggerLabel_one": "1 automatycznie zatwierdzony",
 		"triggerLabel_other": "{{count}} automatycznie zatwierdzonych",
-		"triggerLabelAll": "BRRR"
+		"triggerLabelAll": "Automatycznie",
+		"triggerLabelNone": "Zatwierdzaj ręcznie"
 	},
 	"reasoning": {
 		"thinking": "Myślenie",
@@ -509,24 +511,40 @@
 		"openMcpSettings": "Otwórz ustawienia MCP"
 	},
 	"readCommandOutput": {
-		"title": "Roo read command output"
+		"title": "Agent odczytał wynik polecenia"
 	},
 	"retiredProvider": {
 		"title": "Dostawca nie jest już obsługiwany",
-		"message": "This provider is no longer supported. Please select a different provider in your API profile settings.",
+		"message": "Ten dostawca nie jest już obsługiwany. Wybierz innego w ustawieniach profilu API.",
 		"openSettings": "Otwórz ustawienia",
-		"rooMessage": "As part of our decision to sunset the Roo Code extension, we also ended the Roo Code Router, which only existed to support the extension. Sorry about the hassle."
+		"rooMessage": "Usługa Roo Code Router została wyłączona. Wybierz innego dostawcę w ustawieniach profilu API."
 	},
 	"openSettings": "Otwórz Ustawienia",
 	"effort": {
-		"title": "Wysiłek myślenia",
-		"label": "Wysiłek: {{level}}",
-		"tooltip": "Wysiłek myślenia: {{level}}",
+		"title": "Poziom rozumowania",
+		"label": "{{level}}",
+		"tooltip": "Poziom rozumowania: {{level}}",
 		"off": "Wył.",
 		"minimal": "Minimalny",
 		"low": "Niski",
 		"medium": "Średni",
 		"high": "Wysoki",
 		"xhigh": "B. wysoki"
+	},
+	"workspace": {
+		"heading": "Nad czym dziś pracujemy?",
+		"description": "Opisz cel. Agent przeanalizuje projekt i pomoże Ci przejść od pomysłu do działającego kodu.",
+		"explore": "Poznaj strukturę projektu",
+		"explorePrompt": "Przeanalizuj strukturę tego projektu. Wyjaśnij, jak działa i gdzie znajdują się najważniejsze części kodu.",
+		"plan": "Zaplanuj kolejną zmianę",
+		"planPrompt": "Pomóż mi zaplanować zmianę w tym projekcie. Najpierw zapoznaj się z kodem, a potem ustalmy zakres i kolejne kroki.",
+		"fix": "Znajdź błędy i zaproponuj poprawki",
+		"fixPrompt": "Sprawdź projekt pod kątem błędów. Wskaż konkretne problemy i zaproponuj poprawki oraz sposób ich weryfikacji.",
+		"mention": "dodaj plik do kontekstu",
+		"commands": "wybierz polecenie"
+	},
+	"compactionError": {
+		"title": "Nie udało się skrócić kontekstu",
+		"dismiss": "Zamknij"
 	}
 }

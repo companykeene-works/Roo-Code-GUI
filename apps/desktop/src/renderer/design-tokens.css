@@ -1,0 +1,146 @@
+/* Shared by the desktop shell and React agent. System fonts also work offline. */
+:root, [data-theme="linear-dark"] {
+	--bg-canvas: #202123;
+	--bg-header: #191a1c;
+	--bg-surface: #28292c;
+	--bg-surface-elevated: #303135;
+	--bg-subtle: #ffffff05;
+	--bg-hover: #ffffff0a;
+	--bg-active: #ffffff12;
+	--border-subtle: #ffffff0e;
+	--border-light: #ffffff20;
+	--border-focus: #8aaef0;
+	--text-primary: #edeef0;
+	--text-secondary: #b2b3b9;
+	--text-muted: #93959d;
+	--accent: #a8c7fa;
+	--accent-hover: #c3d8fc;
+	--accent-subtle: #a8c7fa12;
+	--success: #8fc6a4;
+	--success-subtle: #8fc6a414;
+	--danger: #f19a98;
+	--danger-subtle: #f19a9814;
+	--warning: #e6c58a;
+	--warning-subtle: #e6c58a14;
+}
+[data-theme="clean-light"], body.light-theme {
+	--bg-canvas: #ffffff;
+	--bg-header: #f5f5f5;
+	--bg-surface: #fafafa;
+	--bg-surface-elevated: #ffffff;
+	--bg-subtle: #00000003;
+	--bg-hover: #00000006;
+	--bg-active: #0000000c;
+	--border-subtle: #0000000d;
+	--border-light: #00000020;
+	--border-focus: #416bad;
+	--text-primary: #242528;
+	--text-secondary: #60636b;
+	--text-muted: #71747c;
+	--accent: #355f9e;
+	--accent-hover: #284a7c;
+	--accent-subtle: #355f9e0c;
+	--success: #38754e;
+	--success-subtle: #38754e0c;
+	--danger: #b83c39;
+	--danger-subtle: #b83c390c;
+	--warning: #916919;
+	--warning-subtle: #9169190c;
+}
+[data-theme="oled-black"] {
+	--bg-canvas: #000000; --bg-header: #050505; --bg-surface: #0a0a0a; --bg-surface-elevated: #161616;
+	--text-primary: #f5f5f5; --text-secondary: #b2b2b9; --text-muted: #929299;
+}
+[data-theme="midnight-navy"] {
+	--bg-canvas: #161c25; --bg-header: #10161e; --bg-surface: #1d2531; --bg-surface-elevated: #27303e;
+	--text-primary: #e6edf3; --text-secondary: #acb7c6; --text-muted: #8f9db0;
+}
+[data-theme="cyberpunk"] {
+	--bg-canvas: #101b22; --bg-header: #0b141a; --bg-surface: #152630; --bg-surface-elevated: #1d3440;
+	--text-primary: #e1f0f2; --text-secondary: #abc2c8; --text-muted: #8ba6ae;
+	--accent: #83c9d5; --border-focus: #83c9d5;
+}
+:root, [data-theme] {
+	--font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+	--font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+	--vscode-font-family: var(--font-sans);
+	--vscode-font-size: 14px;
+	--vscode-editor-font-family: var(--font-mono);
+	--vscode-editor-font-size: 13px;
+	--vscode-editor-background: var(--bg-canvas);
+	--vscode-editor-foreground: var(--text-primary);
+	--vscode-foreground: var(--text-primary);
+	--vscode-descriptionForeground: var(--text-secondary);
+	--vscode-disabledForeground: var(--text-muted);
+	--vscode-input-background: var(--bg-surface);
+	--vscode-input-foreground: var(--text-primary);
+	--vscode-input-placeholderForeground: var(--text-muted);
+	--vscode-input-border: var(--border-light);
+	--vscode-focusBorder: var(--border-focus);
+	--vscode-button-background: var(--text-primary);
+	--vscode-button-foreground: var(--bg-canvas);
+	--vscode-button-hoverBackground: var(--text-secondary);
+	--vscode-button-secondaryBackground: var(--bg-surface-elevated);
+	--vscode-button-secondaryForeground: var(--text-primary);
+	--vscode-button-secondaryHoverBackground: var(--bg-active);
+	--vscode-dropdown-background: var(--bg-surface);
+	--vscode-dropdown-foreground: var(--text-primary);
+	--vscode-dropdown-border: var(--border-light);
+	--vscode-menu-background: var(--bg-surface-elevated);
+	--vscode-menu-foreground: var(--text-primary);
+	--vscode-menu-border: var(--border-light);
+	--vscode-menu-selectionBackground: var(--bg-active);
+	--vscode-menu-selectionForeground: var(--text-primary);
+	--vscode-sideBar-background: var(--bg-canvas);
+	--vscode-sideBar-foreground: var(--text-primary);
+	--vscode-sideBar-border: var(--border-subtle);
+	--vscode-sideBarSectionHeader-background: var(--bg-surface);
+	--vscode-sideBarSectionHeader-foreground: var(--text-primary);
+	--vscode-panel-border: var(--border-subtle);
+	--vscode-editorGroup-border: var(--border-subtle);
+	--vscode-editorWidget-background: var(--bg-surface);
+	--vscode-editorWidget-border: var(--border-light);
+	--vscode-editorHoverWidget-background: var(--bg-surface-elevated);
+	--vscode-editorHoverWidget-foreground: var(--text-primary);
+	--vscode-editorHoverWidget-border: var(--border-light);
+	--vscode-list-hoverBackground: var(--bg-hover);
+	--vscode-list-hoverForeground: var(--text-primary);
+	--vscode-list-activeSelectionBackground: var(--bg-active);
+	--vscode-list-activeSelectionForeground: var(--text-primary);
+	--vscode-list-focusBackground: var(--bg-active);
+	--vscode-toolbar-hoverBackground: var(--bg-hover);
+	--vscode-textLink-foreground: var(--accent);
+	--vscode-textCodeBlock-background: var(--bg-header);
+	--vscode-badge-background: var(--bg-active);
+	--vscode-badge-foreground: var(--text-secondary);
+	--vscode-errorForeground: var(--danger);
+	--vscode-notifications-background: var(--bg-surface-elevated);
+	--vscode-notifications-foreground: var(--text-primary);
+	--vscode-notifications-border: var(--border-light);
+	--background: var(--bg-canvas);
+	--foreground: var(--text-primary);
+	--card: var(--bg-surface);
+	--card-foreground: var(--text-primary);
+	--popover: var(--bg-surface-elevated);
+	--popover-foreground: var(--text-primary);
+	--primary: var(--text-primary);
+	--primary-foreground: var(--bg-canvas);
+	--secondary: var(--bg-surface-elevated);
+	--secondary-foreground: var(--text-primary);
+	--muted: var(--bg-surface);
+	--muted-foreground: var(--text-secondary);
+	--accent-foreground: var(--text-primary);
+	--border: var(--border-light);
+	--input: var(--bg-surface);
+	--ring: var(--border-focus);
+	--radius: 10px;
+	color-scheme: dark;
+}
+[data-theme="clean-light"], body.light-theme { color-scheme: light; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea, [tabindex] { outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--border-focus); }
+::selection { background: var(--accent-subtle); color: var(--text-primary); }
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

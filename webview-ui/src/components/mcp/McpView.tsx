@@ -49,7 +49,7 @@ const McpView = () => {
 						<VSCodeLink
 							href={buildDocLink("features/mcp/using-mcp-in-roo", "mcp_settings")}
 							style={{ display: "inline" }}>
-							Learn More
+							Dowiedz się więcej
 						</VSCodeLink>
 					</Trans>
 				</div>

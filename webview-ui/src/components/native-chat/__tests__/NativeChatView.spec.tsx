@@ -25,9 +25,9 @@ describe("NativeChatView UI header and mode controls", () => {
 		render(<NativeChatView onSwitchToAgent={mockSwitchToAgent} />)
 
 		// Confirm AI Chat header and New Chat button are present
-		expect(screen.getByText("AI Chat")).toBeInTheDocument()
-		expect(screen.getByTitle("Start a new chat conversation")).toBeInTheDocument()
-		expect(screen.getAllByText("New Chat").length).toBeGreaterThanOrEqual(1)
+		expect(screen.getByText("Czat AI")).toBeInTheDocument()
+		expect(screen.getByTitle("Rozpocznij nową rozmowę")).toBeInTheDocument()
+		expect(screen.getAllByText("Nowa rozmowa").length).toBeGreaterThanOrEqual(1)
 
 		// Confirm Agent Mode button is NOT present in the DOM
 		expect(screen.queryByText("Agent Mode")).toBeNull()

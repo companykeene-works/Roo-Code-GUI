@@ -226,7 +226,7 @@ export const SkillsSettings: React.FC = () => {
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-vscode-textLink-foreground hover:underline">
-										Docs
+										Dokumentacja
 									</a>
 								),
 							}}

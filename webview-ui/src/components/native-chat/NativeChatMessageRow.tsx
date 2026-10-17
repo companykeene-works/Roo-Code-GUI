@@ -82,7 +82,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 					<div className="flex items-center justify-between gap-2 mb-1.5 select-none">
 						<div className="flex items-center gap-2">
 							<span className="text-xs font-semibold text-[var(--vscode-editor-foreground)]">
-								{isUser ? "You" : "Roo AI"}
+								{isUser ? "Ty" : "Roo AI"}
 							</span>
 							<span className="text-[11px] text-[var(--vscode-descriptionForeground)] opacity-70">
 								{formatTimestamp(message.timestamp)}
@@ -96,7 +96,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 									type="button"
 									onClick={() => setIsEditing(true)}
 									className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-									title="Edit message & resend"
+									title="Edytuj wiadomość & resend"
 								>
 									<Edit2 className="w-3.5 h-3.5" />
 								</button>
@@ -105,7 +105,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 								type="button"
 								onClick={handleCopy}
 								className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-								title="Copy message"
+								title="Kopiuj wiadomość"
 							>
 								{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
 							</button>
@@ -114,7 +114,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 									type="button"
 									onClick={() => onRegenerate(message.id)}
 									className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-									title="Regenerate response"
+									title="Wygeneruj ponownie"
 								>
 									<RotateCw className="w-3.5 h-3.5" />
 								</button>
@@ -140,10 +140,10 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 								<div className="flex items-center gap-2 truncate">
 									<Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
 									<span className="truncate">
-										Web Search: &ldquo;{message.webSearch.query}&rdquo;
+										Wyszukiwanie: &ldquo;{message.webSearch.query}&rdquo;
 									</span>
 									<span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500/15 text-sky-300">
-										{message.webSearch.results.length} sources
+										{message.webSearch.results.length} źródeł
 									</span>
 								</div>
 								{isWebSearchExpanded ? (
@@ -188,9 +188,9 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 							>
 								<div className="flex items-center gap-2">
 									<Brain className="w-3.5 h-3.5 text-indigo-400" />
-									<span>Thinking Process</span>
+									<span>Tok rozumowania</span>
 									<span className="text-[10px] text-indigo-400/70">
-										({message.reasoning.split(/\s+/).length} words)
+										({message.reasoning.split(/\s+/).length} słów)
 									</span>
 								</div>
 								{isReasoningExpanded ? (
@@ -226,14 +226,14 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 									}}
 									className="px-2.5 py-1 text-xs rounded border border-[var(--vscode-button-secondaryBorder,transparent)] bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] cursor-pointer"
 								>
-									Cancel
+									Anuluj
 								</button>
 								<button
 									type="button"
 									onClick={handleSaveEdit}
 									className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-background,#0e639c)] text-[var(--vscode-button-foreground,#ffffff)] hover:bg-[var(--vscode-button-hoverBackground,#1177bb)] cursor-pointer"
 								>
-									Save & Resend
+									Zapisz i wyślij ponownie
 								</button>
 							</div>
 						</div>
@@ -272,7 +272,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 										onClick={() => openSettings({ section: "providers", source: "native_chat_error" })}
 										className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] transition-colors cursor-pointer"
 									>
-										Open Provider Settings
+										Otwórz ustawienia dostawcy
 									</button>
 								</div>
 							)}
@@ -282,11 +282,11 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 					{/* Footer Meta: Token Usage */}
 					{!isUser && message.tokenUsage && (
 						<div className="mt-2.5 pt-2 border-t border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.04))] flex items-center gap-3 text-[10.5px] text-[var(--vscode-descriptionForeground)] opacity-60 select-none">
-							<span>Prompt: {message.tokenUsage.promptTokens || 0}</span>
+							<span>Wejście: {message.tokenUsage.promptTokens || 0}</span>
 							<span>•</span>
-							<span>Output: {message.tokenUsage.completionTokens || 0}</span>
+							<span>Wyjście: {message.tokenUsage.completionTokens || 0}</span>
 							<span>•</span>
-							<span>Total: {message.tokenUsage.totalTokens || 0}</span>
+							<span>Razem: {message.tokenUsage.totalTokens || 0}</span>
 						</div>
 					)}
 				</div>

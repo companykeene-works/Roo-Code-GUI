@@ -87,13 +87,8 @@ Var LabelSummaryDir
 
 ; 1. PreInit Hook: OS Language Detection & Fallback
 !macro preInit
-  ; Detect OS UI Language: if Polish (1045), pre-select 1045, otherwise fallback to English (1033)
-  System::Call 'kernel32::GetUserDefaultUILanguage() i .r0'
-  ${If} $0 == 1045
-    StrCpy $LANGUAGE 1045
-  ${Else}
-    StrCpy $LANGUAGE 1033
-  ${EndIf}
+  ; This distribution uses Polish on every Windows installation.
+  StrCpy $LANGUAGE 1045
 !macroend
 
 ; 2. CustomInit Hook: Native Windows Registry Detection of Existing Installation

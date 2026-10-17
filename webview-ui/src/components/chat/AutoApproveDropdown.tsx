@@ -49,7 +49,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 
 	const isAutoMode = approvalMode === "auto"
 	const isSafetyConfigured = isSafetyModelConfigured(state)
-	const approvalModel = commandSafetyConfig?.modelId || "Not configured (fail-closed)"
+	const approvalModel = commandSafetyConfig?.modelId || "Brak modelu — wymagane potwierdzenie"
 
 	const toggles = useAutoApprovalToggles()
 
@@ -234,7 +234,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									vscode.postMessage({ type: "approvalMode", approvalMode: "manual" })
 								}}>
 								<Sliders className="size-3" />
-								<span>Manual</span>
+								<span>Ręcznie</span>
 							</button>
 							<button
 								type="button"
@@ -249,7 +249,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									vscode.postMessage({ type: "approvalMode", approvalMode: "auto" })
 								}}>
 								<Zap className="size-3 text-amber-400" />
-								<span>Auto</span>
+								<span>Automatycznie</span>
 							</button>
 						</div>
 					</div>
@@ -263,7 +263,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 										<Zap className="size-3.5" />
 									</div>
 									<h4 className="m-0 font-bold text-sm text-vscode-foreground">
-										Autonomous Auto-Approve
+										Samodzielna praca agenta
 									</h4>
 								</div>
 								<Settings
@@ -272,22 +272,22 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 								/>
 							</div>
 							<p className="m-0 text-xs text-vscode-descriptionForeground leading-relaxed">
-								Autonomous mode is active. Safe operations proceed immediately, while potentially destructive or host-impacting actions are adjudicated by the Approval Authority model.
+								Tryb samodzielny jest aktywny. Bezpieczne operacje są wykonywane od razu. Działania mogące usunąć dane lub wpłynąć na komputer ocenia niezależny model.
 							</p>
 							<div className="p-2.5 rounded bg-black/30 border border-white/[0.06] text-xs space-y-1.5">
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Approval Authority:</span>
+									<span className="text-vscode-descriptionForeground">Model oceniający:</span>
 									<span className="font-mono text-vscode-foreground font-medium text-[11px] truncate max-w-[180px]" title={approvalModel}>
 										{approvalModel}
 									</span>
 								</div>
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Safety Boundaries:</span>
-									<span className="text-green-400 font-medium">Always Enforced</span>
+									<span className="text-vscode-descriptionForeground">Zasady bezpieczeństwa:</span>
+									<span className="text-green-400 font-medium">Zawsze obowiązują</span>
 								</div>
 								<div className="flex justify-between items-center">
-									<span className="text-vscode-descriptionForeground">Fail-Closed:</span>
-									<span className="text-vscode-foreground font-medium">Active</span>
+									<span className="text-vscode-descriptionForeground">W razie braku oceny:</span>
+									<span className="text-vscode-foreground font-medium">Wymagane potwierdzenie</span>
 								</div>
 							</div>
 							<Button
@@ -295,7 +295,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 								size="sm"
 								className="w-full h-7 text-xs"
 								onClick={handleOpenSettings}>
-								Open Safety Settings
+								Otwórz ustawienia bezpieczeństwa
 							</Button>
 						</div>
 					) : (
@@ -362,7 +362,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 															className="flex items-center gap-1 text-[10px] bg-vscode-badge-background text-vscode-badge-foreground px-1.5 py-0.5 rounded flex-shrink-0"
 															data-testid="requires-safety-model-badge">
 															<Lock className="size-2.5" />
-															<span>Requires Safety Model</span>
+															<span>Wymaga modelu oceniającego</span>
 														</span>
 													)}
 												</Button>
@@ -414,10 +414,10 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 									}}>
 									<ToggleSwitch
 										checked={effectiveAutoApprovalEnabled}
-										aria-label="Toggle auto-approval"
+										aria-label="Zmień tryb zatwierdzania"
 										onChange={handleAutoApprovalToggle}
 									/>
-									<span className={cn("text-sm font-bold select-none")}>Enabled</span>
+									<span className={cn("text-sm font-bold select-none")}>Włączone</span>
 								</label>
 							</div>
 						</>

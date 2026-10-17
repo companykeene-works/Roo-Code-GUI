@@ -1,5 +1,5 @@
 {
-	"title": "Worktrees",
+	"title": "Drzewa robocze Git",
 	"done": "Gotowe",
 	"description": "Git worktrees pozwalają pracować jednocześnie na wielu branchach w oddzielnych katalogach. Każdy worktree ma własne okno VS Code z Roo Code.",
 	"notGitRepo": "Ten workspace nie jest repozytorium Git. Worktrees wymagają repozytorium Git, aby działać.",
@@ -12,7 +12,7 @@
 	"primary": "Główny",
 	"current": "Bieżący",
 	"locked": "Zablokowany",
-	"detachedHead": "Detached HEAD",
+	"detachedHead": "Odłączony HEAD",
 	"noBranch": "Brak brancha",
 	"switchInThisWindow": "Przełącz na worktree",
 	"openInNewWindow": "Otwórz w nowym oknie",
@@ -50,8 +50,8 @@
 	"close": "Zamknij",
 	"showInHomeScreen": "Pokaż worktrees na ekranie głównym",
 	"selector": {
-		"worktree": "Worktree",
-		"title": "Worktrees",
+		"worktree": "Drzewo robocze",
+		"title": "Drzewa robocze Git",
 		"tooltip": "Przełączaj się między worktrees",
 		"description": "Git worktrees pozwalają pracować jednocześnie na wielu branchach. Kliknij, aby zmienić workspace.",
 		"settings": "Zarządzaj Worktrees",

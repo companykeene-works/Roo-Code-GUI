@@ -127,6 +127,7 @@ const App = () => {
 	useEffect(() => {
 		if (theme) {
 			document.documentElement.setAttribute("data-theme", theme)
+			document.body.setAttribute("data-theme", theme)
 			const isLight = (theme as string) === "clean-light" || (theme as string) === "light"
 			document.body.classList.toggle("vscode-light", isLight)
 			document.body.classList.toggle("vscode-dark", !isLight)
@@ -141,6 +142,7 @@ const App = () => {
 				const currentTheme = (message as any).theme
 				if (currentTheme) {
 					document.documentElement.setAttribute("data-theme", currentTheme)
+					document.body.setAttribute("data-theme", currentTheme)
 					const isLight = currentTheme === "clean-light" || currentTheme === "light"
 					document.body.classList.toggle("vscode-light", isLight)
 					document.body.classList.toggle("vscode-dark", !isLight)

@@ -194,7 +194,7 @@ export const AutoApproveSettings = ({
 						onClick={() => setCachedStateField("approvalMode", "manual")}>
 						<div className="flex items-center justify-center gap-1.5">
 							<Sliders className="size-3.5" />
-							<span>Manual</span>
+							<span>Ręcznie</span>
 						</div>
 					</button>
 					<button
@@ -208,7 +208,7 @@ export const AutoApproveSettings = ({
 						onClick={() => setCachedStateField("approvalMode", "auto")}>
 						<div className="flex items-center justify-center gap-1.5">
 							<Zap className="size-3.5 text-amber-400" />
-							<span>Auto</span>
+							<span>Automatycznie</span>
 						</div>
 					</button>
 				</div>
@@ -222,9 +222,9 @@ export const AutoApproveSettings = ({
 									<Zap className="size-5" />
 								</div>
 								<div className="space-y-1">
-									<h4 className="text-sm font-semibold text-vscode-foreground">Autonomous Auto-Approve</h4>
+									<h4 className="text-sm font-semibold text-vscode-foreground">Samodzielna praca agenta</h4>
 									<p className="text-xs text-vscode-descriptionForeground leading-relaxed">
-										Autonomous Mode enables Roo Code to complete complex tasks autonomously. Routine safe operations execute immediately without asking. Potentially destructive, system-level, or host-impacting actions are adjudicated by an independent <strong>Approval Authority</strong> model.
+										W trybie samodzielnym agent wykonuje bezpieczne operacje bez pytania. Działania, które mogą usunąć dane lub wpłynąć na system, ocenia niezależny <strong>model oceniający</strong> bezpieczeństwo.
 									</p>
 								</div>
 							</div>
@@ -233,14 +233,14 @@ export const AutoApproveSettings = ({
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<ShieldCheck className="size-4 text-green-400" />
-										<span className="text-xs font-semibold text-vscode-foreground">Hard Safety Boundaries</span>
+										<span className="text-xs font-semibold text-vscode-foreground">Stałe zasady bezpieczeństwa</span>
 									</div>
 									<Badge variant="outline" className="text-[10px] text-green-400 border-green-500/30 bg-green-500/10">
-										Always Active
+										Zawsze aktywne
 									</Badge>
 								</div>
 								<p className="text-[11px] text-vscode-descriptionForeground leading-relaxed">
-									System files, external secrets, host-breaking commands, and untrusted execution boundaries are always strictly protected. <strong>Worker Model != Approval Authority:</strong> Worker models can never approve their own actions. If the Approval Model is unavailable, times out, or matches the Worker Model, actions fail-closed to manual user approval.
+									Pliki systemowe i poufne dane pozostają chronione. Polecenia mogące uszkodzić system oraz niezaufany kod podlegają dodatkowej kontroli. <strong>Oddzielny model oceniający:</strong> Agent nie może zatwierdzać własnych działań. Gdy niezależny model jest niedostępny, nie odpowiada na czas lub jest tym samym modelem co agent, wymagane jest Twoje potwierdzenie.
 								</p>
 							</div>
 
@@ -248,10 +248,10 @@ export const AutoApproveSettings = ({
 								<div className="flex items-center justify-between">
 									<div>
 										<label className="text-xs font-semibold text-vscode-foreground block">
-											Approval Authority Model
+											Model oceniający bezpieczeństwo
 										</label>
 										<span className="text-[11px] text-vscode-descriptionForeground">
-											Independent AI model evaluating actions for safety
+											Niezależny model AI sprawdzający bezpieczeństwo działań
 										</span>
 									</div>
 									<Button
@@ -261,14 +261,14 @@ export const AutoApproveSettings = ({
 										onClick={() => setIsLogModalOpen(true)}
 										data-testid="view-decision-log-btn">
 										<FileText className="size-3.5" />
-										<span>View Decision Log</span>
+										<span>Pokaż historię decyzji</span>
 									</Button>
 								</div>
 
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 									<div>
 										<label className="block text-[11px] font-medium text-vscode-descriptionForeground mb-1">
-											Provider
+											Dostawca
 										</label>
 										<Select
 											value={safetyConfig.provider || "openai"}
@@ -292,26 +292,26 @@ export const AutoApproveSettings = ({
 
 									<div>
 										<label className="block text-[11px] font-medium text-vscode-descriptionForeground mb-1">
-											Model ID
+											Identyfikator modelu
 										</label>
 										<CommandSafetyModelCombobox
 											provider={safetyConfig.provider || "openai"}
 											value={safetyConfig.modelId || ""}
 											onChange={(modelId) => updateSafetyConfig({ modelId })}
-											placeholder="Select or enter approval model..."
+											placeholder="Wybierz lub wpisz model oceniający…"
 										/>
 									</div>
 								</div>
 
 								<div>
 									<label className="block text-[11px] font-medium text-vscode-descriptionForeground mb-1">
-										Dedicated API Key (optional)
+										Osobny klucz API (opcjonalnie)
 									</label>
 									<Input
 										type="password"
 										value={safetyConfig.apiKey || ""}
 										onChange={(e) => updateSafetyConfig({ apiKey: e.target.value })}
-										placeholder="Leave empty to use main provider key"
+										placeholder="Pozostaw puste, aby użyć klucza głównego dostawcy"
 										className="h-8 text-xs"
 									/>
 								</div>
@@ -320,7 +320,7 @@ export const AutoApproveSettings = ({
 									<div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
 										<AlertTriangle className="size-4 shrink-0 text-amber-400" />
 										<span>
-											Approval model not configured. Actions requiring AI evaluation will fail-closed to manual user approval.
+											Nie skonfigurowano modelu oceniającego. Działania wymagające oceny AI będą czekać na Twoje potwierdzenie.
 										</span>
 									</div>
 								)}

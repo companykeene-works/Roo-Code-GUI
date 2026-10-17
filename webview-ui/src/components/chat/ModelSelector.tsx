@@ -562,7 +562,7 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Reasoning" : isFast ? "Fast" : isCoder ? "Coder" : isVision ? "Vision" : undefined,
+					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
 					description: info.description,
 					modelInfo: info,
 				})
@@ -582,13 +582,13 @@ export const ModelSelector = ({
 					const isVision = isVisionModel(id)
 
 					const badge = isReasoning
-						? "Reasoning"
+						? "Rozumowanie"
 						: isFast
-							? "Fast"
+							? "Szybkość"
 							: isCoder
-								? "Coder"
+								? "Programowanie"
 								: isVision
-									? "Vision"
+									? "Obrazy"
 									: undefined
 
 					addOrMergeModel({
@@ -609,18 +609,18 @@ export const ModelSelector = ({
 		// 1.6. Explicit xKiro presets
 		if (activeProvider === "xkiro") {
 			const xkiroPresets = [
-				{ id: "deepseek/deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro DeepSeek-V3: Fast and powerful general-purpose model with free tokens." },
-				{ id: "deepseek/deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, isFlagship: true, badge: "Reasoning", contextWindow: 128000, description: "xKiro DeepSeek-R1: Advanced reasoning and Chain of Thought deduction." },
-				{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: true, isFast: false, isFlagship: true, badge: "Reasoning", contextWindow: 200000, description: "xKiro Claude 3.7 Sonnet: Premier hybrid reasoning and coding model." },
-				{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false, contextWindow: 200000, description: "xKiro Claude 3.5 Sonnet: Industry standard for intelligent coding." },
-				{ id: "openai/gpt-6-astra", name: "GPT-6 Astra", isReasoning: true, isFast: false, isFlagship: true, badge: "Reasoning", contextWindow: 1000000, description: "xKiro GPT-6 Astra: Next-gen flagship model with 1M context window." },
-				{ id: "openai/gpt-5", name: "GPT-5", isReasoning: true, isFast: false, isFlagship: true, badge: "Reasoning", contextWindow: 400000, description: "xKiro GPT-5: OpenAI flagship model with reasoning and 400k context window." },
-				{ id: "openai/gpt-5-mini", name: "GPT-5 Mini", isReasoning: true, isFast: false, isFlagship: false, badge: "Reasoning", contextWindow: 400000, description: "xKiro GPT-5 Mini: Fast, low-cost reasoning model with 400k context window." },
-				{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro GPT-4o: Versatile flagship multimodal model from OpenAI." },
-				{ id: "openai/o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Reasoning", contextWindow: 200000, description: "xKiro o3-mini: High-speed reasoning model." },
-				{ id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 1000000, description: "xKiro Gemini 2.5 Pro: Next-generation reasoning with 1M context window." },
-				{ id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", isReasoning: false, isFast: true, badge: "Fast", contextWindow: 1000000, description: "xKiro Gemini 2.5 Flash: Ultra-fast and lightweight with 1M context window." },
-				{ id: "qwen/qwen-2.5-coder-32b", name: "Qwen 2.5 Coder 32B", isReasoning: false, isFast: true, isCoder: true, isFlagship: true, badge: "Coder", contextWindow: 128000, description: "xKiro Qwen 2.5 Coder: Leading open coding model." },
+				{ id: "deepseek/deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro DeepSeek-V3: Szybki model do zadań ogólnych." },
+				{ id: "deepseek/deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 128000, description: "xKiro DeepSeek-R1: Zaawansowane rozumowanie i analiza." },
+				{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 200000, description: "xKiro Claude 3.7 Sonnet: Rozumowanie i programowanie w jednym modelu." },
+				{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false, contextWindow: 200000, description: "xKiro Claude 3.5 Sonnet: Model do programowania i analizy kodu." },
+				{ id: "openai/gpt-6-astra", name: "GPT-6 Astra", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 1000000, description: "xKiro GPT-6 Astra: Zaawansowany model z kontekstem 1 mln tokenów." },
+				{ id: "openai/gpt-5", name: "GPT-5", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 400000, description: "xKiro GPT-5: Model OpenAI z rozumowaniem i kontekstem 400 tys. tokenów." },
+				{ id: "openai/gpt-5-mini", name: "GPT-5 Mini", isReasoning: true, isFast: false, isFlagship: false, badge: "Rozumowanie", contextWindow: 400000, description: "xKiro GPT-5 Mini: Szybki model z rozumowaniem i kontekstem 400 tys. tokenów." },
+				{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro GPT-4o: Wszechstronny model multimodalny OpenAI." },
+				{ id: "openai/o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Rozumowanie", contextWindow: 200000, description: "xKiro o3-mini: Szybki model z rozumowaniem." },
+				{ id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 1000000, description: "xKiro Gemini 2.5 Pro: Zaawansowana analiza z kontekstem 1 mln tokenów." },
+				{ id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", isReasoning: false, isFast: true, badge: "Szybkość", contextWindow: 1000000, description: "xKiro Gemini 2.5 Flash: Lekki, szybki model z kontekstem 1 mln tokenów." },
+				{ id: "qwen/qwen-2.5-coder-32b", name: "Qwen 2.5 Coder 32B", isReasoning: false, isFast: true, isCoder: true, isFlagship: true, badge: "Programowanie", contextWindow: 128000, description: "xKiro Qwen 2.5 Coder: Otwarty model do programowania." },
 			]
 			xkiroPresets.forEach((p) => {
 				addOrMergeModel({
@@ -647,7 +647,7 @@ export const ModelSelector = ({
 						isFast,
 						isCoder,
 						isVision,
-						badge: isReasoning ? "Reasoning" : isFast ? "Fast" : isCoder ? "Coder" : isVision ? "Vision" : undefined,
+						badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
 						description: info.description,
 						modelInfo: info,
 					})
@@ -655,7 +655,7 @@ export const ModelSelector = ({
 			} else {
 				const orPresets = [
 					{ id: "deepseek/deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false },
-					{ id: "deepseek/deepseek-r1", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Reasoning" },
+					{ id: "deepseek/deepseek-r1", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 					{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: false, isFast: false },
 					{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false },
 					{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false },
@@ -671,10 +671,10 @@ export const ModelSelector = ({
 		if (activeProvider === "openai") {
 			const openaiPresets = [
 				{ id: "gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false },
-				{ id: "gpt-4o-mini", name: "GPT-4o Mini", isReasoning: false, isFast: true, badge: "Fast" },
-				{ id: "o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Reasoning" },
+				{ id: "gpt-4o-mini", name: "GPT-4o Mini", isReasoning: false, isFast: true, badge: "Szybkość" },
+				{ id: "o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 				{ id: "deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false },
-				{ id: "deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Reasoning" },
+				{ id: "deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 			]
 			openaiPresets.forEach((p) => {
 				addOrMergeModel(p)
@@ -685,8 +685,8 @@ export const ModelSelector = ({
 		if (activeProvider === "ollama") {
 			const ollamaPresets = [
 				{ id: "llama3.1", name: "Llama 3.1", isReasoning: false, isFast: false },
-				{ id: "qwen2.5-coder:7b", name: "Qwen 2.5 Coder 7B", isReasoning: false, isFast: true, isCoder: true, badge: "Fast" },
-				{ id: "deepseek-r1:8b", name: "DeepSeek R1 8B", isReasoning: true, isFast: false, badge: "Reasoning" },
+				{ id: "qwen2.5-coder:7b", name: "Qwen 2.5 Coder 7B", isReasoning: false, isFast: true, isCoder: true, badge: "Szybkość" },
+				{ id: "deepseek-r1:8b", name: "DeepSeek R1 8B", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 			]
 			ollamaPresets.forEach((p) => {
 				addOrMergeModel(p)
@@ -709,7 +709,7 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Reasoning" : isFast ? "Fast" : isCoder ? "Coder" : isVision ? "Vision" : undefined,
+					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
 					modelInfo: activeModelInfo,
 				})
 			}
@@ -763,7 +763,7 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Reasoning" : isFast ? "Fast" : isCoder ? "Coder" : isVision ? "Vision" : undefined,
+					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
 					contextWindow: getModelContextWindow(recent.id),
 				})
 			}
@@ -1080,22 +1080,22 @@ export const ModelSelector = ({
 							<span className="truncate font-medium">{m.name}</span>
 							{m.isReasoning && (
 								<span className="text-[9.5px] px-1 py-0.2 rounded bg-amber-500/15 text-amber-400 font-semibold border border-amber-500/30">
-									Reasoning
+									Rozumowanie
 								</span>
 							)}
 							{m.isFast && !m.isReasoning && (
 								<span className="text-[9.5px] px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30">
-									Fast
+									Szybkość
 								</span>
 							)}
 							{m.isCoder && !m.isReasoning && !m.isFast && (
 								<span className="text-[9.5px] px-1 py-0.2 rounded bg-blue-500/15 text-blue-400 font-semibold border border-blue-500/30">
-									Coder
+									Programowanie
 								</span>
 							)}
 							{m.isVision && !m.isReasoning && !m.isFast && !m.isCoder && (
 								<span className="text-[9.5px] px-1 py-0.2 rounded bg-purple-500/15 text-purple-400 font-semibold border border-purple-500/30">
-									Vision
+									Obrazy
 								</span>
 							)}
 						</div>
@@ -1104,7 +1104,7 @@ export const ModelSelector = ({
 							{ctxStr && (
 								<>
 									<span>·</span>
-									<span>{ctxStr} ctx</span>
+									<span>{ctxStr} kontekstu</span>
 								</>
 							)}
 						</div>
@@ -1135,7 +1135,7 @@ export const ModelSelector = ({
 							Model: {effectiveModelId}
 						</div>
 						<div className="text-vscode-descriptionForeground text-[11px]">
-							Provider: {effectiveProviderLabel}
+							Dostawca: {effectiveProviderLabel}
 						</div>
 					</div>
 				}>
@@ -1173,7 +1173,7 @@ export const ModelSelector = ({
 							<div className="flex items-center gap-1.5">
 								<ProviderIcon provider={effectiveProvider} />
 								<span className="text-xs font-semibold text-vscode-foreground">
-									{t("chat:modelSelector.title") || "AI Models"}
+									{t("chat:modelSelector.title") || "Modele AI"}
 								</span>
 							</div>
 							<div className="flex items-center gap-1.5">
@@ -1188,10 +1188,10 @@ export const ModelSelector = ({
 									onClick={handleToggleLock}
 								/>
 								{(activeProvider === "xkiro" || activeProvider === "openai") && (
-									<StandardTooltip content="Refresh available models">
+									<StandardTooltip content="Odśwież listę modeli">
 										<button
 											data-testid="refresh-models-button"
-											aria-label="Refresh models"
+											aria-label="Odśwież modele"
 											onClick={handleRefreshModels}
 											disabled={isRefreshingModels}
 											className={cn(
@@ -1200,7 +1200,7 @@ export const ModelSelector = ({
 												isRefreshingModels && "opacity-70 cursor-wait",
 											)}>
 											<RefreshCw className={cn("size-2.5", isRefreshingModels && "animate-spin")} />
-											<span>{isRefreshingModels ? "Syncing..." : "Refresh"}</span>
+											<span>{isRefreshingModels ? "Odświeżam…" : "Odśwież"}</span>
 										</button>
 									</StandardTooltip>
 								)}
@@ -1235,10 +1235,10 @@ export const ModelSelector = ({
 							{(
 								[
 									{ key: "all" as const, label: "All", count: categoryCounts.all, icon: undefined },
-									{ key: "reasoning" as const, label: "Reasoning", count: categoryCounts.reasoning, icon: Brain },
-									{ key: "fast" as const, label: "Fast", count: categoryCounts.fast, icon: Zap },
-									{ key: "coder" as const, label: "Coder", count: categoryCounts.coder, icon: Code2 },
-									{ key: "vision" as const, label: "Vision", count: categoryCounts.vision, icon: Eye },
+									{ key: "reasoning" as const, label: "Rozumowanie", count: categoryCounts.reasoning, icon: Brain },
+									{ key: "fast" as const, label: "Szybkość", count: categoryCounts.fast, icon: Zap },
+									{ key: "coder" as const, label: "Programowanie", count: categoryCounts.coder, icon: Code2 },
+									{ key: "vision" as const, label: "Obrazy", count: categoryCounts.vision, icon: Eye },
 									{ key: "default" as const, label: "Default", count: categoryCounts.default, icon: undefined },
 								]
 							).map((cat) => {
@@ -1271,7 +1271,7 @@ export const ModelSelector = ({
 									onClick={() => handleSelectCustomModel(searchQuery.trim())}
 									className="px-2.5 py-2 text-xs cursor-pointer flex items-center gap-2 rounded-md transition-colors mx-1 hover:bg-vscode-list-hoverBackground text-vscode-textLink-foreground">
 									<Plus className="size-3.5 flex-shrink-0" />
-									<span className="truncate">Use custom model "{searchQuery.trim()}"</span>
+									<span className="truncate">Użyj własnego modelu „{searchQuery.trim()}"</span>
 								</div>
 							) : (
 								<div className="py-4 px-3 text-center text-xs text-vscode-descriptionForeground">
@@ -1286,10 +1286,10 @@ export const ModelSelector = ({
 										<div className="px-2.5 py-1 text-[10px] font-bold text-vscode-descriptionForeground uppercase tracking-wider flex items-center justify-between">
 											<div className="flex items-center gap-1">
 												<History className="size-3 text-vscode-descriptionForeground" />
-												<span>Recently used</span>
+												<span>Ostatnio używane</span>
 											</div>
 											<span className="text-[9.5px] opacity-70 font-normal">
-												{recentlyUsedModels.length} {recentlyUsedModels.length === 1 ? "model" : "models"}
+												{recentlyUsedModels.length} {recentlyUsedModels.length === 1 ? "model" : "modeli"}
 											</span>
 										</div>
 										<div className="space-y-0.5">
@@ -1304,10 +1304,10 @@ export const ModelSelector = ({
 										<div className="px-2.5 py-1 text-[10px] font-bold text-vscode-descriptionForeground uppercase tracking-wider flex items-center justify-between">
 											<div className="flex items-center gap-1">
 												<Sparkles className="size-3 text-[#a78bfa]" />
-												<span>Recommended / Flagship</span>
+												<span>Polecane modele</span>
 											</div>
 											<span className="text-[9.5px] opacity-70 font-normal">
-												{flagshipModels.length} models
+												{flagshipModels.length} modeli
 											</span>
 										</div>
 										<div className="space-y-0.5">
@@ -1353,7 +1353,7 @@ export const ModelSelector = ({
 											onClick={() => handleSelectCustomModel(searchQuery.trim())}
 											className="px-2.5 py-1.5 text-xs cursor-pointer flex items-center gap-2 rounded-md transition-colors mx-1 border-t border-vscode-dropdown-border/30 hover:bg-vscode-list-hoverBackground text-vscode-textLink-foreground">
 											<Plus className="size-3.5 flex-shrink-0" />
-											<span className="truncate">Use custom model "{searchQuery.trim()}"</span>
+											<span className="truncate">Użyj własnego modelu „{searchQuery.trim()}"</span>
 										</div>
 									)}
 							</>
@@ -1386,7 +1386,7 @@ export const ModelSelector = ({
 								type="text"
 								value={customModelInput}
 								onChange={(e) => setCustomModelInput(e.target.value)}
-								placeholder="Enter custom model ID..."
+								placeholder="Wpisz identyfikator modelu…"
 								className="flex-1 h-6 px-2 text-[11px] bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-none focus:border-vscode-focusBorder"
 							/>
 							<Button

@@ -60,7 +60,7 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 	return (
 		<>
 			<div>
-				<label className="block font-medium mb-1">Authentication Method</label>
+				<label className="block font-medium mb-1">Sposób uwierzytelniania</label>
 				<Select
 					value={
 						apiConfiguration?.awsUseApiKey

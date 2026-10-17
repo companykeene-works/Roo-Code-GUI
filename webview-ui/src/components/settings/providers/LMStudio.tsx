@@ -157,7 +157,7 @@ export const LMStudio = ({ apiConfiguration, setApiConfigurationField }: LMStudi
 						b: <VSCodeLink href="https://lmstudio.ai/docs/basics/server" />,
 						span: (
 							<span className="text-vscode-errorForeground ml-1">
-								<span className="font-medium">Note:</span>
+								<span className="font-medium">Uwaga:</span>
 							</span>
 						),
 					}}

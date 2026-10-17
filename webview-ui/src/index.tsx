@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 
 import "./i18n/setup"
 import "./index.css"
+import "./workspace.css"
 import App from "./App"
 import "../node_modules/@vscode/codicons/dist/codicon.css"
 import { CrashBoundary } from "./components/CrashBoundary"

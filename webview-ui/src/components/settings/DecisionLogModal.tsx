@@ -72,28 +72,28 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 				return (
 					<Badge className="bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1 font-mono text-[10px]">
 						<CheckCircle2 className="size-3" />
-						APPROVED
+						ZATWIERDZONO
 					</Badge>
 				)
 			case "DENIED_AND_REPLAN":
 				return (
 					<Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-mono text-[10px]">
 						<AlertTriangle className="size-3" />
-						REPLAN
+						ZMIEŃ PLAN
 					</Badge>
 				)
 			case "HARD_BLOCK":
 				return (
 					<Badge className="bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1 font-mono text-[10px]">
 						<XCircle className="size-3" />
-						BLOCKED
+						ZABLOKOWANO
 					</Badge>
 				)
 			case "MANUAL_APPROVAL":
 				return (
 					<Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1 font-mono text-[10px]">
 						<ShieldCheck className="size-3" />
-						MANUAL ASK
+						PYTANIE DO UŻYTKOWNIKA
 					</Badge>
 				)
 			default:
@@ -113,15 +113,15 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 					<div className="flex items-center justify-between pr-6">
 						<div className="flex items-center gap-2">
 							<ShieldCheck className="size-5 text-vscode-textLink-foreground" />
-							<DialogTitle className="text-base font-semibold">Autonomous Decision Log</DialogTitle>
+							<DialogTitle className="text-base font-semibold">Historia decyzji agenta</DialogTitle>
 						</div>
 						<Button variant="ghost" size="sm" onClick={fetchEntries} disabled={isLoading} className="h-7 px-2">
 							<RefreshCw className={`size-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} />
-							Refresh
+							Odśwież
 						</Button>
 					</div>
 					<DialogDescription className="text-xs text-vscode-descriptionForeground">
-						Audit trail of all autonomous safety decisions made by the independent Approval Authority model.
+						Decyzje niezależnego modelu dotyczące bezpieczeństwa działań agenta.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -129,7 +129,7 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 					<div className="relative flex-1">
 						<Search className="absolute left-2.5 top-2.5 size-3.5 text-vscode-descriptionForeground" />
 						<Input
-							placeholder="Search actions, targets, reasons, or models..."
+							placeholder="Szukaj działań, uzasadnień lub modeli…"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-8 h-8 text-xs"
@@ -143,7 +143,7 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 								size="sm"
 								className="h-8 text-xs px-2.5"
 								onClick={() => setFilterDecision(type)}>
-								{type === "all" ? "All" : type === "ALLOW_AUTO" ? "Approved" : type === "DENIED_AND_REPLAN" ? "Replan" : type === "HARD_BLOCK" ? "Blocked" : "Manual"}
+								{type === "all" ? "Wszystkie" : type === "ALLOW_AUTO" ? "Zatwierdzone" : type === "DENIED_AND_REPLAN" ? "Zmiana planu" : type === "HARD_BLOCK" ? "Zablokowane" : "Ręcznie"}
 							</Button>
 						))}
 					</div>
@@ -153,8 +153,8 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 					{filteredEntries.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground text-sm">
 							<Clock className="size-8 mb-2 opacity-50" />
-							<p>No decision logs recorded yet.</p>
-							<p className="text-xs opacity-75">Autonomous approvals and replans will appear here.</p>
+							<p>Nie ma jeszcze żadnych decyzji.</p>
+							<p className="text-xs opacity-75">Tutaj pojawią się zatwierdzenia i zalecenia zmiany planu.</p>
 						</div>
 					) : (
 						filteredEntries.map((entry) => (
@@ -183,14 +183,14 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 
 								{entry.reason && (
 									<div className="text-[11px] text-amber-300/90 bg-amber-500/10 p-1.5 rounded border border-amber-500/20">
-										<span className="font-semibold">Reason: </span>
+										<span className="font-semibold">Uzasadnienie: </span>
 										{entry.reason}
 									</div>
 								)}
 
 								{entry.replanGuidance && (
 									<div className="text-[11px] text-vscode-descriptionForeground italic">
-										<span className="font-semibold not-italic">Guidance to worker: </span>
+										<span className="font-semibold not-italic">Wskazówki dla agenta: </span>
 										{entry.replanGuidance}
 									</div>
 								)}
