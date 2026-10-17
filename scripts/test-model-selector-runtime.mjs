@@ -70,6 +70,46 @@ try {
 		await agent.$eval(".model-selector-filters button", (el) => el.click())
 	}
 	results.push("Search empty state, clear action and capability filters work")
+	const collapseQuickSections = async () =>
+		agent.$$eval('.model-quick-section .model-section-toggle[aria-expanded="true"]', (buttons) =>
+			buttons.forEach((button) => button.click()),
+		)
+	await collapseQuickSections()
+	const families = await agent.$$eval("[data-model-family]", (groups) =>
+		groups.map((group) => ({
+			family: group.dataset.modelFamily,
+			models: group.querySelectorAll("[data-model-option]").length,
+		})),
+	)
+	assert.ok(families.length > 0)
+	assert.ok(families.every((group) => group.models > 0))
+	await agent.$eval(".model-selector-list", (el) => {
+		el.scrollTop = 0
+	})
+	await page.screenshot({ path: ".design-qa/model-families-dark.png" })
+	const firstFamily = families[0].family
+	await agent.$eval("[data-model-family] .model-section-toggle", (el) => el.click())
+	assert.equal(
+		await agent.$eval("[data-model-family] .model-section-toggle", (el) => el.getAttribute("aria-expanded")),
+		"true",
+	)
+	await page.screenshot({ path: ".design-qa/model-family-expanded.png" })
+	await agent.$eval("[data-model-family] .model-section-toggle", (el) => el.click())
+	assert.equal(
+		await agent.$eval("[data-model-family] .model-section-toggle", (el) => el.getAttribute("aria-expanded")),
+		"false",
+	)
+	if (families.length > 1) {
+		await agent.$eval("[data-model-family]:nth-of-type(2) .model-section-toggle", (el) => el.click())
+		await agent.$eval(".model-selector-search input", (el) => el.focus())
+		await page.keyboard.press("ArrowDown")
+		assert.notEqual(
+			await agent.evaluate(() => document.activeElement.closest("[data-model-family]")?.dataset.modelFamily),
+			firstFamily,
+		)
+		await agent.$eval("[data-model-family]:nth-of-type(2) .model-section-toggle", (el) => el.click())
+	}
+	results.push("Family groups contain models; quick sections and families collapse; keyboard skips hidden rows")
 	await page.keyboard.press("Escape")
 	await page.$eval("#open-settings-btn", (el) => el.click())
 	await page.waitForSelector("#settings-modal-backdrop:not(.hidden)")
@@ -84,7 +124,19 @@ try {
 	await new Promise((resolve) => setTimeout(resolve, 500))
 	await open()
 	await page.screenshot({ path: ".design-qa/model-picker-light.png" })
+	await collapseQuickSections()
+	await agent.$eval(".model-selector-list", (el) => {
+		el.scrollTop = 0
+	})
+	await page.screenshot({ path: ".design-qa/model-families-light.png" })
 	await page.setViewport({ width: 900, height: 720 })
+	await agent.waitForFunction(
+		() => {
+			const r = document.querySelector(".model-selector-panel").getBoundingClientRect()
+			return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight
+		},
+		{ polling: 100 },
+	)
 	const fits = await agent.$eval(".model-selector-panel", (el) => {
 		const r = el.getBoundingClientRect()
 		return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight

@@ -41,6 +41,15 @@ import { vscode } from "@/utils/vscode"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { MODELS_BY_PROVIDER } from "@/components/settings/constants"
 import { IconButton } from "./IconButton"
+import {
+	modelFamilies,
+	modelFamilyOrder,
+	ModelFamilyIcon,
+	extractModelFamily,
+	modelVersionParts,
+	type ModelFamily,
+} from "./model-families"
+export { extractModelFamily, type ModelFamily } from "./model-families"
 import "./model-selector.css"
 
 export interface ModelSelectorProps {
@@ -72,19 +81,6 @@ export interface ModelItem {
 }
 
 export type ModelCategory = "all" | "reasoning" | "fast" | "coder" | "vision" | "default"
-
-export type ModelFamily = "claude" | "openai" | "deepseek" | "gemini" | "qwen" | "other"
-
-export const extractModelFamily = (id: string): ModelFamily => {
-	const lower = id.toLowerCase()
-	if (lower.includes("claude") || lower.includes("anthropic")) return "claude"
-	if (lower.includes("gpt") || lower.includes("openai") || /(?:^|[\/_\-])o[1-9](?:[\/_\-]|$)/i.test(lower))
-		return "openai"
-	if (lower.includes("deepseek")) return "deepseek"
-	if (lower.includes("gemini") || lower.includes("google")) return "gemini"
-	if (lower.includes("qwen")) return "qwen"
-	return "other"
-}
 
 export const extractModelVersion = (id: string): number => {
 	const lower = id.toLowerCase()
@@ -182,22 +178,7 @@ export const getModelTierScore = (id: string): number => {
 }
 
 export const compareModels = (a: ModelItem, b: ModelItem): number => {
-	const getFamilyPriority = (fam: ModelFamily): number => {
-		switch (fam) {
-			case "claude":
-				return 1
-			case "openai":
-				return 2
-			case "deepseek":
-				return 3
-			case "gemini":
-				return 4
-			case "qwen":
-				return 5
-			default:
-				return 6
-		}
-	}
+	const getFamilyPriority = (family: ModelFamily) => modelFamilyOrder.indexOf(family)
 
 	const famA = extractModelFamily(a.id)
 	const famB = extractModelFamily(b.id)
@@ -207,10 +188,12 @@ export const compareModels = (a: ModelItem, b: ModelItem): number => {
 	if (prioA !== prioB) return prioA - prioB
 
 	if (famA !== "other") {
-		// Inside same known family: sort descending by version
-		const verA = extractModelVersion(a.id)
-		const verB = extractModelVersion(b.id)
-		if (verA !== verB) return verB - verA
+		const versionA = modelVersionParts(a.id)
+		const versionB = modelVersionParts(b.id)
+		for (let i = 0; i < Math.max(versionA.length, versionB.length); i++) {
+			const difference = (versionB[i] || 0) - (versionA[i] || 0)
+			if (difference) return difference
+		}
 
 		// Inside same version: sort descending by tier score
 		const tierA = getModelTierScore(a.id)
@@ -218,7 +201,10 @@ export const compareModels = (a: ModelItem, b: ModelItem): number => {
 		if (tierA !== tierB) return tierB - tierA
 	}
 
-	return a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true })
+	return (
+		a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) ||
+		a.id.localeCompare(b.id, undefined, { sensitivity: "base", numeric: true })
+	)
 }
 
 export const promoteDynamicFlagships = (models: ModelItem[]): Set<string> => {
@@ -426,6 +412,7 @@ export const ModelSelector = ({
 	const { t } = useAppTranslation()
 	const [open, setOpen] = useState(false)
 	const [searchQuery, setSearchQuery] = useState("")
+	const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set(modelFamilyOrder))
 	const [customModelInput, setCustomModelInput] = useState("")
 	const [selectedCategory, setSelectedCategory] = useState<ModelCategory>("all")
 	const searchInputRef = useRef<HTMLInputElement>(null)
@@ -1057,6 +1044,29 @@ export const ModelSelector = ({
 		return { flagshipModels: flagship, allOtherModels: other }
 	}, [filteredModels, recentlyUsedModels, activeProvider])
 
+	const familyGroups = useMemo(
+		() =>
+			modelFamilyOrder
+				.map((family) => ({
+					family,
+					models: allOtherModels.filter((m) => extractModelFamily(m.id) === family).sort(compareModels),
+				}))
+				.filter((group) => group.models.length > 0),
+		[allOtherModels],
+	)
+
+	useEffect(() => {
+		setCollapsedSections(new Set(searchQuery.trim() || selectedCategory !== "all" ? [] : modelFamilyOrder))
+	}, [searchQuery, selectedCategory])
+
+	const toggleSection = (key: string) =>
+		setCollapsedSections((previous) => {
+			const next = new Set(previous)
+			if (next.has(key)) next.delete(key)
+			else next.add(key)
+			return next
+		})
+
 	// Switch model
 	const handleSelectModel = useCallback(
 		(modelId: string, isCustom = false) => {
@@ -1253,6 +1263,7 @@ export const ModelSelector = ({
 				getCanonicalModelKey(effectiveProvider, m.id) ===
 				getCanonicalModelKey(effectiveProvider, effectiveModelId)
 			const context = formatContextWindow(m.contextWindow)
+			const variant = m.id.includes(":") ? m.id.slice(m.id.indexOf(":") + 1) : null
 			const capability = m.isReasoning
 				? { label: "Rozumowanie", Icon: Brain }
 				: m.isCoder
@@ -1280,27 +1291,38 @@ export const ModelSelector = ({
 						.join("\n")}
 					onClick={() => handleSelectModel(m.id)}
 					className="model-option">
+					<ModelFamilyIcon family={extractModelFamily(m.id)} />
 					<div className="model-option-content">
 						<div className="model-option-heading">
-							<span className="model-option-name">{m.name}</span>
-							{capability && (
-								<span className="model-capability">
-									<capability.Icon aria-hidden="true" />
-									{capability.label}
+							<span className="model-option-label">
+								<span className="model-option-name">{m.name}</span>
+								{variant && <span className="model-option-variant">{variant}</span>}
+							</span>
+							{isSelected && (
+								<span className="model-option-selected">
+									<Check aria-hidden="true" />
+									Wybrany
 								</span>
 							)}
 						</div>
 						<div className="model-option-meta">
-							<span className="model-option-provider">{currentProviderLabel}</span>
+							<span className="model-option-provider" title={"Dostawca API: " + currentProviderLabel}>
+								{currentProviderLabel}
+							</span>
+							{capability ? (
+								<span className="model-capability">
+									<capability.Icon aria-hidden="true" />
+									{capability.label}
+								</span>
+							) : (
+								<span />
+							)}
 							<span className="model-option-context">
 								<span>Kontekst</span>
 								<strong>{context || "Brak danych"}</strong>
 							</span>
 						</div>
 					</div>
-					<span className="model-option-check" aria-hidden="true">
-						{isSelected && <Check />}
-					</span>
 				</button>
 			)
 		},
@@ -1314,7 +1336,9 @@ export const ModelSelector = ({
 		if (!isSearch && !target.hasAttribute("data-model-option")) return
 		if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
 		if (isSearch && (event.key === "Home" || event.key === "End")) return
-		const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-model-option]"))
+		const options = Array.from(
+			event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-model-option]"),
+		).filter((option) => !option.closest("[hidden]"))
 		if (!options.length) return
 		event.preventDefault()
 		const index = options.indexOf(target as HTMLButtonElement)
@@ -1392,7 +1416,7 @@ export const ModelSelector = ({
 							<h3>Wybierz model</h3>
 							<div className="model-selector-source">
 								<ProviderIcon provider={effectiveProvider} />
-								<span>{currentProviderLabel}</span>
+								<span>Dostawca API: {currentProviderLabel}</span>
 							</div>
 						</div>
 						<div className="model-selector-actions">
@@ -1483,42 +1507,95 @@ export const ModelSelector = ({
 						</div>
 					) : (
 						<>
-							{recentlyUsedModels.length > 0 && (
-								<section className="model-selector-section" aria-labelledby="models-recent-heading">
-									<div className="model-section-heading">
-										<h4 id="models-recent-heading">
-											<History aria-hidden="true" />
-											Ostatnio używane
+							{[
+								{
+									key: "recent",
+									heading: "models-recent-heading",
+									label: "Ostatnio używane",
+									models: recentlyUsedModels,
+									Icon: History,
+								},
+								{
+									key: "recommended",
+									heading: "models-recommended-heading",
+									label: "Polecane modele",
+									models: flagshipModels,
+									Icon: Sparkles,
+								},
+							]
+								.filter((section) => section.models.length > 0)
+								.map((section) => (
+									<section
+										key={section.key}
+										className="model-selector-section model-quick-section"
+										aria-labelledby={section.heading}>
+										<h4 id={section.heading} className="model-section-title">
+											<button
+												type="button"
+												className="model-section-toggle"
+												aria-expanded={!collapsedSections.has(section.key)}
+												aria-controls={"models-" + section.key + "-list"}
+												onClick={() => toggleSection(section.key)}>
+												<section.Icon aria-hidden="true" />
+												<span>{section.label}</span>
+												<span className="model-group-count" aria-hidden="true">
+													{section.models.length}
+												</span>
+												<ChevronDown aria-hidden="true" />
+											</button>
 										</h4>
-										<span>{recentlyUsedModels.length}</span>
-									</div>
-									{recentlyUsedModels.map((m) => renderModelRow(m, "recent"))}
-								</section>
-							)}
-							{flagshipModels.length > 0 && (
+										<div
+											id={"models-" + section.key + "-list"}
+											hidden={collapsedSections.has(section.key)}>
+											{section.models.map((m) => renderModelRow(m, section.key))}
+										</div>
+									</section>
+								))}
+							{familyGroups.length > 0 && (
 								<section
-									className="model-selector-section"
-									aria-labelledby="models-recommended-heading">
+									className="model-selector-section model-family-section"
+									aria-labelledby="models-all-heading">
 									<div className="model-section-heading">
-										<h4 id="models-recommended-heading">
-											<Sparkles aria-hidden="true" />
-											Polecane modele
-										</h4>
-										<span>{flagshipModels.length}</span>
-									</div>
-									{flagshipModels.map((m) => renderModelRow(m, "flagship"))}
-								</section>
-							)}
-							{allOtherModels.length > 0 && (
-								<section className="model-selector-section" aria-labelledby="models-all-heading">
-									<div className="model-section-heading">
-										<h4 id="models-all-heading">
-											<Layers aria-hidden="true" />
-											{flagshipModels.length ? "Pozostałe modele" : "Dostępne modele"}
-										</h4>
+										<h4 id="models-all-heading">Modele według rodzin</h4>
 										<span>{allOtherModels.length}</span>
 									</div>
-									{allOtherModels.map((m) => renderModelRow(m, "all"))}
+									{familyGroups.map(({ family, models }) => (
+										<section
+											key={family}
+											className="model-family-group"
+											data-model-family={family}
+											aria-labelledby={"models-family-" + family + "-heading"}>
+											<h5
+												id={"models-family-" + family + "-heading"}
+												className="model-family-heading">
+												<button
+													type="button"
+													className="model-section-toggle"
+													aria-expanded={!collapsedSections.has(family)}
+													aria-controls={"models-family-" + family + "-list"}
+													onClick={() => toggleSection(family)}>
+													<ModelFamilyIcon family={family} />
+													<span className="model-family-name">
+														{modelFamilies[family].name}
+													</span>
+													{modelFamilies[family].company !== modelFamilies[family].name && (
+														<span className="model-family-company">
+															{modelFamilies[family].company}
+														</span>
+													)}
+													<span className="model-group-count" aria-hidden="true">
+														{models.length}
+													</span>
+													<ChevronDown aria-hidden="true" />
+												</button>
+											</h5>
+											<div
+												id={"models-family-" + family + "-list"}
+												hidden={collapsedSections.has(family)}>
+												{models.map((m) => renderModelRow(m, family))}
+											</div>
+										</section>
+									))}
 								</section>
 							)}
 							{searchQuery.trim() &&

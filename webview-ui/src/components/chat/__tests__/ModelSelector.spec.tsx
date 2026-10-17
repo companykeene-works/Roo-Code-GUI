@@ -8,6 +8,7 @@ import {
 	promoteDynamicFlagships,
 	sanitizeCustomModelId,
 	getCanonicalModelKey,
+	compareModels,
 } from "../ModelSelector"
 import { vscode } from "@/utils/vscode"
 
@@ -81,6 +82,66 @@ describe("ModelSelector", () => {
 			routerModels: undefined,
 			openAiModels: undefined,
 		}
+	})
+
+	test.each([
+		["x-ai/grok-4.1", "grok"],
+		["meta-llama/llama-3.3-70b", "meta"],
+		["mistralai/codestral-2508", "mistral"],
+		["google/gemma-3-27b", "gemma"],
+		["moonshotai/kimi-k2", "kimi"],
+		["deepseek/deepseek-r1-distill-qwen-32b", "deepseek"],
+	])("classifies %s without confusing publisher and distilled base family", (id, family) => {
+		expect(extractModelFamily(id)).toBe(family)
+	})
+
+	test("sorts numeric generations before tiers and keeps variant names stable", () => {
+		const models = ["gpt-5.9", "gpt-5.10-mini", "gpt-5.10", "gpt-4o"].map((id) => ({ id, name: id }))
+		expect(models.sort(compareModels).map((m) => m.id)).toEqual(["gpt-5.10", "gpt-5.10-mini", "gpt-5.9", "gpt-4o"])
+		const claude = ["claude-3.7-sonnet", "claude-sonnet-4-5", "claude-opus-4-5"].map((id) => ({ id, name: id }))
+		expect(claude.sort(compareModels).map((m) => m.id)).toEqual([
+			"claude-opus-4-5",
+			"claude-sonnet-4-5",
+			"claude-3.7-sonnet",
+		])
+	})
+
+	test("groups the main catalog, orders generations and expands search matches in collapsed families", () => {
+		mockExtensionState.openAiModels = ["x-ai/grok-3", "x-ai/grok-4.1", "meta-llama/llama-3.3-70b"]
+		render(<ModelSelector />)
+		fireEvent.click(screen.getByTestId("model-selector-trigger"))
+		const grok = document.querySelector('[data-model-family="grok"]')!
+		expect(
+			Array.from(grok.querySelectorAll<HTMLButtonElement>("[data-model-option]")).map((el) => el.dataset.modelId),
+		).toEqual(["x-ai/grok-4.1", "x-ai/grok-3"])
+		expect(document.querySelector('[data-model-family="meta"]')).toBeInTheDocument()
+		const toggle = grok.querySelector("button")!
+		expect(toggle).toHaveAttribute("aria-expanded", "false")
+		fireEvent.click(toggle)
+		expect(grok.querySelector("[data-model-option]")).toBeVisible()
+		fireEvent.click(toggle)
+		expect(toggle).toHaveAttribute("aria-expanded", "false")
+		expect(grok.querySelector("[data-model-option]")).not.toBeVisible()
+		fireEvent.change(screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" }), {
+			target: { value: "grok" },
+		})
+		expect(toggle).toHaveAttribute("aria-expanded", "true")
+		expect(grok.querySelector("[data-model-option]")).toBeVisible()
+		expect(document.querySelector('[data-model-family="meta"]')).not.toBeInTheDocument()
+	})
+
+	test("keeps tagged variants distinguishable and places standard inference before batch", () => {
+		const models = ["openai/gpt-5:batch", "openai/gpt-5"].map((id) => ({ id, name: "GPT-5" }))
+		expect(models.sort(compareModels).map((m) => m.id)).toEqual(["openai/gpt-5", "openai/gpt-5:batch"])
+		mockExtensionState.openAiModels = ["openai/gpt-5", "openai/gpt-5:batch"]
+		render(<ModelSelector />)
+		fireEvent.click(screen.getByTestId("model-selector-trigger"))
+		fireEvent.change(screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" }), {
+			target: { value: "gpt-5" },
+		})
+		expect(document.querySelector('[data-model-id="openai/gpt-5:batch"] .model-option-variant')).toHaveTextContent(
+			"batch",
+		)
 	})
 
 	test("cleanModelDisplayName formats known models and new generations correctly", () => {
@@ -159,7 +220,9 @@ describe("ModelSelector", () => {
 		render(<ModelSelector />)
 		fireEvent.click(screen.getByTestId("model-selector-trigger"))
 		const input = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
-		const rows = document.querySelectorAll<HTMLButtonElement>("[data-model-option]")
+		const rows = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-model-option]")).filter(
+			(row) => !row.closest("[hidden]"),
+		)
 		expect(
 			Array.from(rows).some(
 				(row) =>
@@ -248,7 +311,7 @@ describe("ModelSelector", () => {
 
 		// Section headers
 		expect(screen.getByText("Polecane modele")).toBeInTheDocument()
-		expect(screen.getByText(/Pozostałe modele/)).toBeInTheDocument()
+		expect(screen.getByText("Modele według rodzin")).toBeInTheDocument()
 
 		// Dynamic model rendered
 		expect(screen.getByText("Custom Test Model")).toBeInTheDocument()
