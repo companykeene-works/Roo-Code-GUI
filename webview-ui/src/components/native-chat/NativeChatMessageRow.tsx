@@ -60,8 +60,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 		<div
 			className={`group relative py-4 px-4 sm:px-6 transition-colors ${
 				isUser ? "bg-transparent" : "bg-[var(--vscode-editor-background,rgba(255,255,255,0.015))]"
-			}`}
-		>
+			}`}>
 			<div className="max-w-3xl mx-auto flex gap-3">
 				{/* Avatar */}
 				<div className="shrink-0 mt-0.5">
@@ -70,7 +69,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 							<User className="w-4 h-4 opacity-80" />
 						</div>
 					) : (
-						<div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20">
+						<div className="w-7 h-7 rounded-full bg-[var(--bg-surface-elevated)] flex items-center justify-center text-[var(--text-secondary)] shadow-none">
 							<Sparkles className="w-4 h-4" />
 						</div>
 					)}
@@ -96,8 +95,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 									type="button"
 									onClick={() => setIsEditing(true)}
 									className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-									title="Edytuj wiadomość & resend"
-								>
+									title="Edytuj wiadomość & resend">
 									<Edit2 className="w-3.5 h-3.5" />
 								</button>
 							)}
@@ -105,17 +103,19 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 								type="button"
 								onClick={handleCopy}
 								className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-								title="Kopiuj wiadomość"
-							>
-								{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+								title="Kopiuj wiadomość">
+								{copied ? (
+									<Check className="w-3.5 h-3.5 text-emerald-400" />
+								) : (
+									<Copy className="w-3.5 h-3.5" />
+								)}
 							</button>
 							{!isUser && isLastAssistantMessage && onRegenerate && (
 								<button
 									type="button"
 									onClick={() => onRegenerate(message.id)}
 									className="p-1 rounded text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-									title="Wygeneruj ponownie"
-								>
+									title="Wygeneruj ponownie">
 									<RotateCw className="w-3.5 h-3.5" />
 								</button>
 							)}
@@ -135,14 +135,13 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 							<button
 								type="button"
 								onClick={() => setIsWebSearchExpanded((prev) => !prev)}
-								className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.04))] transition-colors cursor-pointer select-none"
-							>
+								className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.04))] transition-colors cursor-pointer select-none">
 								<div className="flex items-center gap-2 truncate">
-									<Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+									<Globe className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
 									<span className="truncate">
 										Wyszukiwanie: &ldquo;{message.webSearch.query}&rdquo;
 									</span>
-									<span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500/15 text-sky-300">
+									<span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--accent-subtle)] text-[var(--text-secondary)]">
 										{message.webSearch.results.length} źródeł
 									</span>
 								</div>
@@ -161,8 +160,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 												href={r.url}
 												target="_blank"
 												rel="noopener noreferrer"
-												className="font-medium text-[var(--vscode-textLink-foreground,#3794ff)] hover:underline flex items-center gap-1"
-											>
+												className="font-medium text-[var(--vscode-textLink-foreground,#3794ff)] hover:underline flex items-center gap-1">
 												<span className="truncate">{r.title}</span>
 												<ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
 											</a>
@@ -180,23 +178,22 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 
 					{/* Collapsible Reasoning / Thinking Box */}
 					{message.reasoning && (
-						<div className="mb-3 rounded-lg border border-indigo-500/20 bg-indigo-950/10 overflow-hidden">
+						<div className="mb-3 rounded-lg border border-[var(--border-light)] bg-[var(--bg-hover)] overflow-hidden">
 							<button
 								type="button"
 								onClick={() => setIsReasoningExpanded((prev) => !prev)}
-								className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-500/10 transition-colors cursor-pointer select-none"
-							>
+								className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/10 transition-colors cursor-pointer select-none">
 								<div className="flex items-center gap-2">
-									<Brain className="w-3.5 h-3.5 text-indigo-400" />
+									<Brain className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
 									<span>Tok rozumowania</span>
-									<span className="text-[10px] text-indigo-400/70">
+									<span className="text-[10px] text-[var(--text-secondary)]">
 										({message.reasoning.split(/\s+/).length} słów)
 									</span>
 								</div>
 								{isReasoningExpanded ? (
-									<ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+									<ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
 								) : (
-									<ChevronRight className="w-3.5 h-3.5 text-indigo-400" />
+									<ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
 								)}
 							</button>
 
@@ -224,15 +221,13 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 										setIsEditing(false)
 										setEditText(message.content)
 									}}
-									className="px-2.5 py-1 text-xs rounded border border-[var(--vscode-button-secondaryBorder,transparent)] bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] cursor-pointer"
-								>
+									className="px-2.5 py-1 text-xs rounded border border-[var(--vscode-button-secondaryBorder,transparent)] bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] cursor-pointer">
 									Anuluj
 								</button>
 								<button
 									type="button"
 									onClick={handleSaveEdit}
-									className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-background,#0e639c)] text-[var(--vscode-button-foreground,#ffffff)] hover:bg-[var(--vscode-button-hoverBackground,#1177bb)] cursor-pointer"
-								>
+									className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-background,#0e639c)] text-[var(--vscode-button-foreground,#ffffff)] hover:bg-[var(--vscode-button-hoverBackground,#1177bb)] cursor-pointer">
 									Zapisz i wyślij ponownie
 								</button>
 							</div>
@@ -245,7 +240,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 							) : message.isStreaming ? (
 								message.status ? (
 									<div className="flex items-center gap-2 text-xs text-[var(--vscode-descriptionForeground)] py-1 select-none">
-										<Globe className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+										<Globe className="w-3.5 h-3.5 text-[var(--text-secondary)] animate-spin" />
 										<span>{message.status}</span>
 									</div>
 								) : (
@@ -257,7 +252,7 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 
 					{/* Error Notification */}
 					{message.error && (
-						<div className="mt-2.5 p-2.5 rounded-lg border border-red-500/30 bg-red-950/20 text-xs text-red-300 flex flex-col gap-2">
+						<div className="mt-2.5 p-2.5 rounded-lg border border-[var(--border-light)] bg-[var(--danger-subtle)] text-xs text-[var(--danger)] flex flex-col gap-2">
 							<div className="flex items-start gap-2">
 								<AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
 								<span className="flex-1 leading-relaxed">{message.error}</span>
@@ -269,9 +264,10 @@ export const NativeChatMessageRow: React.FC<NativeChatMessageRowProps> = ({
 								<div className="flex items-center gap-2 pl-6">
 									<button
 										type="button"
-										onClick={() => openSettings({ section: "providers", source: "native_chat_error" })}
-										className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] transition-colors cursor-pointer"
-									>
+										onClick={() =>
+											openSettings({ section: "providers", source: "native_chat_error" })
+										}
+										className="px-2.5 py-1 text-xs rounded font-medium bg-[var(--vscode-button-secondaryBackground,#3a3d41)] text-[var(--vscode-button-secondaryForeground,#ffffff)] hover:bg-[var(--vscode-button-secondaryHoverBackground,#45494e)] transition-colors cursor-pointer">
 										Otwórz ustawienia dostawcy
 									</button>
 								</div>

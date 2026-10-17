@@ -256,12 +256,11 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 		<div
 			className={`native-chat-view flex flex-col h-full w-full bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)] overflow-hidden ${
 				isHidden ? "hidden" : ""
-			}`}
-		>
+			}`}>
 			{/* Top Bar / Header */}
 			<div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.06))] bg-[var(--vscode-editor-background)] shrink-0 select-none">
 				<div className="flex items-center gap-2 truncate">
-					<div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-tight shrink-0">
+					<div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--bg-hover)] border border-[var(--border-light)] text-[var(--text-secondary)] text-xs font-semibold tracking-tight shrink-0">
 						<Sparkles className="w-3 h-3" />
 						<span>Czat AI</span>
 					</div>
@@ -275,8 +274,7 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 						type="button"
 						onClick={handleCreateNewChat}
 						className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md font-medium text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground,rgba(255,255,255,0.08))] transition-colors cursor-pointer"
-						title="Rozpocznij nową rozmowę"
-					>
+						title="Rozpocznij nową rozmowę">
 						<MessageSquarePlus className="w-3.5 h-3.5" />
 						<span>Nowa rozmowa</span>
 					</button>
@@ -312,8 +310,7 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 						type="button"
 						onClick={() => virtuosoRef.current?.scrollToIndex({ index: "LAST", behavior: "smooth" })}
 						className="absolute bottom-4 right-6 p-2 rounded-full bg-[var(--vscode-editorWidget-background,#252526)] hover:bg-[var(--vscode-list-hoverBackground,#2a2d2e)] text-[var(--vscode-editor-foreground)] border border-[var(--vscode-editorWidget-border,rgba(255,255,255,0.15))] shadow-xl transition-all cursor-pointer z-20"
-						title="Przejdź do najnowszej wiadomości"
-					>
+						title="Przejdź do najnowszej wiadomości">
 						<ArrowDown className="w-4 h-4" />
 					</button>
 				)}
@@ -326,12 +323,14 @@ export const NativeChatView: React.FC<NativeChatViewProps> = ({ isHidden = false
 					initialText={session?.draft?.text || ""}
 					initialImages={session?.draft?.images || []}
 					initialWebSearchMode={session?.draft?.webSearchMode || "auto"}
-					modelPreference={session?.modelPreference || {
-						apiProvider: preferences?.apiProvider || "xkiro",
-						modelId: preferences?.modelId || "openai/gpt-5.6-terra",
-						reasoningEffort: preferences?.reasoningEffort || "medium",
-						webSearchMode: preferences?.webSearchMode || "auto",
-					}}
+					modelPreference={
+						session?.modelPreference || {
+							apiProvider: preferences?.apiProvider || "xkiro",
+							modelId: preferences?.modelId || "openai/gpt-5.6-terra",
+							reasoningEffort: preferences?.reasoningEffort || "medium",
+							webSearchMode: preferences?.webSearchMode || "auto",
+						}
+					}
 					onModelPreferenceChange={handleModelPreferenceChange}
 					isStreaming={isStreaming}
 					onSend={handleSend}

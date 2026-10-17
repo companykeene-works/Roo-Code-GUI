@@ -219,18 +219,7 @@ export const ModeSelector = ({
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid="mode-selector-trigger"
-					className={cn(
-						"h-8 inline-flex items-center relative whitespace-nowrap px-2 text-xs",
-						"bg-transparent border border-border/40 rounded-md text-vscode-foreground",
-						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
-						disabled
-							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 hover:bg-vscode-toolbar-hoverBackground/60 hover:border-border/70 cursor-pointer",
-						triggerClassName,
-						!disabled && !hasOpenedModeSelector
-							? "bg-primary opacity-90 hover:bg-primary-hover text-vscode-button-foreground"
-							: null,
-					)}>
+					className={cn("agent-toolbar-control shrink-0", triggerClassName)}>
 					<span className="flex items-center gap-1.5 truncate">
 						<ModeIcon icon={selectedMode?.icon} slug={selectedMode?.slug} className="size-3.5 opacity-80" />
 						<span className="truncate">{cleanModeName(selectedMode?.name || "")}</span>
@@ -241,7 +230,7 @@ export const ModeSelector = ({
 				align="start"
 				sideOffset={4}
 				container={portalContainer}
-				className="p-0 overflow-hidden min-w-80 max-w-9/10">
+				className="agent-mode-menu p-0 overflow-hidden min-w-80 max-w-9/10">
 				<div className="flex flex-col w-full">
 					{/* Show search bar only when there are more than SEARCH_THRESHOLD items, otherwise show info blurb */}
 					{showSearch ? (
@@ -294,7 +283,9 @@ export const ModeSelector = ({
 											)}
 											data-testid="mode-selector-item">
 											<div className="flex items-center gap-2.5 flex-1 min-w-0">
-												<div className="p-1 rounded bg-[rgba(255,255,255,0.06)] text-vscode-foreground shrink-0">
+												<div
+													data-mode-icon-box=""
+													className="p-1 rounded bg-[var(--bg-hover)] text-vscode-foreground shrink-0">
 													<ModeIcon icon={mode.icon} slug={mode.slug} className="size-4" />
 												</div>
 												<div className="flex-1 min-w-0">

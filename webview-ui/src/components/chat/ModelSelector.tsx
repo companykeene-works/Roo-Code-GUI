@@ -375,23 +375,23 @@ export const formatContextWindow = (tokens?: number): string | null => {
 const ProviderIcon = ({ provider, className }: { provider: string; className?: string }) => {
 	switch (provider) {
 		case "xkiro":
-			return <Sparkles className={cn("size-3.5 text-[#a78bfa] flex-shrink-0", className)} />
+			return <Sparkles className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "anthropic":
-			return <Brain className={cn("size-3.5 text-[#f97316] flex-shrink-0", className)} />
+			return <Brain className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "gemini":
-			return <Sparkles className={cn("size-3.5 text-[#38bdf8] flex-shrink-0", className)} />
+			return <Sparkles className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "deepseek":
-			return <Cpu className={cn("size-3.5 text-[#3b82f6] flex-shrink-0", className)} />
+			return <Cpu className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "openrouter":
-			return <Layers className={cn("size-3.5 text-[#818cf8] flex-shrink-0", className)} />
+			return <Layers className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "openai":
 		case "openai-native":
-			return <Bot className={cn("size-3.5 text-[#10b981] flex-shrink-0", className)} />
+			return <Bot className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		case "ollama":
 		case "lmstudio":
-			return <Server className={cn("size-3.5 text-[#f59e0b] flex-shrink-0", className)} />
+			return <Server className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 		default:
-			return <Sparkles className={cn("size-3.5 text-[#a78bfa] flex-shrink-0", className)} />
+			return <Sparkles className={cn("size-3.5 text-vscode-descriptionForeground flex-shrink-0", className)} />
 	}
 }
 
@@ -1299,7 +1299,7 @@ export const ModelSelector = ({
 					disabled={disabled}
 					data-testid={triggerTestId || "model-selector-trigger"}
 					className={cn(
-						"model-selector-trigger h-8 min-w-0 inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 text-xs bg-transparent border border-border/40 rounded-md text-vscode-foreground focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+						"agent-toolbar-control model-selector-trigger h-8 min-w-0 inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 text-xs bg-transparent border border-border/40 rounded-md text-vscode-foreground focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 						disabled
 							? "opacity-50 cursor-not-allowed"
 							: "hover:bg-vscode-toolbar-hoverBackground cursor-pointer",

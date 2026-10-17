@@ -60,7 +60,7 @@
 	--text-primary: #e1f0f2; --text-secondary: #abc2c8; --text-muted: #8ba6ae;
 	--accent: #83c9d5; --border-focus: #83c9d5;
 }
-:root, [data-theme] {
+:root, :root[data-theme], body[data-theme] {
 	--font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
 	--font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
 	--vscode-font-family: var(--font-sans);
@@ -134,9 +134,29 @@
 	--input: var(--bg-surface);
 	--ring: var(--border-focus);
 	--radius: 10px;
+	--radius-control: 8px;
+	--radius-panel: 12px;
+	--motion-fast: 120ms;
+	--motion-normal: 160ms;
+	--shadow-floating: 0 12px 36px #00000026, 0 2px 6px #00000012;
+	--shadow-dialog: 0 24px 64px #00000030;
+	--destructive: var(--danger);
+	--destructive-foreground: var(--bg-canvas);
+	--vscode-charts-green: var(--success);
+	--vscode-charts-yellow: var(--warning);
+	--vscode-charts-red: var(--danger);
+	--vscode-inputValidation-warningForeground: var(--warning);
+	--vscode-inputValidation-warningBackground: var(--warning-subtle);
+	--vscode-inputValidation-warningBorder: var(--border-light);
+	--vscode-inputValidation-infoForeground: var(--accent);
+	--vscode-inputValidation-infoBackground: var(--accent-subtle);
+	--vscode-inputValidation-infoBorder: var(--border-light);
+	--vscode-notificationsWarningIcon-foreground: var(--warning);
+	--vscode-notificationsErrorIcon-foreground: var(--danger);
+	--vscode-notificationsInfoIcon-foreground: var(--accent);
 	color-scheme: dark;
 }
-[data-theme="clean-light"], body.light-theme { color-scheme: light; }
+:root[data-theme="clean-light"], body[data-theme="clean-light"], body.light-theme { color-scheme: light; }
 button, input, select, textarea { font: inherit; }
 button, a, input, select, textarea, [tabindex] { outline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--border-focus); }

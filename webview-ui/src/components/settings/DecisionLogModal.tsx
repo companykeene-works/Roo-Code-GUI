@@ -1,12 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react"
 import type { DecisionLogEntry } from "@roo-code/types"
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge, Button, Input } from "@/components/ui"
 import { vscode } from "@/utils/vscode"
 import { ShieldCheck, CheckCircle2, AlertTriangle, XCircle, Search, RefreshCw, Clock } from "lucide-react"
@@ -70,14 +64,14 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 		switch (decision) {
 			case "ALLOW_AUTO":
 				return (
-					<Badge className="bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1 font-mono text-[10px]">
+					<Badge className="bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--border-light)] flex items-center gap-1 font-mono text-[10px]">
 						<CheckCircle2 className="size-3" />
 						ZATWIERDZONO
 					</Badge>
 				)
 			case "DENIED_AND_REPLAN":
 				return (
-					<Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-mono text-[10px]">
+					<Badge className="bg-[var(--warning-subtle)] text-[var(--warning)] border border-[var(--border-light)] flex items-center gap-1 font-mono text-[10px]">
 						<AlertTriangle className="size-3" />
 						ZMIEŃ PLAN
 					</Badge>
@@ -91,14 +85,14 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 				)
 			case "MANUAL_APPROVAL":
 				return (
-					<Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1 font-mono text-[10px]">
+					<Badge className="bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--border-light)] flex items-center gap-1 font-mono text-[10px]">
 						<ShieldCheck className="size-3" />
 						PYTANIE DO UŻYTKOWNIKA
 					</Badge>
 				)
 			default:
 				return (
-					<Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1 font-mono text-[10px]">
+					<Badge className="bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--border-light)] flex items-center gap-1 font-mono text-[10px]">
 						<ShieldCheck className="size-3" />
 						{decision}
 					</Badge>
@@ -115,7 +109,12 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 							<ShieldCheck className="size-5 text-vscode-textLink-foreground" />
 							<DialogTitle className="text-base font-semibold">Historia decyzji agenta</DialogTitle>
 						</div>
-						<Button variant="ghost" size="sm" onClick={fetchEntries} disabled={isLoading} className="h-7 px-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={fetchEntries}
+							disabled={isLoading}
+							className="h-7 px-2">
 							<RefreshCw className={`size-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} />
 							Odśwież
 						</Button>
@@ -143,7 +142,15 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 								size="sm"
 								className="h-8 text-xs px-2.5"
 								onClick={() => setFilterDecision(type)}>
-								{type === "all" ? "Wszystkie" : type === "ALLOW_AUTO" ? "Zatwierdzone" : type === "DENIED_AND_REPLAN" ? "Zmiana planu" : type === "HARD_BLOCK" ? "Zablokowane" : "Ręcznie"}
+								{type === "all"
+									? "Wszystkie"
+									: type === "ALLOW_AUTO"
+										? "Zatwierdzone"
+										: type === "DENIED_AND_REPLAN"
+											? "Zmiana planu"
+											: type === "HARD_BLOCK"
+												? "Zablokowane"
+												: "Ręcznie"}
 							</Button>
 						))}
 					</div>
@@ -154,7 +161,9 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 						<div className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground text-sm">
 							<Clock className="size-8 mb-2 opacity-50" />
 							<p>Nie ma jeszcze żadnych decyzji.</p>
-							<p className="text-xs opacity-75">Tutaj pojawią się zatwierdzenia i zalecenia zmiany planu.</p>
+							<p className="text-xs opacity-75">
+								Tutaj pojawią się zatwierdzenia i zalecenia zmiany planu.
+							</p>
 						</div>
 					) : (
 						filteredEntries.map((entry) => (
@@ -182,7 +191,7 @@ export const DecisionLogModal: React.FC<DecisionLogModalProps> = ({ isOpen, onCl
 								</div>
 
 								{entry.reason && (
-									<div className="text-[11px] text-amber-300/90 bg-amber-500/10 p-1.5 rounded border border-amber-500/20">
+									<div className="text-[11px] text-[var(--warning)] bg-[var(--warning-subtle)] p-1.5 rounded border border-[var(--border-light)]">
 										<span className="font-semibold">Uzasadnienie: </span>
 										{entry.reason}
 									</div>

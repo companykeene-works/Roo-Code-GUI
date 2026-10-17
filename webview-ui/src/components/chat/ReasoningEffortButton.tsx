@@ -1,11 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react"
 import { Brain, ChevronDown, Check } from "lucide-react"
 
-import {
-	type ProviderSettings,
-	type ModelInfo,
-	modelSupportsReasoning,
-} from "@roo-code/types"
+import { type ProviderSettings, type ModelInfo, modelSupportsReasoning } from "@roo-code/types"
 
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
@@ -72,13 +68,8 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 		[t],
 	)
 
-	const {
-		apiConfiguration,
-		currentApiConfigName,
-		setApiConfiguration,
-		currentTaskItem,
-		openAiModelInfos,
-	} = useExtensionState()
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, currentTaskItem, openAiModelInfos } =
+		useExtensionState()
 
 	const selectedModel = useSelectedModel(apiConfiguration, openAiModelInfos)
 	const isTaskExecuting = Boolean(disabled && currentTaskItem?.executionModelId)
@@ -92,11 +83,9 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 	// Check if the selected model supports reasoning
 	const activeModelSupportsReasoning = useMemo(() => {
 		const supportsEffort =
-			activeModelInfo?.supportsReasoningEffort !== undefined &&
-			activeModelInfo?.supportsReasoningEffort !== false
+			activeModelInfo?.supportsReasoningEffort !== undefined && activeModelInfo?.supportsReasoningEffort !== false
 		const hasLevels =
-			Array.isArray(activeModelInfo?.reasoningEffortLevels) &&
-			activeModelInfo.reasoningEffortLevels.length > 0
+			Array.isArray(activeModelInfo?.reasoningEffortLevels) && activeModelInfo.reasoningEffortLevels.length > 0
 
 		return !!(
 			supportsEffort ||
@@ -128,10 +117,7 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 
 	// Current reasoning effort state
 	const currentEffort: string = useMemo(() => {
-		if (
-			apiConfiguration?.enableReasoningEffort === false ||
-			apiConfiguration?.reasoningEffort === "disable"
-		) {
+		if (apiConfiguration?.enableReasoningEffort === false || apiConfiguration?.reasoningEffort === "disable") {
 			return "Off"
 		}
 		const effort = (
@@ -202,17 +188,11 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid="reasoning-effort-trigger"
-					className={cn(
-						"h-8 w-auto inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-xs shrink-0",
-						"border border-border/40 rounded-md text-vscode-foreground",
-						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-						disabled
-							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 hover:bg-vscode-toolbar-hoverBackground/60 hover:border-border/70 cursor-pointer",
-						className,
-					)}>
-					<Brain className="size-3.5 text-amber-400 flex-shrink-0" />
-					<span className="font-medium">{t("chat:effort.label", { level: getEffortLabel(currentEffort) })}</span>
+					className={cn("agent-toolbar-control shrink-0", className)}>
+					<Brain className="size-3.5 text-vscode-descriptionForeground flex-shrink-0" />
+					<span className="font-medium">
+						{t("chat:effort.label", { level: getEffortLabel(currentEffort) })}
+					</span>
 					<ChevronDown className="size-3 text-vscode-descriptionForeground opacity-60 flex-shrink-0 -mr-0.5" />
 				</PopoverTrigger>
 			</StandardTooltip>
@@ -221,11 +201,11 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 				align="start"
 				sideOffset={4}
 				container={portalContainer}
-				className="p-1.5 overflow-hidden w-[160px] bg-vscode-dropdown-background border border-vscode-dropdown-border shadow-xl rounded-md"
+				className="agent-effort-menu"
 				data-testid="reasoning-effort-popover">
 				<div className="flex flex-col gap-0.5" data-testid="reasoning-effort-section">
-					<div className="px-2 py-1 text-[11px] font-semibold text-vscode-descriptionForeground flex items-center gap-1.5 border-b border-vscode-dropdown-border/50 pb-1 mb-0.5 select-none">
-						<Brain className="size-3.5 text-amber-400 flex-shrink-0" />
+					<div className="agent-menu-heading">
+						<Brain className="size-3.5 text-vscode-descriptionForeground flex-shrink-0" />
 						<span>{t("chat:effort.title")}</span>
 					</div>
 					{effortOptions.map((effort) => {
@@ -235,19 +215,13 @@ export const ReasoningEffortButton: React.FC<ReasoningEffortButtonProps> = ({
 								key={effort}
 								type="button"
 								data-testid={`reasoning-effort-pill-${effort.toLowerCase()}`}
+								aria-pressed={isSelected}
 								onClick={(e) => {
 									e.stopPropagation()
 									handleSelectEffort(effort)
 									setOpen(false)
 								}}
-								className={cn(
-									"w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded transition-all cursor-pointer text-left font-medium select-none",
-									isSelected
-										? effort === "Off"
-											? "bg-vscode-button-secondaryBackground text-vscode-foreground font-semibold shadow-xs"
-											: "bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/35 shadow-xs"
-										: "text-vscode-descriptionForeground hover:text-vscode-foreground hover:bg-vscode-toolbar-hoverBackground/60 border border-transparent",
-								)}>
+								className="agent-menu-option">
 								<span>{getEffortLabel(effort)}</span>
 								{isSelected && <Check className="size-3.5 text-current flex-shrink-0" />}
 							</button>

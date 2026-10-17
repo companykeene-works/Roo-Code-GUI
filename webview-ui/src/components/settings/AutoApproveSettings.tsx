@@ -180,12 +180,11 @@ export const AutoApproveSettings = ({
 
 			<Section>
 				{/* Top Segmented Switcher: [ Manual ] [ Auto ] */}
-				<div
-					className="flex bg-vscode-input-background p-1 rounded-lg border border-vscode-input-border max-w-xs mb-4"
-					data-testid="approval-mode-switcher">
+				<div className="approval-segment max-w-xs mb-4" data-testid="approval-mode-switcher">
 					<button
 						type="button"
 						data-testid="approval-mode-manual-btn"
+						aria-pressed={currentApprovalMode === "manual"}
 						className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold transition-all cursor-pointer ${
 							currentApprovalMode === "manual"
 								? "bg-vscode-button-background text-vscode-button-foreground shadow-xs"
@@ -200,6 +199,7 @@ export const AutoApproveSettings = ({
 					<button
 						type="button"
 						data-testid="approval-mode-auto-btn"
+						aria-pressed={currentApprovalMode === "auto"}
 						className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold transition-all cursor-pointer ${
 							currentApprovalMode === "auto"
 								? "bg-vscode-button-background text-vscode-button-foreground shadow-xs"
@@ -207,7 +207,7 @@ export const AutoApproveSettings = ({
 						}`}
 						onClick={() => setCachedStateField("approvalMode", "auto")}>
 						<div className="flex items-center justify-center gap-1.5">
-							<Zap className="size-3.5 text-amber-400" />
+							<Zap className="size-3.5 text-[var(--warning)]" />
 							<span>Automatycznie</span>
 						</div>
 					</button>
@@ -218,13 +218,17 @@ export const AutoApproveSettings = ({
 					<div className="space-y-4" data-testid="autonomous-approval-panel">
 						<div className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] space-y-4">
 							<div className="flex items-start gap-3">
-								<div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+								<div className="p-2 rounded-lg bg-[var(--warning-subtle)] border border-[var(--border-light)] text-[var(--warning)] shrink-0 mt-0.5">
 									<Zap className="size-5" />
 								</div>
 								<div className="space-y-1">
-									<h4 className="text-sm font-semibold text-vscode-foreground">Samodzielna praca agenta</h4>
+									<h4 className="text-sm font-semibold text-vscode-foreground">
+										Samodzielna praca agenta
+									</h4>
 									<p className="text-xs text-vscode-descriptionForeground leading-relaxed">
-										W trybie samodzielnym agent wykonuje bezpieczne operacje bez pytania. Działania, które mogą usunąć dane lub wpłynąć na system, ocenia niezależny <strong>model oceniający</strong> bezpieczeństwo.
+										W trybie samodzielnym agent wykonuje bezpieczne operacje bez pytania. Działania,
+										które mogą usunąć dane lub wpłynąć na system, ocenia niezależny{" "}
+										<strong>model oceniający</strong> bezpieczeństwo.
 									</p>
 								</div>
 							</div>
@@ -232,15 +236,23 @@ export const AutoApproveSettings = ({
 							<div className="p-3 rounded-lg border border-white/[0.06] bg-black/20 space-y-2">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<ShieldCheck className="size-4 text-green-400" />
-										<span className="text-xs font-semibold text-vscode-foreground">Stałe zasady bezpieczeństwa</span>
+										<ShieldCheck className="size-4 text-[var(--success)]" />
+										<span className="text-xs font-semibold text-vscode-foreground">
+											Stałe zasady bezpieczeństwa
+										</span>
 									</div>
-									<Badge variant="outline" className="text-[10px] text-green-400 border-green-500/30 bg-green-500/10">
+									<Badge
+										variant="outline"
+										className="text-[10px] text-[var(--success)] border-[var(--border-light)] bg-[var(--success-subtle)]">
 										Zawsze aktywne
 									</Badge>
 								</div>
 								<p className="text-[11px] text-vscode-descriptionForeground leading-relaxed">
-									Pliki systemowe i poufne dane pozostają chronione. Polecenia mogące uszkodzić system oraz niezaufany kod podlegają dodatkowej kontroli. <strong>Oddzielny model oceniający:</strong> Agent nie może zatwierdzać własnych działań. Gdy niezależny model jest niedostępny, nie odpowiada na czas lub jest tym samym modelem co agent, wymagane jest Twoje potwierdzenie.
+									Pliki systemowe i poufne dane pozostają chronione. Polecenia mogące uszkodzić system
+									oraz niezaufany kod podlegają dodatkowej kontroli.{" "}
+									<strong>Oddzielny model oceniający:</strong> Agent nie może zatwierdzać własnych
+									działań. Gdy niezależny model jest niedostępny, nie odpowiada na czas lub jest tym
+									samym modelem co agent, wymagane jest Twoje potwierdzenie.
 								</p>
 							</div>
 
@@ -317,10 +329,11 @@ export const AutoApproveSettings = ({
 								</div>
 
 								{!isSafetyConfigured && (
-									<div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
-										<AlertTriangle className="size-4 shrink-0 text-amber-400" />
+									<div className="p-2.5 rounded-lg bg-[var(--warning-subtle)] border border-[var(--border-light)] text-[var(--warning)] text-xs flex items-center gap-2">
+										<AlertTriangle className="size-4 shrink-0 text-[var(--warning)]" />
 										<span>
-											Nie skonfigurowano modelu oceniającego. Działania wymagające oceny AI będą czekać na Twoje potwierdzenie.
+											Nie skonfigurowano modelu oceniającego. Działania wymagające oceny AI będą
+											czekać na Twoje potwierdzenie.
 										</span>
 									</div>
 								)}
@@ -465,7 +478,9 @@ export const AutoApproveSettings = ({
 											setCachedStateField("alwaysAllowWriteProtected", e.target.checked)
 										}
 										data-testid="always-allow-write-protected-checkbox">
-										<span className="font-medium">{t("settings:autoApprove.write.protected.label")}</span>
+										<span className="font-medium">
+											{t("settings:autoApprove.write.protected.label")}
+										</span>
 									</VSCodeCheckbox>
 									<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 										{t("settings:autoApprove.write.protected.description")}
@@ -564,7 +579,9 @@ export const AutoApproveSettings = ({
 											variant="secondary"
 											data-testid={`remove-command-${index}`}
 											onClick={() => {
-												const newCommands = (allowedCommands ?? []).filter((_, i) => i !== index)
+												const newCommands = (allowedCommands ?? []).filter(
+													(_, i) => i !== index,
+												)
 												setCachedStateField("allowedCommands", newCommands)
 
 												vscode.postMessage({
@@ -644,10 +661,7 @@ export const AutoApproveSettings = ({
 				)}
 			</Section>
 
-			<DecisionLogModal
-				isOpen={isLogModalOpen}
-				onClose={() => setIsLogModalOpen(false)}
-			/>
+			<DecisionLogModal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} />
 		</div>
 	)
 }

@@ -89,14 +89,7 @@ export const WorktreeSelector = ({ disabled = false }: WorktreeSelectorProps) =>
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid="worktree-selector-trigger"
-					className={cn(
-						"inline-flex gap-1 mx-2 mb-1 items-center relative whitespace-nowrap px-3 py-2",
-						"bg-transparent rounded-full text-vscode-foreground text-left text-sm",
-						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
-						disabled
-							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
-					)}>
+					className={cn("agent-toolbar-control shrink-0")}>
 					<span className="font-semibold mr-2">{t("worktrees:selector.worktree")}:</span>
 					<GitBranch className="w-3 h-3" />
 					<span className="truncate">{currentWorktree?.branch || t("worktrees:noBranch")}</span>
@@ -107,7 +100,7 @@ export const WorktreeSelector = ({ disabled = false }: WorktreeSelectorProps) =>
 				align="start"
 				sideOffset={4}
 				container={portalContainer}
-				className="p-0 overflow-hidden min-w-80 max-w-9/10">
+				className="agent-worktree-menu p-0 overflow-hidden min-w-80 max-w-9/10">
 				<div className="flex flex-col w-full">
 					{/* Bottom bar with settings cog and title */}
 					<div className="px-3 pb-4">

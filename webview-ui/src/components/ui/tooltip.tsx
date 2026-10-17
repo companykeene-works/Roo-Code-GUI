@@ -30,14 +30,14 @@ function TooltipContent({
 				data-slot="tooltip-content"
 				sideOffset={sideOffset}
 				className={cn(
-					"text-vscode-editorHoverWidget-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-[1000] w-fit origin-(--radix-tooltip-content-transform-origin) rounded-sm px-2 py-1 text-xs text-balance",
+					"text-vscode-editorHoverWidget-foreground z-[1000] w-fit origin-(--radix-tooltip-content-transform-origin) rounded-sm px-2 py-1 text-xs text-balance",
 					"max-w-[300px] break-words",
 					className,
 				)}
 				style={{
 					background: "var(--vscode-editorHoverWidget-background, #252526)",
 					border: "1px solid var(--vscode-editorHoverWidget-border, #454545)",
-					boxShadow: "0 4px 12px rgba(0, 0, 0, 0.45)",
+					boxShadow: "var(--shadow-floating)",
 					zIndex: 1000,
 					...style,
 				}}

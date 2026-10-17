@@ -53,6 +53,16 @@ Testy interfejsu nie wysyłają płatnych zapytań do zewnętrznych modeli. Rozm
 
 Build jest lokalny i nie ma podpisu cyfrowego wydawcy.
 
+## Domknięcie warstwy wizualnej
+
+Wspólne tokeny określają teraz także promienie kontrolek i paneli, cienie, czas przejść oraz semantyczne kolory ostrzeżeń i błędów. Usunięto drugi, odziedziczony zestaw pięciu palet z `webview-ui/src/index.css`, który potrafił przywracać stare kolory po zmianie motywu. Widoki Electron i React korzystają z tego samego źródła kolorów.
+
+`ui-surfaces.css` ujednolica komponenty menu, list wyboru, formularzy, dialogów, podpowiedzi i przełączników. Dolny pasek używa wspólnej wysokości, typografii i neutralnych ikon; stan otwartego panelu, aktywnego ustawienia oraz fokus klawiatury mają osobne oznaczenia. Panel rozumowania, zatwierdzania, trybów i worktree korzysta z tej samej warstwy powierzchni. Wskaźnik kontekstu jest neutralny przy zwykłym użyciu i zachowuje wcześniejsze progi ostrzegawcze oraz obliczenia.
+
+Ujednolicono też ustawienia bezpieczeństwa, podglądy motywów, awatary i rozumowanie w czacie, checkpointy, menu kontekstowe oraz stany plików i terminala. Usunięto ozdobne gradienty, pulsujące obwódki i powiększanie kontrolek; animacje ładowania i semantyczne kolory statusów pozostają. Ograniczenie ruchu respektuje ustawienie systemowe. Obsługa i zapis ustawień, w tym bufor `cachedState`, pozostają bez zmian.
+
+`node scripts/audit-interface-runtime.mjs` oraz wariant `--light` zapisują przegląd trzech paneli dolnego paska, trybu automatycznego zatwierdzania, siedmiu kategorii ustawień, pięciu widoków desktopowych i przykładowej rozmowy. Rozmowa jest wyłącznie lokalną próbką wizualną: nie zapisuje się jej i nie wysyła do modelu. Raporty i zrzuty trafiają do `.design-qa/`. Kontrolę uzupełniają skrypty `test-design-runtime.mjs` i `test-model-selector-runtime.mjs` oraz 133 testy UI, stanu konfiguracji, przełączników i obliczeń kontekstu.
+
 ## Panel modeli
 
 Panel używa jednej listy z wierszami o wysokości co najmniej 64 px. Nazwa i subtelne oznaczenie możliwości są oddzielone od dostawcy i wyrównanego kontekstu. Każdy model występuje raz, we właściwej rodzinie. Wyszukiwarka otrzymuje fokus przy otwarciu; strzałki, Home i End przechodzą między widocznymi modelami, Enter wybiera, a Escape zamyka panel. Filtry uwzględniają modele mające kilka możliwości jednocześnie.

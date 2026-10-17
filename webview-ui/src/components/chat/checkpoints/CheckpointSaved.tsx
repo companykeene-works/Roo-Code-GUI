@@ -87,13 +87,13 @@ export const CheckpointSaved = ({
 			className="flex items-center justify-between gap-2 pt-2 pb-3"
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}>
-			<div className="flex items-center gap-2 text-blue-400 whitespace-nowrap">
+			<div className="flex items-center gap-2 text-vscode-descriptionForeground whitespace-nowrap">
 				<GitCommitVertical className="w-4" />
 				<span className="font-semibold">{t("chat:checkpoint.regular")}</span>
 				{isCurrent && <span className="text-muted">({t("chat:checkpoint.current")})</span>}
 			</div>
 			<span
-				className="block w-full h-[2px] mt-[2px] text-xs"
+				className="block w-full h-px mt-[2px]"
 				style={{
 					backgroundImage:
 						"linear-gradient(90deg, rgba(0, 188, 255, .65), rgba(0, 188, 255, .65) 80%, rgba(0, 188, 255, 0) 99%)",

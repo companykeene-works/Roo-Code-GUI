@@ -21,7 +21,7 @@ const THEMES: ThemeOption[] = [
 		description: "Neutralny grafit i łagodny kontrast",
 		bgCanvas: "#202123",
 		bgSurface: "#28292c",
-		accent: "#3b82f6",
+		accent: "#a8c7fa",
 		textColor: "#edeef0",
 	},
 	{
@@ -30,35 +30,35 @@ const THEMES: ThemeOption[] = [
 		description: "Głęboka czerń i wyraźny kontrast",
 		bgCanvas: "#000000",
 		bgSurface: "#0a0a0a",
-		accent: "#3b82f6",
+		accent: "#a8c7fa",
 		textColor: "#ffffff",
 	},
 	{
 		id: "midnight-navy",
 		name: "Granatowy",
 		description: "Ciemne powierzchnie z odcieniami granatu",
-		bgCanvas: "#0d1117",
-		bgSurface: "#161b22",
-		accent: "#58a6ff",
+		bgCanvas: "#161c25",
+		bgSurface: "#1d2531",
+		accent: "#a8c7fa",
 		textColor: "#e6edf3",
 	},
 	{
 		id: "cyberpunk",
 		name: "Cyberpunk",
 		description: "Ciemne tło z akcentami w kolorze cyjanu",
-		bgCanvas: "#090d16",
-		bgSurface: "#0f172a",
-		accent: "#00f0ff",
-		textColor: "#f1f5f9",
+		bgCanvas: "#101b22",
+		bgSurface: "#152630",
+		accent: "#83c9d5",
+		textColor: "#e1f0f2",
 	},
 	{
 		id: "clean-light",
 		name: "Jasny",
 		description: "Jasne powierzchnie i delikatne szarości",
-		bgCanvas: "#edeef0",
-		bgSurface: "#ffffff",
-		accent: "#2563eb",
-		textColor: "#0f172a",
+		bgCanvas: "#ffffff",
+		bgSurface: "#fafafa",
+		accent: "#355f9e",
+		textColor: "#242528",
 		isLight: true,
 	},
 ]
@@ -68,10 +68,7 @@ interface ThemeSettingsProps {
 	onThemeChange: (theme: ThemeType) => void
 }
 
-export const ThemeSettings: React.FC<ThemeSettingsProps> = ({
-	selectedTheme = "linear-dark",
-	onThemeChange,
-}) => {
+export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ selectedTheme = "linear-dark", onThemeChange }) => {
 	const handleSelect = (themeId: ThemeType) => {
 		onThemeChange(themeId)
 	}
@@ -117,9 +114,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({
 										className="w-2.5 h-2.5 rounded-full"
 										style={{ backgroundColor: theme.accent }}
 									/>
-									<span
-										className="text-[10px] font-medium"
-										style={{ color: theme.textColor }}>
+									<span className="text-[10px] font-medium" style={{ color: theme.textColor }}>
 										Aa
 									</span>
 								</div>
@@ -169,7 +164,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({
 								</div>
 
 								{isSelected && (
-									<div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-xs">
+									<div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--text-primary)] text-[var(--bg-canvas)] flex items-center justify-center shadow-xs">
 										<Check className="w-3 h-3 stroke-[3]" />
 									</div>
 								)}

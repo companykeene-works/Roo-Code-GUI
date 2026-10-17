@@ -30,7 +30,11 @@ export interface CheckboxProps
 
 const Checkbox = React.forwardRef<React.ElementRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
 	({ className, variant, ...props }, ref) => (
-		<CheckboxPrimitive.Root ref={ref} className={cn(checkboxVariants({ variant, className }))} {...props}>
+		<CheckboxPrimitive.Root
+			data-ui-checkbox=""
+			ref={ref}
+			className={cn(checkboxVariants({ variant, className }))}
+			{...props}>
 			<CheckboxPrimitive.Indicator className={cn("flex items-center justify-center text-current")}>
 				<Check className="h-4 w-4 text-vscode-background" />
 			</CheckboxPrimitive.Indicator>

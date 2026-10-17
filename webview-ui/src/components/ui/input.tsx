@@ -7,6 +7,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 		return (
 			<input
 				type={type}
+				data-ui-input=""
 				className={cn(
 					"flex w-full text-vscode-input-foreground border border-vscode-dropdown-border bg-vscode-input-background rounded-xl px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-vscode-focusBorder disabled:cursor-not-allowed disabled:opacity-50",
 					className,

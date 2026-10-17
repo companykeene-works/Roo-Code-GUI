@@ -4554,7 +4554,7 @@
 							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
 						</svg>
 						<div class="empty-title">${escapeHtml(tDesktop("noFilesFound"))}</div>
-						<div class="empty-subtitle">Try a different search query</div>
+						<div class="empty-subtitle">Spróbuj innej nazwy pliku</div>
 					</div>
 				`
 			} else {
@@ -4564,7 +4564,7 @@
 							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
 						</svg>
 						<div class="empty-title">${escapeHtml(currentWorkspace?.path ? tDesktop("noFilesFound") : tDesktop("noWorkspaceOpen"))}</div>
-						<div class="empty-subtitle">Workspace is empty or files are ignored</div>
+						<div class="empty-subtitle">Folder jest pusty lub jego pliki są pomijane</div>
 					</div>
 				`
 			}
