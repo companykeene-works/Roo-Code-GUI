@@ -1,0 +1,106 @@
+import assert from "node:assert/strict"
+import fs from "node:fs"
+import { createRequire } from "node:module"
+const require = createRequire(new URL("../src/package.json", import.meta.url))
+const browser = await require("puppeteer-core").connect({ browserURL: "http://127.0.0.1:9223", defaultViewport: null })
+const results = []
+try {
+	const page = (await browser.pages()).find((p) => /^http:\/\/127\.0\.0\.1:\d+\/$/.test(p.url()))
+	assert.ok(page)
+	await page.setViewport({ width: 1300, height: 900 })
+	const errors = []
+	page.on("pageerror", (e) => errors.push(e.message))
+	await page.waitForSelector("#webview-frame")
+	const agent = await (await page.$("#webview-frame")).contentFrame()
+	await agent.waitForSelector(".composer-model", { timeout: 30000 })
+	await agent.addStyleTag({
+		content: "*, *::before, *::after { animation: none !important; transition: none !important; }",
+	})
+	if (await agent.$(".model-selector-panel")) await page.keyboard.press("Escape")
+	const open = async () => {
+		await agent.$eval(".composer-model", (el) => el.click())
+		await agent.waitForSelector(".model-selector-panel")
+		await agent.waitForFunction(
+			() =>
+				document
+					.querySelector(".model-selector-panel")
+					.getAnimations()
+					.every((a) => a.playState === "finished"),
+			{ polling: 100 },
+		)
+	}
+	await open()
+	const dimensions = await agent.$eval(".model-selector-panel", (el) => ({
+		width: el.getBoundingClientRect().width,
+		overflow: el.scrollWidth > el.clientWidth,
+	}))
+	assert.equal(dimensions.width, 456)
+	assert.equal(dimensions.overflow, false)
+	assert.ok(await agent.$eval(".model-option", (el) => el.getBoundingClientRect().height >= 64))
+	assert.equal(await agent.$eval(".model-selector-search input", (el) => el === document.activeElement), true)
+	await page.screenshot({ path: ".design-qa/model-picker-dark.png" })
+	results.push("456px panel, readable rows, autofocus and no horizontal overflow")
+	await page.keyboard.press("ArrowDown")
+	assert.equal(await agent.evaluate(() => document.activeElement?.hasAttribute("data-model-option")), true)
+	const chosen = await agent.evaluate(() => document.activeElement.dataset.modelId)
+	await page.keyboard.press("Enter")
+	await agent.waitForFunction(() => !document.querySelector(".model-selector-panel"), { polling: 100 })
+	await open()
+	await agent.waitForFunction(
+		(id) =>
+			Array.from(document.querySelectorAll('[data-model-option][aria-pressed="true"]')).some(
+				(el) => el.dataset.modelId === id,
+			),
+		{ polling: 100 },
+		chosen,
+	)
+	assert.ok(await agent.$('[aria-labelledby="models-recent-heading"]'))
+	await page.screenshot({ path: ".design-qa/model-picker-dark.png" })
+	results.push("Keyboard selection closes panel, persists active model and shows recent models")
+	await agent.$eval(".model-selector-search input", (el) => el.focus())
+	await page.keyboard.type("no-such-model-qa")
+	await agent.waitForSelector(".model-selector-empty")
+	assert.equal(await agent.$$eval("[data-model-option]", (els) => els.length), 0)
+	await agent.$eval('[aria-label="Wyczyść wyszukiwanie"]', (el) => el.click())
+	await agent.waitForSelector("[data-model-option]")
+	const filter = await agent.$('.model-selector-filters button:not([aria-pressed="true"])')
+	if (filter) {
+		await filter.evaluate((el) => el.click())
+		assert.equal(await agent.$$eval('.model-selector-filters button[aria-pressed="true"]', (els) => els.length), 1)
+		await agent.$eval(".model-selector-filters button", (el) => el.click())
+	}
+	results.push("Search empty state, clear action and capability filters work")
+	await page.keyboard.press("Escape")
+	await page.$eval("#open-settings-btn", (el) => el.click())
+	await page.waitForSelector("#settings-modal-backdrop:not(.hidden)")
+	const settings = await (await page.$("#settings-webview-frame")).contentFrame()
+	await settings.waitForSelector('[data-testid="tab-appearance"]', { timeout: 30000 })
+	await settings.$eval('[data-testid="tab-appearance"]', (el) => el.click())
+	await settings.$eval('[data-testid="theme-card-linear-dark"]', (el) => el.click())
+	await settings.$eval('[data-testid="theme-card-clean-light"]', (el) => el.click())
+	await agent.waitForFunction(() => document.body.dataset.theme === "clean-light", { polling: 100 })
+	await page.$eval("#close-settings-modal-btn", (el) => el.click())
+	// Let the theme broadcast and React remount settle before opening the menu again.
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	await open()
+	await page.screenshot({ path: ".design-qa/model-picker-light.png" })
+	await page.setViewport({ width: 900, height: 720 })
+	const fits = await agent.$eval(".model-selector-panel", (el) => {
+		const r = el.getBoundingClientRect()
+		return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight
+	})
+	assert.ok(fits, "Panel fits the narrow desktop viewport")
+	await page.screenshot({ path: ".design-qa/model-picker-narrow.png" })
+	results.push("Light theme and 900px desktop layout remain readable and inside viewport")
+	await page.keyboard.press("Escape")
+	await page.setViewport({ width: 1300, height: 900 })
+	await page.$eval("#open-settings-btn", (el) => el.click())
+	await settings.$eval('[data-testid="theme-card-linear-dark"]', (el) => el.click())
+	await agent.waitForFunction(() => document.body.dataset.theme === "linear-dark", { polling: 100 })
+	await page.$eval("#close-settings-modal-btn", (el) => el.click())
+	assert.deepEqual(errors, [])
+	fs.writeFileSync(".design-qa/model-picker-results.json", JSON.stringify({ passed: true, results, errors }, null, 2))
+	console.log(results.join("\n"))
+} finally {
+	browser.disconnect()
+}

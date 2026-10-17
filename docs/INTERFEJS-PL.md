@@ -52,3 +52,9 @@ Opcja `--portable` uruchamia gotowy plik `Roo-Code-PL-Portable-1.0.0-x64.exe`. W
 Testy interfejsu nie wysyłają płatnych zapytań do zewnętrznych modeli. Rozmowy z wybranym dostawcą wymagają skonfigurowania jego klucza API, tak jak przed przebudową.
 
 Build jest lokalny i nie ma podpisu cyfrowego wydawcy.
+
+## Panel modeli
+
+Panel używa jednej listy z wierszami o wysokości co najmniej 64 px. Nazwa i subtelne oznaczenie możliwości są oddzielone od dostawcy i wyrównanego kontekstu. Ostatnio używane modele nie powtarzają się w pozostałych sekcjach. Wyszukiwarka otrzymuje fokus przy otwarciu; strzałki, Home i End przechodzą między modelami, Enter wybiera, a Escape zamyka panel. Filtry uwzględniają modele mające kilka możliwości jednocześnie.
+
+`node scripts/test-model-selector-runtime.mjs` sprawdza panel w działającej aplikacji: wybór klawiaturą, zapis aktywnego i ostatnio używanego modelu, wyszukiwanie, filtry, oba motywy i okno 900 px. Zapisuje zrzuty oraz `.design-qa/model-picker-results.json`. Dodatkowo 44 testy jednostkowe selektora i blokady konfiguracji sprawdzają zachowanie wyboru, rozumowania, deduplikacji i historii modeli.

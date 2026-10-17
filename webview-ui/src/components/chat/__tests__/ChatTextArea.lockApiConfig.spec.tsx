@@ -79,8 +79,8 @@ describe("ChatTextArea - lockApiConfigAcrossModes toggle", () => {
 			const button = openPopoverAndGetLockToggle("chat:lockApiConfigAcrossModes")
 			expect(button).toBeInTheDocument()
 			// Unlocked state has muted opacity
-			expect(button.className).toContain("opacity-60")
-			expect(button.className).not.toContain("text-vscode-focusBorder")
+			expect(button).toHaveAttribute("aria-pressed", "false")
+			expect(button).not.toHaveClass("is-locked")
 		})
 
 		it("renders with highlight color when lockApiConfigAcrossModes is true", () => {
@@ -94,8 +94,8 @@ describe("ChatTextArea - lockApiConfigAcrossModes toggle", () => {
 			const button = openPopoverAndGetLockToggle("chat:unlockApiConfigAcrossModes")
 			expect(button).toBeInTheDocument()
 			// Locked state has the focus border highlight color
-			expect(button.className).toContain("text-vscode-focusBorder")
-			expect(button.className).not.toContain("opacity-60")
+			expect(button).toHaveAttribute("aria-pressed", "true")
+			expect(button).toHaveClass("is-locked")
 		})
 
 		it("renders in unlocked state when lockApiConfigAcrossModes is undefined (default)", () => {
@@ -108,7 +108,7 @@ describe("ChatTextArea - lockApiConfigAcrossModes toggle", () => {
 			const button = openPopoverAndGetLockToggle("chat:lockApiConfigAcrossModes")
 			expect(button).toBeInTheDocument()
 			// Default (undefined/falsy) renders in unlocked style
-			expect(button.className).toContain("opacity-60")
+			expect(button).toHaveAttribute("aria-pressed", "false")
 		})
 	})
 

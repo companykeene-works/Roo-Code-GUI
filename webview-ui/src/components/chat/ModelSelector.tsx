@@ -1,5 +1,22 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react"
-import { Check, X, Sparkles, Cpu, Search, Brain, Zap, Bot, Server, Layers, ChevronDown, Plus, RefreshCw, Loader2, Code2, Eye, History } from "lucide-react"
+import {
+	Check,
+	X,
+	Sparkles,
+	Cpu,
+	Search,
+	Brain,
+	Zap,
+	Bot,
+	Server,
+	Layers,
+	ChevronDown,
+	Plus,
+	RefreshCw,
+	Code2,
+	Eye,
+	History,
+} from "lucide-react"
 
 import {
 	type ProviderSettings,
@@ -21,10 +38,10 @@ import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger, StandardTooltip, Button } from "@/components/ui"
 import { cn } from "@/lib/utils"
 import { vscode } from "@/utils/vscode"
-import { openSettings } from "@/utils/settingsNavigation"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { MODELS_BY_PROVIDER } from "@/components/settings/constants"
 import { IconButton } from "./IconButton"
+import "./model-selector.css"
 
 export interface ModelSelectorProps {
 	disabled?: boolean
@@ -61,7 +78,8 @@ export type ModelFamily = "claude" | "openai" | "deepseek" | "gemini" | "qwen" |
 export const extractModelFamily = (id: string): ModelFamily => {
 	const lower = id.toLowerCase()
 	if (lower.includes("claude") || lower.includes("anthropic")) return "claude"
-	if (lower.includes("gpt") || lower.includes("openai") || /(?:^|[\/_\-])o[1-9](?:[\/_\-]|$)/i.test(lower)) return "openai"
+	if (lower.includes("gpt") || lower.includes("openai") || /(?:^|[\/_\-])o[1-9](?:[\/_\-]|$)/i.test(lower))
+		return "openai"
 	if (lower.includes("deepseek")) return "deepseek"
 	if (lower.includes("gemini") || lower.includes("google")) return "gemini"
 	if (lower.includes("qwen")) return "qwen"
@@ -141,10 +159,23 @@ export const getModelTierScore = (id: string): number => {
 	if (lower.includes("opus")) score += 30
 	else if (lower.includes("sonnet") || lower.includes("pro") || lower.includes("max")) score += 20
 	else if (lower.includes("plus") || lower.includes("chat") || lower.includes("reasoner")) score += 15
-	else if (lower.includes("mini") || lower.includes("flash") || lower.includes("haiku") || lower.includes("turbo") || lower.includes("lite")) score += 5
+	else if (
+		lower.includes("mini") ||
+		lower.includes("flash") ||
+		lower.includes("haiku") ||
+		lower.includes("turbo") ||
+		lower.includes("lite")
+	)
+		score += 5
 	else score += 10
 
-	if (lower.includes("reason") || lower.includes("r1") || lower.includes("o1") || lower.includes("o3") || lower.includes("thinking")) {
+	if (
+		lower.includes("reason") ||
+		lower.includes("r1") ||
+		lower.includes("o1") ||
+		lower.includes("o3") ||
+		lower.includes("thinking")
+	) {
 		score += 5
 	}
 	return score
@@ -153,12 +184,18 @@ export const getModelTierScore = (id: string): number => {
 export const compareModels = (a: ModelItem, b: ModelItem): number => {
 	const getFamilyPriority = (fam: ModelFamily): number => {
 		switch (fam) {
-			case "claude": return 1
-			case "openai": return 2
-			case "deepseek": return 3
-			case "gemini": return 4
-			case "qwen": return 5
-			default: return 6
+			case "claude":
+				return 1
+			case "openai":
+				return 2
+			case "deepseek":
+				return 3
+			case "gemini":
+				return 4
+			case "qwen":
+				return 5
+			default:
+				return 6
 		}
 	}
 
@@ -310,7 +347,6 @@ export const isVisionModel = (id: string): boolean => {
 	return lower.includes("vision") || lower.includes("vl") || lower.includes("omni") || lower.includes("multimodal")
 }
 
-
 export const sanitizeCustomModelId = (rawModelId: string): string => {
 	if (!rawModelId) return ""
 
@@ -429,9 +465,7 @@ export const ModelSelector = ({
 	const effectiveLockApiConfigAcrossModes = propLockApiConfigAcrossModes ?? extLockApiConfigAcrossModes ?? false
 	const effectiveProfileName = propDisplayName || extCurrentApiConfigName || "default"
 	const activeConfigId =
-		propCurrentConfigId ||
-		effectiveListApiConfigMeta.find((c) => c.name === effectiveProfileName)?.id ||
-		""
+		propCurrentConfigId || effectiveListApiConfigMeta.find((c) => c.name === effectiveProfileName)?.id || ""
 
 	const { id: activeModelId, info: activeModelInfo, isUnavailable } = useSelectedModel(apiConfiguration)
 	const activeProvider = (apiConfiguration?.apiProvider || "xkiro") as ProviderName
@@ -439,13 +473,12 @@ export const ModelSelector = ({
 	// When actively streaming, the selector is locked and reflects the in-flight execution model.
 	// When interactive (idle, paused, interrupted, awaiting continue), it reflects the user's selected model for the next continuation.
 	const isTaskStreaming = Boolean(disabled && currentTaskItem?.executionModelId)
-	const effectiveModelId = (isTaskStreaming
-		? currentTaskItem?.executionModelId
-		: (activeModelId || currentTaskItem?.executionModelId)) || ""
+	const effectiveModelId =
+		(isTaskStreaming ? currentTaskItem?.executionModelId : activeModelId || currentTaskItem?.executionModelId) || ""
 	const effectiveProvider = (
 		isTaskStreaming && currentTaskItem?.executionProvider
 			? currentTaskItem.executionProvider
-			: (activeProvider || currentTaskItem?.executionProvider || "xkiro")
+			: activeProvider || currentTaskItem?.executionProvider || "xkiro"
 	) as ProviderName
 
 	const effectiveModelInfo = useMemo(() => {
@@ -469,11 +502,11 @@ export const ModelSelector = ({
 			values: {
 				provider: activeProvider,
 				baseUrl: isXkiro
-					? (apiConfiguration?.xkiroBaseUrl || "https://api.xkiro.com/v1")
+					? apiConfiguration?.xkiroBaseUrl || "https://api.xkiro.com/v1"
 					: apiConfiguration?.openAiBaseUrl,
 				apiKey: isXkiro
-					? (apiConfiguration?.xkiroApiKey || apiConfiguration?.apiKey)
-					: (apiConfiguration?.openAiApiKey || apiConfiguration?.apiKey),
+					? apiConfiguration?.xkiroApiKey || apiConfiguration?.apiKey
+					: apiConfiguration?.openAiApiKey || apiConfiguration?.apiKey,
 			},
 		})
 		setTimeout(() => setIsRefreshingModels(false), 10000)
@@ -488,14 +521,14 @@ export const ModelSelector = ({
 		const hasNoModels = !openAiModels || openAiModels.length === 0
 		const apiKey =
 			activeProvider === "xkiro"
-				? (apiConfiguration?.xkiroApiKey || apiConfiguration?.apiKey)
-				: (apiConfiguration?.openAiApiKey || apiConfiguration?.apiKey)
+				? apiConfiguration?.xkiroApiKey || apiConfiguration?.apiKey
+				: apiConfiguration?.openAiApiKey || apiConfiguration?.apiKey
 
 		if (hasNoModels && apiKey && !autoFetchedProvidersRef.current.has(activeProvider)) {
 			autoFetchedProvidersRef.current.add(activeProvider)
 			const baseUrl =
 				activeProvider === "xkiro"
-					? (apiConfiguration?.xkiroBaseUrl || "https://api.xkiro.com/v1")
+					? apiConfiguration?.xkiroBaseUrl || "https://api.xkiro.com/v1"
 					: apiConfiguration?.openAiBaseUrl
 
 			vscode.postMessage({
@@ -562,7 +595,15 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
+					badge: isReasoning
+						? "Rozumowanie"
+						: isFast
+							? "Szybkość"
+							: isCoder
+								? "Programowanie"
+								: isVision
+									? "Obrazy"
+									: undefined,
 					description: info.description,
 					modelInfo: info,
 				})
@@ -609,18 +650,120 @@ export const ModelSelector = ({
 		// 1.6. Explicit xKiro presets
 		if (activeProvider === "xkiro") {
 			const xkiroPresets = [
-				{ id: "deepseek/deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro DeepSeek-V3: Szybki model do zadań ogólnych." },
-				{ id: "deepseek/deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 128000, description: "xKiro DeepSeek-R1: Zaawansowane rozumowanie i analiza." },
-				{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 200000, description: "xKiro Claude 3.7 Sonnet: Rozumowanie i programowanie w jednym modelu." },
-				{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false, contextWindow: 200000, description: "xKiro Claude 3.5 Sonnet: Model do programowania i analizy kodu." },
-				{ id: "openai/gpt-6-astra", name: "GPT-6 Astra", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 1000000, description: "xKiro GPT-6 Astra: Zaawansowany model z kontekstem 1 mln tokenów." },
-				{ id: "openai/gpt-5", name: "GPT-5", isReasoning: true, isFast: false, isFlagship: true, badge: "Rozumowanie", contextWindow: 400000, description: "xKiro GPT-5: Model OpenAI z rozumowaniem i kontekstem 400 tys. tokenów." },
-				{ id: "openai/gpt-5-mini", name: "GPT-5 Mini", isReasoning: true, isFast: false, isFlagship: false, badge: "Rozumowanie", contextWindow: 400000, description: "xKiro GPT-5 Mini: Szybki model z rozumowaniem i kontekstem 400 tys. tokenów." },
-				{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 128000, description: "xKiro GPT-4o: Wszechstronny model multimodalny OpenAI." },
-				{ id: "openai/o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Rozumowanie", contextWindow: 200000, description: "xKiro o3-mini: Szybki model z rozumowaniem." },
-				{ id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", isReasoning: false, isFast: false, isFlagship: true, contextWindow: 1000000, description: "xKiro Gemini 2.5 Pro: Zaawansowana analiza z kontekstem 1 mln tokenów." },
-				{ id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", isReasoning: false, isFast: true, badge: "Szybkość", contextWindow: 1000000, description: "xKiro Gemini 2.5 Flash: Lekki, szybki model z kontekstem 1 mln tokenów." },
-				{ id: "qwen/qwen-2.5-coder-32b", name: "Qwen 2.5 Coder 32B", isReasoning: false, isFast: true, isCoder: true, isFlagship: true, badge: "Programowanie", contextWindow: 128000, description: "xKiro Qwen 2.5 Coder: Otwarty model do programowania." },
+				{
+					id: "deepseek/deepseek-chat",
+					name: "DeepSeek V3",
+					isReasoning: false,
+					isFast: false,
+					isFlagship: true,
+					contextWindow: 128000,
+					description: "xKiro DeepSeek-V3: Szybki model do zadań ogólnych.",
+				},
+				{
+					id: "deepseek/deepseek-reasoner",
+					name: "DeepSeek R1",
+					isReasoning: true,
+					isFast: false,
+					isFlagship: true,
+					badge: "Rozumowanie",
+					contextWindow: 128000,
+					description: "xKiro DeepSeek-R1: Zaawansowane rozumowanie i analiza.",
+				},
+				{
+					id: "anthropic/claude-3.7-sonnet",
+					name: "Claude 3.7 Sonnet",
+					isReasoning: true,
+					isFast: false,
+					isFlagship: true,
+					badge: "Rozumowanie",
+					contextWindow: 200000,
+					description: "xKiro Claude 3.7 Sonnet: Rozumowanie i programowanie w jednym modelu.",
+				},
+				{
+					id: "anthropic/claude-3.5-sonnet",
+					name: "Claude 3.5 Sonnet",
+					isReasoning: false,
+					isFast: false,
+					contextWindow: 200000,
+					description: "xKiro Claude 3.5 Sonnet: Model do programowania i analizy kodu.",
+				},
+				{
+					id: "openai/gpt-6-astra",
+					name: "GPT-6 Astra",
+					isReasoning: true,
+					isFast: false,
+					isFlagship: true,
+					badge: "Rozumowanie",
+					contextWindow: 1000000,
+					description: "xKiro GPT-6 Astra: Zaawansowany model z kontekstem 1 mln tokenów.",
+				},
+				{
+					id: "openai/gpt-5",
+					name: "GPT-5",
+					isReasoning: true,
+					isFast: false,
+					isFlagship: true,
+					badge: "Rozumowanie",
+					contextWindow: 400000,
+					description: "xKiro GPT-5: Model OpenAI z rozumowaniem i kontekstem 400 tys. tokenów.",
+				},
+				{
+					id: "openai/gpt-5-mini",
+					name: "GPT-5 Mini",
+					isReasoning: true,
+					isFast: false,
+					isFlagship: false,
+					badge: "Rozumowanie",
+					contextWindow: 400000,
+					description: "xKiro GPT-5 Mini: Szybki model z rozumowaniem i kontekstem 400 tys. tokenów.",
+				},
+				{
+					id: "openai/gpt-4o",
+					name: "GPT-4o",
+					isReasoning: false,
+					isFast: false,
+					isFlagship: true,
+					contextWindow: 128000,
+					description: "xKiro GPT-4o: Wszechstronny model multimodalny OpenAI.",
+				},
+				{
+					id: "openai/o3-mini",
+					name: "o3-mini",
+					isReasoning: true,
+					isFast: false,
+					badge: "Rozumowanie",
+					contextWindow: 200000,
+					description: "xKiro o3-mini: Szybki model z rozumowaniem.",
+				},
+				{
+					id: "google/gemini-2.5-pro",
+					name: "Gemini 2.5 Pro",
+					isReasoning: false,
+					isFast: false,
+					isFlagship: true,
+					contextWindow: 1000000,
+					description: "xKiro Gemini 2.5 Pro: Zaawansowana analiza z kontekstem 1 mln tokenów.",
+				},
+				{
+					id: "google/gemini-2.5-flash",
+					name: "Gemini 2.5 Flash",
+					isReasoning: false,
+					isFast: true,
+					badge: "Szybkość",
+					contextWindow: 1000000,
+					description: "xKiro Gemini 2.5 Flash: Lekki, szybki model z kontekstem 1 mln tokenów.",
+				},
+				{
+					id: "qwen/qwen-2.5-coder-32b",
+					name: "Qwen 2.5 Coder 32B",
+					isReasoning: false,
+					isFast: true,
+					isCoder: true,
+					isFlagship: true,
+					badge: "Programowanie",
+					contextWindow: 128000,
+					description: "xKiro Qwen 2.5 Coder: Otwarty model do programowania.",
+				},
 			]
 			xkiroPresets.forEach((p) => {
 				addOrMergeModel({
@@ -647,7 +790,15 @@ export const ModelSelector = ({
 						isFast,
 						isCoder,
 						isVision,
-						badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
+						badge: isReasoning
+							? "Rozumowanie"
+							: isFast
+								? "Szybkość"
+								: isCoder
+									? "Programowanie"
+									: isVision
+										? "Obrazy"
+										: undefined,
 						description: info.description,
 						modelInfo: info,
 					})
@@ -655,7 +806,13 @@ export const ModelSelector = ({
 			} else {
 				const orPresets = [
 					{ id: "deepseek/deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false },
-					{ id: "deepseek/deepseek-r1", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Rozumowanie" },
+					{
+						id: "deepseek/deepseek-r1",
+						name: "DeepSeek R1",
+						isReasoning: true,
+						isFast: false,
+						badge: "Rozumowanie",
+					},
 					{ id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", isReasoning: false, isFast: false },
 					{ id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", isReasoning: false, isFast: false },
 					{ id: "openai/gpt-4o", name: "GPT-4o", isReasoning: false, isFast: false },
@@ -674,7 +831,13 @@ export const ModelSelector = ({
 				{ id: "gpt-4o-mini", name: "GPT-4o Mini", isReasoning: false, isFast: true, badge: "Szybkość" },
 				{ id: "o3-mini", name: "o3-mini", isReasoning: true, isFast: false, badge: "Rozumowanie" },
 				{ id: "deepseek-chat", name: "DeepSeek V3", isReasoning: false, isFast: false },
-				{ id: "deepseek-reasoner", name: "DeepSeek R1", isReasoning: true, isFast: false, badge: "Rozumowanie" },
+				{
+					id: "deepseek-reasoner",
+					name: "DeepSeek R1",
+					isReasoning: true,
+					isFast: false,
+					badge: "Rozumowanie",
+				},
 			]
 			openaiPresets.forEach((p) => {
 				addOrMergeModel(p)
@@ -685,8 +848,21 @@ export const ModelSelector = ({
 		if (activeProvider === "ollama") {
 			const ollamaPresets = [
 				{ id: "llama3.1", name: "Llama 3.1", isReasoning: false, isFast: false },
-				{ id: "qwen2.5-coder:7b", name: "Qwen 2.5 Coder 7B", isReasoning: false, isFast: true, isCoder: true, badge: "Szybkość" },
-				{ id: "deepseek-r1:8b", name: "DeepSeek R1 8B", isReasoning: true, isFast: false, badge: "Rozumowanie" },
+				{
+					id: "qwen2.5-coder:7b",
+					name: "Qwen 2.5 Coder 7B",
+					isReasoning: false,
+					isFast: true,
+					isCoder: true,
+					badge: "Szybkość",
+				},
+				{
+					id: "deepseek-r1:8b",
+					name: "DeepSeek R1 8B",
+					isReasoning: true,
+					isFast: false,
+					badge: "Rozumowanie",
+				},
 			]
 			ollamaPresets.forEach((p) => {
 				addOrMergeModel(p)
@@ -709,7 +885,15 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
+					badge: isReasoning
+						? "Rozumowanie"
+						: isFast
+							? "Szybkość"
+							: isCoder
+								? "Programowanie"
+								: isVision
+									? "Obrazy"
+									: undefined,
 					modelInfo: activeModelInfo,
 				})
 			}
@@ -743,9 +927,7 @@ export const ModelSelector = ({
 			const canonKey = getCanonicalModelKey(activeProvider, recent.id)
 			if (seenRecentKeys.has(canonKey)) continue
 
-			const catalogModel = availableModels.find(
-				(m) => getCanonicalModelKey(activeProvider, m.id) === canonKey,
-			)
+			const catalogModel = availableModels.find((m) => getCanonicalModelKey(activeProvider, m.id) === canonKey)
 
 			if (catalogModel) {
 				seenRecentKeys.add(canonKey)
@@ -763,7 +945,15 @@ export const ModelSelector = ({
 					isFast,
 					isCoder,
 					isVision,
-					badge: isReasoning ? "Rozumowanie" : isFast ? "Szybkość" : isCoder ? "Programowanie" : isVision ? "Obrazy" : undefined,
+					badge: isReasoning
+						? "Rozumowanie"
+						: isFast
+							? "Szybkość"
+							: isCoder
+								? "Programowanie"
+								: isVision
+									? "Obrazy"
+									: undefined,
 					contextWindow: getModelContextWindow(recent.id),
 				})
 			}
@@ -833,10 +1023,10 @@ export const ModelSelector = ({
 
 		availableModels.forEach((m) => {
 			if (m.isReasoning) reasoning++
-			else if (m.isFast) fast++
-			else if (m.isCoder) coder++
-			else if (m.isVision) vision++
-			else general++
+			if (m.isFast) fast++
+			if (m.isCoder) coder++
+			if (m.isVision) vision++
+			if (!m.isReasoning && !m.isFast && !m.isCoder && !m.isVision) general++
 		})
 
 		return {
@@ -853,8 +1043,10 @@ export const ModelSelector = ({
 	const { flagshipModels, allOtherModels } = useMemo(() => {
 		const flagship: ModelItem[] = []
 		const other: ModelItem[] = []
+		const recentKeys = new Set(recentlyUsedModels.map((m) => getCanonicalModelKey(activeProvider, m.id)))
 
 		filteredModels.forEach((m) => {
+			if (recentKeys.has(getCanonicalModelKey(activeProvider, m.id))) return
 			if (m.isFlagship) {
 				flagship.push(m)
 			} else {
@@ -863,7 +1055,7 @@ export const ModelSelector = ({
 		})
 
 		return { flagshipModels: flagship, allOtherModels: other }
-	}, [filteredModels])
+	}, [filteredModels, recentlyUsedModels, activeProvider])
 
 	// Switch model
 	const handleSelectModel = useCallback(
@@ -884,7 +1076,8 @@ export const ModelSelector = ({
 				openAiModelInfos?.[stripModelTag(modelId)]
 			const targetSupportsReasoning =
 				!!targetModelInfo?.supportsReasoningEffort ||
-				(Array.isArray(targetModelInfo?.reasoningEffortLevels) && targetModelInfo.reasoningEffortLevels.length > 0) ||
+				(Array.isArray(targetModelInfo?.reasoningEffortLevels) &&
+					targetModelInfo.reasoningEffortLevels.length > 0) ||
 				!!targetModelInfo?.supportsReasoningBudget ||
 				!!targetModelInfo?.maxThinkingTokens ||
 				!!targetModelItem?.isReasoning ||
@@ -913,9 +1106,7 @@ export const ModelSelector = ({
 						if (!isAllowed) {
 							// Clamp to "medium" if allowed, or first available
 							const hasMedium = allowedLevels.some((l) => l.toLowerCase() === "medium")
-							const clamped = hasMedium
-								? "medium"
-								: allowedLevels[0].toLowerCase()
+							const clamped = hasMedium ? "medium" : allowedLevels[0].toLowerCase()
 							updatedConfig.reasoningEffort = clamped as any
 							updatedConfig.enableReasoningEffort = true
 						}
@@ -1055,74 +1246,102 @@ export const ModelSelector = ({
 	const effectiveProviderLabel = providerDisplayNames[effectiveProvider] || effectiveProvider
 	const currentProviderLabel = effectiveProviderLabel
 
-	// Unified row renderer across all model sections
+	// One compact row layout for recent, recommended and remaining models.
 	const renderModelRow = useCallback(
 		(m: ModelItem, sectionKey: string) => {
 			const isSelected =
-				m.id === effectiveModelId ||
 				getCanonicalModelKey(effectiveProvider, m.id) ===
-					getCanonicalModelKey(effectiveProvider, effectiveModelId)
-			const ctxStr = formatContextWindow(m.contextWindow)
-
+				getCanonicalModelKey(effectiveProvider, effectiveModelId)
+			const context = formatContextWindow(m.contextWindow)
+			const capability = m.isReasoning
+				? { label: "Rozumowanie", Icon: Brain }
+				: m.isCoder
+					? { label: "Programowanie", Icon: Code2 }
+					: m.isFast
+						? { label: "Szybki", Icon: Zap }
+						: m.isVision
+							? { label: "Obrazy", Icon: Eye }
+							: null
 			return (
-				<div
+				<button
+					type="button"
 					key={`${sectionKey}-${m.id}`}
+					data-model-option=""
+					data-model-id={m.id}
+					aria-pressed={isSelected}
+					title={[
+						m.id,
+						m.description,
+						m.contextWindow
+							? `Kontekst: ${new Intl.NumberFormat("pl").format(m.contextWindow)} tokenów`
+							: null,
+					]
+						.filter(Boolean)
+						.join("\n")}
 					onClick={() => handleSelectModel(m.id)}
-					className={cn(
-						"px-2.5 py-1.5 text-xs cursor-pointer flex items-center justify-between gap-2 rounded-md transition-colors mx-1",
-						"hover:bg-vscode-list-hoverBackground",
-						isSelected
-							? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground font-medium"
-							: "text-vscode-foreground",
-					)}>
-					<div className="flex flex-col min-w-0 flex-1">
-						<div className="flex items-center gap-1.5">
-							<span className="truncate font-medium">{m.name}</span>
-							{m.isReasoning && (
-								<span className="text-[9.5px] px-1 py-0.2 rounded bg-amber-500/15 text-amber-400 font-semibold border border-amber-500/30">
-									Rozumowanie
-								</span>
-							)}
-							{m.isFast && !m.isReasoning && (
-								<span className="text-[9.5px] px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30">
-									Szybkość
-								</span>
-							)}
-							{m.isCoder && !m.isReasoning && !m.isFast && (
-								<span className="text-[9.5px] px-1 py-0.2 rounded bg-blue-500/15 text-blue-400 font-semibold border border-blue-500/30">
-									Programowanie
-								</span>
-							)}
-							{m.isVision && !m.isReasoning && !m.isFast && !m.isCoder && (
-								<span className="text-[9.5px] px-1 py-0.2 rounded bg-purple-500/15 text-purple-400 font-semibold border border-purple-500/30">
-									Obrazy
+					className="model-option">
+					<div className="model-option-content">
+						<div className="model-option-heading">
+							<span className="model-option-name">{m.name}</span>
+							{capability && (
+								<span className="model-capability">
+									<capability.Icon aria-hidden="true" />
+									{capability.label}
 								</span>
 							)}
 						</div>
-						<div className="flex items-center gap-1.5 text-[10.5px] text-vscode-descriptionForeground opacity-75 mt-0.5 truncate">
-							<span className="truncate">{m.id}</span>
-							{ctxStr && (
-								<>
-									<span>·</span>
-									<span>{ctxStr} kontekstu</span>
-								</>
-							)}
+						<div className="model-option-meta">
+							<span className="model-option-provider">{currentProviderLabel}</span>
+							<span className="model-option-context">
+								<span>Kontekst</span>
+								<strong>{context || "Brak danych"}</strong>
+							</span>
 						</div>
 					</div>
-
-					<div className="flex items-center flex-shrink-0">
-						{isSelected ? (
-							<div className="size-4 flex items-center justify-center text-vscode-focusBorder">
-								<Check className="size-3.5" />
-							</div>
-						) : (
-							<div className="size-4" />
-						)}
-					</div>
-				</div>
+					<span className="model-option-check" aria-hidden="true">
+						{isSelected && <Check />}
+					</span>
+				</button>
 			)
 		},
-		[effectiveModelId, effectiveProvider, handleSelectModel],
+		[effectiveModelId, effectiveProvider, currentProviderLabel, handleSelectModel],
+	)
+
+	// Keep keyboard navigation local to the search field and model rows.
+	const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		const target = event.target as HTMLElement
+		const isSearch = target === searchInputRef.current
+		if (!isSearch && !target.hasAttribute("data-model-option")) return
+		if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
+		if (isSearch && (event.key === "Home" || event.key === "End")) return
+		const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-model-option]"))
+		if (!options.length) return
+		event.preventDefault()
+		const index = options.indexOf(target as HTMLButtonElement)
+		const next =
+			event.key === "Home"
+				? 0
+				: event.key === "End"
+					? options.length - 1
+					: event.key === "ArrowDown"
+						? (index + 1) % options.length
+						: index <= 0
+							? options.length - 1
+							: index - 1
+		options[next].focus({ preventScroll: true })
+		options[next].scrollIntoView?.({ block: "nearest" })
+	}
+
+	const renderCustomSearchOption = () => (
+		<button
+			type="button"
+			className="model-custom-result"
+			onClick={() => handleSelectCustomModel(searchQuery.trim())}>
+			<Plus aria-hidden="true" />
+			<span>
+				Użyj modelu <strong>„{searchQuery.trim()}”</strong>
+			</span>
+		</button>
 	)
 
 	return (
@@ -1130,274 +1349,208 @@ export const ModelSelector = ({
 			<StandardTooltip
 				content={
 					<div className="flex flex-col gap-0.5 text-xs text-left">
-						<div className="font-semibold text-vscode-foreground">{effectiveDisplayName}</div>
-						<div className="text-vscode-descriptionForeground font-mono text-[11px]">
-							Model: {effectiveModelId}
-						</div>
-						<div className="text-vscode-descriptionForeground text-[11px]">
-							Dostawca: {effectiveProviderLabel}
-						</div>
+						<div className="font-semibold">{effectiveDisplayName}</div>
+						<div className="text-vscode-descriptionForeground">{effectiveModelId}</div>
+						<div className="text-vscode-descriptionForeground">Dostawca: {effectiveProviderLabel}</div>
 					</div>
 				}>
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid={triggerTestId || "model-selector-trigger"}
 					className={cn(
-						"h-8 min-w-0 inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 text-xs",
-						"bg-transparent border border-border/40 rounded-md text-vscode-foreground",
-						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+						"model-selector-trigger h-8 min-w-0 inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 text-xs bg-transparent border border-border/40 rounded-md text-vscode-foreground focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 						disabled
 							? "opacity-50 cursor-not-allowed"
-							: "opacity-90 hover:opacity-100 hover:bg-vscode-toolbar-hoverBackground/60 hover:border-border/70 cursor-pointer",
+							: "hover:bg-vscode-toolbar-hoverBackground cursor-pointer",
 						triggerClassName,
 					)}>
 					<ProviderIcon provider={effectiveProvider} />
 					<span className="truncate font-medium">{effectiveDisplayName}</span>
-					<span className="opacity-40 select-none text-[11px] shrink-0">·</span>
-					<span className="truncate text-vscode-descriptionForeground opacity-80 shrink-0">
-						{effectiveProviderLabel}
+					<span className="opacity-40" aria-hidden="true">
+						·
 					</span>
-					<ChevronDown className="size-3 text-vscode-descriptionForeground opacity-60 flex-shrink-0 -mr-0.5" />
+					<span className="truncate text-vscode-descriptionForeground">{effectiveProviderLabel}</span>
+					<ChevronDown className="size-3 shrink-0 text-vscode-descriptionForeground" />
 				</PopoverTrigger>
 			</StandardTooltip>
 
 			<PopoverContent
 				align="start"
-				sideOffset={4}
+				sideOffset={8}
+				collisionPadding={16}
 				container={portalContainer}
-				className="p-0 overflow-hidden w-[330px] bg-vscode-dropdown-background border border-vscode-dropdown-border shadow-xl">
-				<div className="flex flex-col w-full">
-					{/* Header: Provider Badge, Lock toggle & Refresh */}
-					<div className="p-2 border-b border-vscode-dropdown-border/60 bg-vscode-dropdown-background space-y-2">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5">
+				className="model-selector-panel"
+				aria-label="Wybór modelu AI"
+				onKeyDown={handlePanelKeyDown}
+				onOpenAutoFocus={(event) => {
+					event.preventDefault()
+					searchInputRef.current?.focus()
+				}}>
+				<div className="model-selector-header">
+					<div className="model-selector-titlebar">
+						<div>
+							<h3>Wybierz model</h3>
+							<div className="model-selector-source">
 								<ProviderIcon provider={effectiveProvider} />
-								<span className="text-xs font-semibold text-vscode-foreground">
-									{t("chat:modelSelector.title") || "Modele AI"}
-								</span>
-							</div>
-							<div className="flex items-center gap-1.5">
-								<IconButton
-									iconClass={effectiveLockApiConfigAcrossModes ? "codicon-lock" : "codicon-unlock"}
-									title={
-										effectiveLockApiConfigAcrossModes
-											? t("chat:unlockApiConfigAcrossModes")
-											: t("chat:lockApiConfigAcrossModes")
-									}
-									className={cn("p-1", effectiveLockApiConfigAcrossModes ? "text-vscode-focusBorder" : "opacity-60")}
-									onClick={handleToggleLock}
-								/>
-								{(activeProvider === "xkiro" || activeProvider === "openai") && (
-									<StandardTooltip content="Odśwież listę modeli">
-										<button
-											data-testid="refresh-models-button"
-											aria-label="Odśwież modele"
-											onClick={handleRefreshModels}
-											disabled={isRefreshingModels}
-											className={cn(
-												"flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded transition-colors cursor-pointer",
-												"bg-vscode-button-secondaryBackground/40 hover:bg-vscode-button-secondaryBackground text-vscode-foreground",
-												isRefreshingModels && "opacity-70 cursor-wait",
-											)}>
-											<RefreshCw className={cn("size-2.5", isRefreshingModels && "animate-spin")} />
-											<span>{isRefreshingModels ? "Odświeżam…" : "Odśwież"}</span>
-										</button>
-									</StandardTooltip>
-								)}
-								<span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[rgba(167,139,250,0.12)] text-[#a78bfa] border border-[rgba(167,139,250,0.25)]">
-									{effectiveProviderLabel}
-								</span>
+								<span>{currentProviderLabel}</span>
 							</div>
 						</div>
-
-						{/* Search Bar */}
-						<div className="relative flex items-center">
-							<Search className="absolute left-2 size-3.5 text-vscode-descriptionForeground opacity-60 pointer-events-none" />
-							<input
-								ref={searchInputRef}
-								aria-label={t("chat:modelSelector.searchPlaceholder")}
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								placeholder={t("chat:modelSelector.searchPlaceholder")}
-								className="w-full h-7 pl-7 pr-7 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-none focus:border-vscode-focusBorder"
+						<div className="model-selector-actions">
+							<IconButton
+								aria-pressed={effectiveLockApiConfigAcrossModes}
+								iconClass={effectiveLockApiConfigAcrossModes ? "codicon-lock" : "codicon-unlock"}
+								title={
+									effectiveLockApiConfigAcrossModes
+										? t("chat:unlockApiConfigAcrossModes")
+										: t("chat:lockApiConfigAcrossModes")
+								}
+								className={cn(
+									"model-selector-action",
+									effectiveLockApiConfigAcrossModes && "is-locked",
+								)}
+								onClick={handleToggleLock}
 							/>
-							{searchQuery && (
+							{(activeProvider === "xkiro" || activeProvider === "openai") && (
 								<button
-									onClick={() => setSearchQuery("")}
-									className="absolute right-1.5 p-0.5 text-vscode-descriptionForeground hover:text-vscode-foreground">
-									<X className="size-3.5" />
+									type="button"
+									className="model-selector-action"
+									data-testid="refresh-models-button"
+									aria-label="Odśwież modele"
+									title={isRefreshingModels ? "Odświeżam modele…" : "Odśwież modele"}
+									disabled={isRefreshingModels}
+									onClick={handleRefreshModels}>
+									<RefreshCw className={cn(isRefreshingModels && "animate-spin")} />
 								</button>
 							)}
 						</div>
-
-						{/* Category Filter Chips */}
-						<div className="flex items-center gap-1 pt-0.5 flex-wrap">
-							{(
-								[
-									{ key: "all" as const, label: "All", count: categoryCounts.all, icon: undefined },
-									{ key: "reasoning" as const, label: "Rozumowanie", count: categoryCounts.reasoning, icon: Brain },
-									{ key: "fast" as const, label: "Szybkość", count: categoryCounts.fast, icon: Zap },
-									{ key: "coder" as const, label: "Programowanie", count: categoryCounts.coder, icon: Code2 },
-									{ key: "vision" as const, label: "Obrazy", count: categoryCounts.vision, icon: Eye },
-									{ key: "default" as const, label: "Default", count: categoryCounts.default, icon: undefined },
-								]
-							).map((cat) => {
-								if (cat.key !== "all" && cat.count === 0) return null
-								const isCatActive = selectedCategory === cat.key
-								const Icon = cat.icon
-								return (
-									<button
-										key={cat.key}
-										onClick={() => setSelectedCategory(cat.key)}
-										className={cn(
-											"h-5 px-1.5 text-[10.5px] rounded flex items-center gap-1 transition-colors cursor-pointer",
-											isCatActive
-												? "bg-vscode-badge-background text-vscode-badge-foreground font-medium"
-												: "bg-vscode-input-background/60 text-vscode-descriptionForeground hover:text-vscode-foreground hover:bg-vscode-input-background",
-										)}>
-										{Icon && <Icon className="size-2.5" />}
-										<span>{cat.label}</span>
-									</button>
-								)
-							})}
-						</div>
 					</div>
 
-					{/* Models List */}
-					<div className="max-h-[300px] overflow-y-auto py-1 space-y-2">
-						{filteredModels.length === 0 && recentlyUsedModels.length === 0 ? (
-							searchQuery.trim() ? (
-								<div
-									onClick={() => handleSelectCustomModel(searchQuery.trim())}
-									className="px-2.5 py-2 text-xs cursor-pointer flex items-center gap-2 rounded-md transition-colors mx-1 hover:bg-vscode-list-hoverBackground text-vscode-textLink-foreground">
-									<Plus className="size-3.5 flex-shrink-0" />
-									<span className="truncate">Użyj własnego modelu „{searchQuery.trim()}"</span>
-								</div>
-							) : (
-								<div className="py-4 px-3 text-center text-xs text-vscode-descriptionForeground">
-									{t("chat:modelSelector.noResults")}
-								</div>
-							)
-						) : (
-							<>
-								{/* 0. Recently Used Section */}
-								{recentlyUsedModels.length > 0 && (
-									<div>
-										<div className="px-2.5 py-1 text-[10px] font-bold text-vscode-descriptionForeground uppercase tracking-wider flex items-center justify-between">
-											<div className="flex items-center gap-1">
-												<History className="size-3 text-vscode-descriptionForeground" />
-												<span>Ostatnio używane</span>
-											</div>
-											<span className="text-[9.5px] opacity-70 font-normal">
-												{recentlyUsedModels.length} {recentlyUsedModels.length === 1 ? "model" : "modeli"}
-											</span>
-										</div>
-										<div className="space-y-0.5">
-											{recentlyUsedModels.map((m) => renderModelRow(m, "recent"))}
-										</div>
-									</div>
-								)}
-
-								{/* 1. Recommended / Flagship Section */}
-								{flagshipModels.length > 0 && (
-									<div>
-										<div className="px-2.5 py-1 text-[10px] font-bold text-vscode-descriptionForeground uppercase tracking-wider flex items-center justify-between">
-											<div className="flex items-center gap-1">
-												<Sparkles className="size-3 text-[#a78bfa]" />
-												<span>Polecane modele</span>
-											</div>
-											<span className="text-[9.5px] opacity-70 font-normal">
-												{flagshipModels.length} modeli
-											</span>
-										</div>
-										<div className="space-y-0.5">
-											{flagshipModels.map((m) => renderModelRow(m, "flagship"))}
-										</div>
-									</div>
-								)}
-
-								{/* 2. All Available Models Section */}
-								{allOtherModels.length > 0 && (
-									<div>
-										<div className="px-2.5 py-1 text-[10px] font-bold text-vscode-descriptionForeground uppercase tracking-wider flex items-center justify-between">
-											<div className="flex items-center gap-1">
-												<Layers className="size-3 text-vscode-descriptionForeground" />
-												<span>
-													{flagshipModels.length > 0
-														? `All Available Models (${availableModels.length})`
-														: `All Models (${filteredModels.length})`}
-												</span>
-											</div>
-										</div>
-										<div className="space-y-0.5">
-											{allOtherModels.map((m) => renderModelRow(m, "all"))}
-										</div>
-									</div>
-								)}
-
-								{/* Fallback if no split occurred */}
-								{flagshipModels.length === 0 && allOtherModels.length === 0 && filteredModels.length > 0 && (
-									<div className="space-y-0.5">
-										{filteredModels.map((m) => renderModelRow(m, "fallback"))}
-									</div>
-								)}
-
-								{searchQuery.trim() &&
-									!filteredModels.some(
-										(m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase(),
-									) &&
-									!recentlyUsedModels.some(
-										(m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase(),
-									) && (
-										<div
-											onClick={() => handleSelectCustomModel(searchQuery.trim())}
-											className="px-2.5 py-1.5 text-xs cursor-pointer flex items-center gap-2 rounded-md transition-colors mx-1 border-t border-vscode-dropdown-border/30 hover:bg-vscode-list-hoverBackground text-vscode-textLink-foreground">
-											<Plus className="size-3.5 flex-shrink-0" />
-											<span className="truncate">Użyj własnego modelu „{searchQuery.trim()}"</span>
-										</div>
-									)}
-							</>
+					<div className="model-selector-search">
+						<Search aria-hidden="true" />
+						<input
+							ref={searchInputRef}
+							aria-label={t("chat:modelSelector.searchPlaceholder")}
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							placeholder="Szukaj po nazwie lub identyfikatorze…"
+						/>
+						{searchQuery && (
+							<button
+								type="button"
+								aria-label="Wyczyść wyszukiwanie"
+								onClick={() => {
+									setSearchQuery("")
+									searchInputRef.current?.focus()
+								}}>
+								<X />
+							</button>
 						)}
 					</div>
 
-					{/* Models List Footer: Stats */}
-					{(activeProvider === "xkiro" || activeProvider === "openai") && (
-						<div className="px-2.5 py-1 border-t border-vscode-dropdown-border/40 bg-vscode-dropdown-background/40 flex items-center justify-between text-[10.5px] text-vscode-descriptionForeground">
-							<span>
-								{openAiModels && openAiModels.length > 0
-									? `${availableModels.length} models discovered`
-									: "Standard presets loaded"}
-							</span>
-						</div>
-					)}
-
-					{/* Custom Model ID Input */}
-					<div className="p-2 border-t border-vscode-dropdown-border/60 bg-vscode-dropdown-background/60">
-						<form
-							onSubmit={(e) => {
-								e.preventDefault()
-								if (customModelInput.trim()) {
-									handleSelectCustomModel(customModelInput.trim())
-									setCustomModelInput("")
-								}
-							}}
-							className="flex items-center gap-1.5">
-							<input
-								type="text"
-								value={customModelInput}
-								onChange={(e) => setCustomModelInput(e.target.value)}
-								placeholder="Wpisz identyfikator modelu…"
-								className="flex-1 h-6 px-2 text-[11px] bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-none focus:border-vscode-focusBorder"
-							/>
-							<Button
-								type="submit"
-								disabled={!customModelInput.trim()}
-								size="sm"
-								className="h-6 px-2 text-[11px] py-0 font-medium cursor-pointer">
-								Set
-							</Button>
-						</form>
+					<div className="model-selector-filters" role="group" aria-label="Filtruj modele">
+						{[
+							{ key: "all", label: "Wszystkie", count: categoryCounts.all },
+							{ key: "reasoning", label: "Rozumowanie", count: categoryCounts.reasoning },
+							{ key: "fast", label: "Szybkie", count: categoryCounts.fast },
+							{ key: "coder", label: "Kod", count: categoryCounts.coder },
+							{ key: "vision", label: "Obrazy", count: categoryCounts.vision },
+							{ key: "default", label: "Ogólne", count: categoryCounts.default },
+						]
+							.filter((cat) => cat.key === "all" || cat.count > 0)
+							.map((cat) => (
+								<button
+									type="button"
+									key={cat.key}
+									aria-pressed={selectedCategory === cat.key}
+									onClick={() => setSelectedCategory(cat.key as ModelCategory)}>
+									{cat.label}
+								</button>
+							))}
 					</div>
+				</div>
+
+				<div className="model-selector-list" aria-label="Dostępne modele">
+					{filteredModels.length === 0 && recentlyUsedModels.length === 0 ? (
+						<div className="model-selector-empty">
+							<p>{t("chat:modelSelector.noResults")}</p>
+							{searchQuery.trim() ? (
+								renderCustomSearchOption()
+							) : (
+								<button type="button" onClick={() => setSelectedCategory("all")}>
+									Pokaż wszystkie modele
+								</button>
+							)}
+						</div>
+					) : (
+						<>
+							{recentlyUsedModels.length > 0 && (
+								<section className="model-selector-section" aria-labelledby="models-recent-heading">
+									<div className="model-section-heading">
+										<h4 id="models-recent-heading">
+											<History aria-hidden="true" />
+											Ostatnio używane
+										</h4>
+										<span>{recentlyUsedModels.length}</span>
+									</div>
+									{recentlyUsedModels.map((m) => renderModelRow(m, "recent"))}
+								</section>
+							)}
+							{flagshipModels.length > 0 && (
+								<section
+									className="model-selector-section"
+									aria-labelledby="models-recommended-heading">
+									<div className="model-section-heading">
+										<h4 id="models-recommended-heading">
+											<Sparkles aria-hidden="true" />
+											Polecane modele
+										</h4>
+										<span>{flagshipModels.length}</span>
+									</div>
+									{flagshipModels.map((m) => renderModelRow(m, "flagship"))}
+								</section>
+							)}
+							{allOtherModels.length > 0 && (
+								<section className="model-selector-section" aria-labelledby="models-all-heading">
+									<div className="model-section-heading">
+										<h4 id="models-all-heading">
+											<Layers aria-hidden="true" />
+											{flagshipModels.length ? "Pozostałe modele" : "Dostępne modele"}
+										</h4>
+										<span>{allOtherModels.length}</span>
+									</div>
+									{allOtherModels.map((m) => renderModelRow(m, "all"))}
+								</section>
+							)}
+							{searchQuery.trim() &&
+								!filteredModels.some((m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase()) &&
+								!recentlyUsedModels.some(
+									(m) => m.id.toLowerCase() === searchQuery.trim().toLowerCase(),
+								) &&
+								renderCustomSearchOption()}
+						</>
+					)}
+				</div>
+
+				<div className="model-selector-footer">
+					<form
+						onSubmit={(e) => {
+							e.preventDefault()
+							if (customModelInput.trim()) {
+								handleSelectCustomModel(customModelInput.trim())
+								setCustomModelInput("")
+							}
+						}}>
+						<input
+							type="text"
+							aria-label="Własny identyfikator modelu"
+							value={customModelInput}
+							onChange={(e) => setCustomModelInput(e.target.value)}
+							placeholder="Własny identyfikator modelu…"
+						/>
+						<Button type="submit" disabled={!customModelInput.trim()} size="sm">
+							Wybierz
+						</Button>
+					</form>
 				</div>
 			</PopoverContent>
 		</Popover>

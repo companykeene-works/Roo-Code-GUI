@@ -155,6 +155,38 @@ describe("ModelSelector", () => {
 		expect(screen.getByText("Claude 3.7 Sonnet")).toBeInTheDocument()
 	})
 
+	test("keyboard navigation moves from search through model rows and marks the active model", () => {
+		render(<ModelSelector />)
+		fireEvent.click(screen.getByTestId("model-selector-trigger"))
+		const input = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
+		const rows = document.querySelectorAll<HTMLButtonElement>("[data-model-option]")
+		expect(
+			Array.from(rows).some(
+				(row) =>
+					row.dataset.modelId === "deepseek/deepseek-chat" && row.getAttribute("aria-pressed") === "true",
+			),
+		).toBe(true)
+		const firstFocus = vi.fn()
+		rows[0].focus = firstFocus
+		const lastFocus = vi.fn()
+		rows[rows.length - 1].focus = lastFocus
+		fireEvent.keyDown(input, { key: "ArrowDown" })
+		expect(firstFocus).toHaveBeenCalledWith({ preventScroll: true })
+		fireEvent.keyDown(rows[0], { key: "End" })
+		expect(lastFocus).toHaveBeenCalledWith({ preventScroll: true })
+		fireEvent.keyDown(rows[rows.length - 1], { key: "ArrowDown" })
+		expect(firstFocus).toHaveBeenCalledWith({ preventScroll: true })
+	})
+
+	test("overlapping capabilities remain available in filters", () => {
+		mockExtensionState.openAiModels = ["qwen/qwen-2.5-coder"]
+		render(<ModelSelector />)
+		fireEvent.click(screen.getByTestId("model-selector-trigger"))
+		fireEvent.click(screen.getByRole("button", { name: "Kod" }))
+		expect(screen.getByText("Qwen 2.5 Coder")).toBeInTheDocument()
+		expect(screen.queryByText("DeepSeek R1")).not.toBeInTheDocument()
+	})
+
 	test("selecting a model sends upsertApiConfiguration and updates state", () => {
 		render(<ModelSelector />)
 		const trigger = screen.getByTestId("model-selector-trigger")
@@ -189,7 +221,7 @@ describe("ModelSelector", () => {
 		// Find the single refresh button in the popover header
 		const refreshBtn = screen.getByTestId("refresh-models-button")
 		expect(refreshBtn).toBeInTheDocument()
-		expect(refreshBtn).toHaveAttribute("aria-label", "Refresh models")
+		expect(refreshBtn).toHaveAttribute("aria-label", "Odśwież modele")
 
 		// Redundant footer button should not exist
 		expect(screen.queryByText("Refresh Models")).not.toBeInTheDocument()
@@ -215,12 +247,12 @@ describe("ModelSelector", () => {
 		fireEvent.click(trigger)
 
 		// Section headers
-		expect(screen.getByText("Recommended / Flagship")).toBeInTheDocument()
-		expect(screen.getByText(/All Available Models/)).toBeInTheDocument()
+		expect(screen.getByText("Polecane modele")).toBeInTheDocument()
+		expect(screen.getByText(/Pozostałe modele/)).toBeInTheDocument()
 
 		// Dynamic model rendered
 		expect(screen.getByText("Custom Test Model")).toBeInTheDocument()
-		expect(screen.getByText("custom-provider/custom-test-model")).toBeInTheDocument()
+		expect(screen.getByTitle(/custom-provider\/custom-test-model/)).toBeInTheDocument()
 	})
 
 	test("promotes newest generation models dynamically to Flagship section", () => {
@@ -257,10 +289,10 @@ describe("ModelSelector", () => {
 		fireEvent.click(trigger)
 
 		// Badges in document
-		expect(screen.getAllByText("Reasoning").length).toBeGreaterThan(0)
-		expect(screen.getAllByText("Fast").length).toBeGreaterThan(0)
-		expect(screen.getAllByText("Coder").length).toBeGreaterThan(0)
-		expect(screen.getAllByText("Vision").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Rozumowanie").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Szybki").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Programowanie").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Obrazy").length).toBeGreaterThan(0)
 	})
 
 	test("submitting custom model form sanitizes model ID and updates state", () => {
@@ -268,10 +300,10 @@ describe("ModelSelector", () => {
 		const trigger = screen.getByTestId("model-selector-trigger")
 		fireEvent.click(trigger)
 
-		const input = screen.getByPlaceholderText("Enter custom model ID...")
+		const input = screen.getByRole("textbox", { name: "Własny identyfikator modelu" })
 		fireEvent.change(input, { target: { value: "  my-org/custom-model #hash ?v=1 \n " } })
 
-		const setButton = screen.getByRole("button", { name: "Set" })
+		const setButton = screen.getByRole("button", { name: "Wybierz" })
 		fireEvent.click(setButton)
 
 		expect(mockSetApiConfiguration).toHaveBeenCalledWith(
@@ -287,10 +319,10 @@ describe("ModelSelector", () => {
 		const trigger = screen.getByTestId("model-selector-trigger")
 		fireEvent.click(trigger)
 
-		const searchInput = screen.getByPlaceholderText("chat:modelSelector.searchPlaceholder")
+		const searchInput = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
 		fireEvent.change(searchInput, { target: { value: "  new-custom-model #frag &x=2 \n " } })
 
-		const customModelButton = screen.getByText(/Use custom model/)
+		const customModelButton = screen.getByText(/Użyj modelu/)
 		fireEvent.click(customModelButton)
 
 		expect(mockSetApiConfiguration).toHaveBeenCalledWith(
@@ -714,18 +746,13 @@ describe("ModelSelector", () => {
 				xkiroModelId: "deepseek/deepseek-chat",
 			}
 			// Simulate dynamic API returning both namespaced and bare models
-			mockExtensionState.openAiModels = [
-				"openai/gpt-6.1-sol",
-				"gpt-6.1-sol",
-				"openai/gpt-6-sol",
-				"gpt-6-sol",
-			]
+			mockExtensionState.openAiModels = ["openai/gpt-6.1-sol", "gpt-6.1-sol", "openai/gpt-6-sol", "gpt-6-sol"]
 
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
 
 			// Search for "sol"
-			const searchInput = screen.getByPlaceholderText("chat:modelSelector.searchPlaceholder")
+			const searchInput = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
 			fireEvent.change(searchInput, { target: { value: "sol" } })
 
 			// Each unique canonical model should appear exactly once in the rendered list
@@ -738,7 +765,7 @@ describe("ModelSelector", () => {
 	})
 
 	describe("Recently Used Models", () => {
-		test("displays recently used models under 'Recently used' header", () => {
+		test("displays recently used models under 'Ostatnio używane' header", () => {
 			mockExtensionState.apiConfiguration = {
 				apiProvider: "xkiro",
 				apiModelId: "deepseek/deepseek-chat",
@@ -762,8 +789,12 @@ describe("ModelSelector", () => {
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
 
-			expect(screen.getByText("Recently used")).toBeInTheDocument()
-			expect(screen.getByText("2 models")).toBeInTheDocument()
+			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
+			expect(
+				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
+			).toHaveLength(2)
+			// Recent models take one row each, without duplicates in the catalog sections.
+			expect(document.querySelectorAll('[data-model-id="anthropic/claude-3.7-sonnet"]')).toHaveLength(1)
 		})
 
 		test("caps recently used models at maximum 5 items in MRU order", () => {
@@ -784,7 +815,9 @@ describe("ModelSelector", () => {
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
 
-			expect(screen.getByText("5 models")).toBeInTheDocument()
+			expect(
+				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
+			).toHaveLength(5)
 		})
 
 		test("prunes stale catalog models not present in available models list", () => {
@@ -811,8 +844,10 @@ describe("ModelSelector", () => {
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
 
-			expect(screen.getByText("Recently used")).toBeInTheDocument()
-			expect(screen.getByText("1 model")).toBeInTheDocument()
+			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
+			expect(
+				screen.getByRole("region", { name: "Ostatnio używane" }).querySelectorAll("[data-model-option]"),
+			).toHaveLength(1)
 			expect(screen.queryByText("Retired Model")).not.toBeInTheDocument()
 		})
 
@@ -834,13 +869,13 @@ describe("ModelSelector", () => {
 			render(<ModelSelector />)
 			fireEvent.click(screen.getByTestId("model-selector-trigger"))
 
-			expect(screen.getByText("Recently used")).toBeInTheDocument()
+			expect(screen.getByText("Ostatnio używane")).toBeInTheDocument()
 
-			const searchInput = screen.getByPlaceholderText("chat:modelSelector.searchPlaceholder")
+			const searchInput = screen.getByRole("textbox", { name: "chat:modelSelector.searchPlaceholder" })
 			fireEvent.change(searchInput, { target: { value: "gemini" } })
 
-			// When query doesn't match, Recently used header should be completely hidden
-			expect(screen.queryByText("Recently used")).not.toBeInTheDocument()
+			// When query doesn't match, Ostatnio używane header should be completely hidden
+			expect(screen.queryByText("Ostatnio używane")).not.toBeInTheDocument()
 		})
 	})
 
@@ -857,7 +892,7 @@ describe("ModelSelector", () => {
 			expect(screen.queryByText("API Profiles")).not.toBeInTheDocument()
 			expect(screen.queryByText("API CONFIGURATION")).not.toBeInTheDocument()
 			expect(screen.queryByText(/Configure API & providers in Settings/i)).not.toBeInTheDocument()
-			expect(screen.getByPlaceholderText("Enter custom model ID...")).toBeInTheDocument()
+			expect(screen.getByRole("textbox", { name: "Własny identyfikator modelu" })).toBeInTheDocument()
 		})
 	})
 
