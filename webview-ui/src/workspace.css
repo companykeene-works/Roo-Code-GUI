@@ -1,5 +1,6 @@
 @import "../../apps/desktop/src/renderer/design-tokens.css";
 @import "./ui-surfaces.css";
+@import "./agent-work.css";
 
 :root {
 	--bg-canvas: var(--vscode-editor-background, #202123);
