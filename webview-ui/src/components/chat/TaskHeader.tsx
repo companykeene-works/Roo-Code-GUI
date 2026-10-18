@@ -362,10 +362,14 @@ const TaskHeader = ({
 							className="agent-plan-trigger"
 							aria-expanded={isPlanExpanded}
 							onClick={() => setIsPlanExpanded((value) => !value)}>
-							<span>Plan pracy</span>
+							<span>{t("chat:taskPlan.title", "Work plan")}</span>
 							<span className="agent-plan-current">
 								{todos?.find((todo) => todo.status === "in_progress")?.content ||
-									`${todos?.filter((todo) => todo.status === "completed").length} z ${todos?.length} kroków`}
+									t("chat:taskPlan.progress", {
+										completed: todos?.filter((todo) => todo.status === "completed").length,
+										total: todos?.length,
+										defaultValue: `${todos?.filter((todo) => todo.status === "completed").length} of ${todos?.length} steps`,
+									})}
 							</span>
 							<ChevronDown size={13} className={isPlanExpanded ? "rotate-180" : ""} />
 						</button>

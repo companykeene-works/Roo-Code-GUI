@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Paperclip, File, X, Search } from "lucide-react"
 import { mentionRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { Popover, PopoverContent, PopoverTrigger } from "@src/components/ui"
+import { useAppTranslation } from "@/i18n/TranslationContext"
 
 export function getContextPaths(value: string): string[] {
 	return [
@@ -39,6 +40,7 @@ export function ProjectContext({
 	disabled?: boolean
 	onImages?: () => void
 }) {
+	const { t } = useAppTranslation()
 	const [open, setOpen] = useState(false)
 	const [query, setQuery] = useState("")
 	const [available, setAvailable] = useState(files)
@@ -66,13 +68,13 @@ export function ProjectContext({
 			.then((data) => setAvailable(data.files || []))
 			.catch((error) => {
 				if (error.name !== "AbortError")
-					setError("Nie udało się wczytać plików. Otwórz projekt i spróbuj ponownie.")
+					setError(t("chat:projectContext.loadError", "Could not load files. Open project and try again."))
 			})
 			.finally(() => {
 				if (!controller.signal.aborted) setLoading(false)
 			})
 		return () => controller.abort()
-	}, [open])
+	}, [open, t])
 	const matches = useMemo(
 		() =>
 			[...new Set(available.map((file) => file.replace(/\\/g, "/")))]
@@ -80,7 +82,7 @@ export function ProjectContext({
 				.sort(
 					(a, b) =>
 						Number(selected.includes(b)) - Number(selected.includes(a)) ||
-						a.localeCompare(b, "pl", { numeric: true }),
+						a.localeCompare(b, undefined, { numeric: true }),
 				)
 				.slice(0, 150),
 		[available, query, selected],
@@ -92,36 +94,36 @@ export function ProjectContext({
 					type="button"
 					disabled={disabled}
 					className="project-context-add"
-					aria-label="Dodaj pliki i kontekst">
+					aria-label={t("chat:projectContext.addFilesContextAria", "Add files and context")}>
 					<Paperclip size={14} />
-					<span>Dodaj kontekst</span>
+					<span>{t("chat:projectContext.addContext", "Add context")}</span>
 				</PopoverTrigger>
 				<PopoverContent side="top" align="start" className="project-context-picker">
 					<div className="context-picker-heading">
-						<strong>Pliki w kontekście</strong>
-						<span>{selected.length ? `${selected.length} wybrane` : "Wybierz pliki dla agenta"}</span>
+						<strong>{t("chat:projectContext.filesInContext", "Files in context")}</strong>
+						<span>{selected.length ? t("chat:projectContext.selectedCount", { count: selected.length, defaultValue: `${selected.length} selected` }) : t("chat:projectContext.selectFilesForAgent", "Select files for agent")}</span>
 					</div>
 					<label className="context-picker-search">
 						<Search size={14} />
 						<input
-							aria-label="Szukaj plików do kontekstu"
-							placeholder="Szukaj po nazwie lub ścieżce…"
+							aria-label={t("chat:projectContext.searchContextAria", "Search files for context")}
+							placeholder={t("chat:projectContext.searchPlaceholder", "Search by name or path…")}
 							value={query}
 							onChange={(event) => setQuery(event.target.value)}
 						/>
 					</label>
 					<div className="context-picker-files">
 						{!cwd ? (
-							<p>Najpierw otwórz folder projektu.</p>
+							<p>{t("chat:projectContext.openProjectFirst", "Open a project folder first.")}</p>
 						) : error ? (
 							<p role="alert">{error}</p>
 						) : loading ? (
-							<p>Wczytuję pliki…</p>
+							<p>{t("chat:projectContext.loadingFiles", "Loading files…")}</p>
 						) : !matches.length ? (
 							<p>
 								{query
-									? "Brak plików pasujących do wyszukiwania."
-									: "W tym projekcie nie ma jeszcze plików."}
+									? t("chat:projectContext.noMatchingFiles", "No files matching your search.")
+									: t("chat:projectContext.noFilesYet", "No files in this project yet.")}
 							</p>
 						) : (
 							matches.map((file) => (
@@ -137,7 +139,7 @@ export function ProjectContext({
 										<small>
 											{file.includes("/")
 												? file.slice(0, file.lastIndexOf("/"))
-												: "Folder główny"}
+												: t("chat:projectContext.rootFolder", "Root folder")}
 										</small>
 									</span>
 									<span className="context-check" aria-hidden="true">
@@ -155,11 +157,11 @@ export function ProjectContext({
 									setOpen(false)
 									onImages()
 								}}>
-								Dodaj obraz…
+								{t("chat:projectContext.addImage", "Add image…")}
 							</button>
 						)}
 						<button type="button" onClick={() => setOpen(false)}>
-							Gotowe
+							{t("chat:projectContext.done", "Done")}
 						</button>
 					</div>
 				</PopoverContent>
@@ -170,7 +172,7 @@ export function ProjectContext({
 					<span>{file.split("/").at(-1)}</span>
 					<button
 						type="button"
-						aria-label={`Usuń ${file} z kontekstu`}
+						aria-label={t("chat:projectContext.removeFileAria", { file, defaultValue: `Remove ${file} from context` })}
 						onClick={() => onChange(toggleContextPath(value, file))}>
 						<X size={12} />
 					</button>

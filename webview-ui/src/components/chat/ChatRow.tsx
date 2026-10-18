@@ -738,7 +738,7 @@ export const ChatRowContent = ({
 					return (
 						<>
 							<div style={headerStyle}>
-								<Eye className="w-4 shrink-0" aria-label="Podgląd plików" />
+								<Eye className="w-4 shrink-0" aria-label={t("chat:fileOperations.previewFiles", "Preview files")} />
 								<span style={{ fontWeight: 500 }}>{t("chat:fileOperations.wantsToReadMultiple")}</span>
 							</div>
 							<BatchFilePermission
@@ -766,7 +766,7 @@ export const ChatRowContent = ({
 							}>
 							<FileCode2
 								className="w-3.5 h-3.5 shrink-0 text-muted-foreground/80"
-								aria-label="Odczyt pliku"
+								aria-label={t("chat:fileOperations.readFileAria", "Read file")}
 							/>
 							<span className="font-medium text-foreground/80">{t("chat:fileOperations.didRead")}</span>
 							<span className="text-border/60">·</span>
@@ -785,7 +785,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<FileCode2 className="w-4 shrink-0" aria-label="Odczyt pliku" />
+							<FileCode2 className="w-4 shrink-0" aria-label={t("chat:fileOperations.readFileAria", "Read file")} />
 							<span style={{ fontWeight: 500 }}>
 								{tool.isOutsideWorkspace
 									? t("chat:fileOperations.wantsToReadOutsideWorkspace")
@@ -902,7 +902,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<ListTree className="w-4 shrink-0" aria-label="Lista plików" />
+							<ListTree className="w-4 shrink-0" aria-label={t("chat:directoryOperations.fileListAria", "File list")} />
 							<span style={{ fontWeight: 500 }}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -928,7 +928,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<FolderTree className="w-4 shrink-0" aria-label="Drzewo folderów" />
+							<FolderTree className="w-4 shrink-0" aria-label={t("chat:directoryOperations.folderTreeAria", "Folder tree")} />
 							<span style={{ fontWeight: 500 }}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -1182,7 +1182,7 @@ export const ChatRowContent = ({
 			case "webSearch":
 				return (
 					<div style={headerStyle}>
-						<Globe className="w-4 shrink-0 text-sky-400" aria-label="Wyszukiwanie w internecie" />
+						<Globe className="w-4 shrink-0 text-sky-400" aria-label={t("chat:webOperations.searchWebAria", "Search the web")} />
 						<span style={{ fontWeight: 500 }}>
 							{message.type === "ask" ? "Wants to search the web" : "Searched the web"}
 						</span>
@@ -1194,7 +1194,7 @@ export const ChatRowContent = ({
 			case "fetchUrl":
 				return (
 					<div style={headerStyle}>
-						<Globe className="w-4 shrink-0 text-sky-400" aria-label="Odczyt strony" />
+						<Globe className="w-4 shrink-0 text-sky-400" aria-label={t("chat:webOperations.fetchUrlAria", "Fetch web page")} />
 						<span style={{ fontWeight: 500 }}>
 							{message.type === "ask" ? "Wants to fetch URL" : "Fetched URL"}
 						</span>
@@ -1262,8 +1262,8 @@ export const ChatRowContent = ({
 						return (
 							<ErrorRow
 								type="api_failure"
-								title="Nie udało się uzyskać odpowiedzi"
-								message="Połączenie z modelem nie powiodło się. Możesz ponowić próbę; szczegóły błędu są dostępne poniżej."
+								title={t("chat:errors.apiResponseFailedTitle", "Failed to get response")}
+								message={t("chat:errors.apiResponseFailedMessage", "Connection to model failed. You can retry; error details are available below.")}
 								errorDetails={apiRequestFailedMessage || apiReqStreamingFailedMessage || message.text}
 							/>
 						)
@@ -1549,11 +1549,11 @@ export const ChatRowContent = ({
 					return (
 						<ErrorRow
 							type="error"
-							title="Problem podczas pracy"
+							title={t("chat:errors.workIssueTitle", "Issue encountered during execution")}
 							message={
 								/ENOENT|no such file/i.test(message.text || "")
-									? "Nie udało się odnaleźć pliku pod wskazaną ścieżką."
-									: "Nie udało się wykonać operacji. Szczegóły są dostępne poniżej."
+									? t("chat:errors.fileNotFoundAtLocation", "Could not find file at specified path.")
+									: t("chat:errors.operationFailedDetailsBelow", "Failed to complete operation. Details are available below.")
 							}
 							errorDetails={message.text}
 						/>
@@ -1630,7 +1630,7 @@ export const ChatRowContent = ({
 
 					if (parsed && !parsed?.content) {
 						console.error("Invalid codebaseSearch content structure:", parsed.content)
-						return <div>Nie udało się wyświetlić wyników wyszukiwania.</div>
+						return <div>{t("chat:codebaseSearch.displayError", "Failed to display search results.")}</div>
 					}
 
 					const { results = [] } = parsed?.content || {}
@@ -1766,9 +1766,9 @@ export const ChatRowContent = ({
 								<div style={headerStyle}>
 									<Globe
 										className="w-4 shrink-0 text-sky-400"
-										aria-label="Wyszukiwanie w internecie"
+										aria-label={t("chat:webOperations.searchWebAria", "Search the web")}
 									/>
-									<span style={{ fontWeight: 500 }}>Wyszukiwanie w internecie</span>
+									<span style={{ fontWeight: 500 }}>{t("chat:webOperations.searchWebTitle", "Web search")}</span>
 									<span
 										className="text-xs ml-1"
 										style={{ color: "var(--vscode-descriptionForeground)" }}>
@@ -1781,8 +1781,8 @@ export const ChatRowContent = ({
 							const url = (sayTool as any).url || ""
 							return (
 								<div style={headerStyle}>
-									<Globe className="w-4 shrink-0 text-sky-400" aria-label="Odczyt strony" />
-									<span style={{ fontWeight: 500 }}>Odczyt strony</span>
+									<Globe className="w-4 shrink-0 text-sky-400" aria-label={t("chat:webOperations.fetchUrlAria", "Fetch web page")} />
+									<span style={{ fontWeight: 500 }}>{t("chat:webOperations.fetchUrlTitle", "Fetch page")}</span>
 									<span
 										className="text-xs ml-1 truncate max-w-[300px]"
 										style={{ color: "var(--vscode-descriptionForeground)" }}>
@@ -1857,23 +1857,25 @@ export const ChatRowContent = ({
 						evaluation.reason?.includes("Approval response schema validation") ||
 						evaluation.reason?.includes("Malformed JSON response from Approval Authority model")
 					const missingConfiguration = /not configured|lacks API key/i.test(evaluation.reason || "")
-					const title = isRejected ? "Działanie wymaga zmiany" : "Potrzebna jest Twoja decyzja"
+					const title = isRejected
+						? t("chat:commandSafety.actionNeedsChangeTitle", "Action requires changes")
+						: t("chat:commandSafety.decisionRequiredTitle", "Your decision is required")
 					const messageText = missingConfiguration
-						? "Model oceniający nie jest skonfigurowany lub nie ma klucza API. Potwierdź operację albo skonfiguruj ocenę bezpieczeństwa."
+						? t("chat:commandSafety.evalModelNotConfigured", "Safety evaluation model is not configured or lacks an API key. Confirm operation or configure safety settings.")
 						: evaluation.deferredRetry
-							? "Ocena bezpieczeństwa jest chwilowo niedostępna. Agent ponowi próbę; możesz też podjąć decyzję ręcznie."
+							? t("chat:commandSafety.evalTemporarilyUnavailable", "Safety evaluation is temporarily unavailable. Agent will retry; you may also decide manually.")
 							: isInfra
-								? "Nie udało się ocenić bezpieczeństwa tej operacji. Wymagane jest ręczne potwierdzenie."
+								? t("chat:commandSafety.evalInfraFailed", "Failed to evaluate safety for this operation. Manual confirmation required.")
 								: isRejected
-									? "Ocena bezpieczeństwa odrzuciła tę operację. Sprawdź szczegóły przed dalszą pracą."
-									: "Ta operacja wymaga ręcznego potwierdzenia. Sprawdź zakres działania przed zatwierdzeniem."
+									? t("chat:commandSafety.evalRejected", "Safety evaluation rejected this operation. Check details before proceeding.")
+									: t("chat:commandSafety.evalManualRequired", "This operation requires manual confirmation. Review scope before approving.")
 
 					return (
 						<WarningRow
 							title={title}
 							message={messageText}
 							details={evaluation.reason}
-							actionText="Ustawienia bezpieczeństwa"
+							actionText={t("chat:commandSafety.safetySettingsAction", "Safety settings")}
 							onAction={() =>
 								openSettings({ section: "commandSafety", source: "command_safety_warning" })
 							}

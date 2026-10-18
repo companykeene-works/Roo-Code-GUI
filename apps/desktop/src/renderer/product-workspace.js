@@ -8,6 +8,12 @@ window.ProductWorkspace = {
 		let cancelGuard = null
 		const icon =
 			'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h6l2 2h10v11H3z"/><path d="M3 7V4h7l2 3"/></svg>'
+
+		function t(key, fallback, ...args) {
+			const res = api.t ? api.t(key, ...args) : fallback
+			return (res && res !== key) ? res : fallback
+		}
+
 		function notify(text) {
 			let toast = $("product-toast")
 			if (!toast) {
@@ -32,9 +38,12 @@ window.ProductWorkspace = {
 			previousFocus?.focus?.()
 		}
 		function renameConversation(initialValue, save) {
-			const body = dialog("Nazwa rozmowy", "Krótka nazwa ułatwi jej odnalezienie w historii.")
+			const body = dialog(
+				t("renameConversation", "Conversation title"),
+				t("renameConversationDesc", "A short name makes it easier to find in history."),
+			)
 			body.innerHTML =
-				'<form class="project-path-form"><label for="conversation-title-input">Tytuł</label><div class="product-input-action"><input id="conversation-title-input" required maxlength="120" autocomplete="off"></div><p class="product-inline-error" role="alert"></p><div class="product-form-actions"><button class="btn btn-primary" type="submit">Zapisz nazwę</button></div></form>'
+				`<form class="project-path-form"><label for="conversation-title-input">${t("conversationTitleLabel", "Title")}</label><div class="product-input-action"><input id="conversation-title-input" required maxlength="120" autocomplete="off"></div><p class="product-inline-error" role="alert"></p><div class="product-form-actions"><button class="btn btn-primary" type="submit">${t("saveTitle", "Save title")}</button></div></form>`
 			const input = body.querySelector("input")
 			input.value = initialValue
 			body.querySelector("form").onsubmit = async (event) => {
@@ -42,11 +51,11 @@ window.ProductWorkspace = {
 				const button = body.querySelector("[type=submit]")
 				button.disabled = true
 				try {
-					if (!input.value.trim()) throw new Error("Wpisz tytuł rozmowy.")
+					if (!input.value.trim()) throw new Error(t("renameConversationEmpty", "Enter a conversation title."))
 					await save(input.value.trim())
 					close()
 				} catch (error) {
-					body.querySelector("[role=alert]").textContent = error.message || "Nie udało się zapisać nazwy."
+					body.querySelector("[role=alert]").textContent = error.message || t("renameConversationError", "Failed to save conversation title.")
 					button.disabled = false
 				}
 			}
@@ -58,7 +67,7 @@ window.ProductWorkspace = {
 			previousFocus = document.activeElement
 			modal = document.createElement("div")
 			modal.className = "product-backdrop"
-			modal.innerHTML = `<section class="product-dialog" role="dialog" aria-modal="true" aria-labelledby="product-dialog-title"><header><div><h2 id="product-dialog-title"></h2><p></p></div><button type="button" class="product-icon-button" aria-label="Zamknij">×</button></header><div class="product-dialog-content"></div></section>`
+			modal.innerHTML = `<section class="product-dialog" role="dialog" aria-modal="true" aria-labelledby="product-dialog-title"><header><div><h2 id="product-dialog-title"></h2><p></p></div><button type="button" class="product-icon-button" aria-label="${t("close", "Close")}">×</button></header><div class="product-dialog-content"></div></section>`
 			modal.querySelector("h2").textContent = title
 			modal.querySelector("header p").textContent = description
 			modal.querySelector("header button").onclick = close
@@ -94,19 +103,19 @@ window.ProductWorkspace = {
 				if (value) input.value = value
 				input.focus()
 			} catch (error) {
-				notify("Nie udało się otworzyć wyboru folderu. Wpisz ścieżkę ręcznie.")
+				notify(t("pickFolderError", "Could not open folder picker. Enter path manually."))
 			}
 		}
 		async function projects(initialPath, relocating = false) {
 			if (!(await guardEditor())) return
 			const current = initialPath || api.workspace()?.path || ""
 			const body = dialog(
-				relocating ? "Zmień lokalizację projektu" : "Projekty",
+				relocating ? t("relocateProjectTitle", "Relocate project") : t("projects", "Projects"),
 				relocating
-					? "Wskaż folder, do którego projekt został przeniesiony. Rozmowy zachowają przypisanie. Pliki nie będą przenoszone."
-					: "Otwórz folder z dysku albo wróć do jednego ze swoich projektów.",
+					? t("relocateProjectDesc", "Specify the folder where the project has been moved. Chats will retain their assignment. Files will not be moved.")
+					: t("projectsDesc", "Open a folder from disk or switch back to one of your projects."),
 			)
-			body.innerHTML = `<form class="project-path-form"><label for="project-path-input">Folder projektu</label><div class="product-input-action"><input id="project-path-input" placeholder="C:\\Projekty\\mój-projekt" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-secondary" id="project-browse">Wybierz…</button></div><p class="product-inline-error" role="alert"></p><div class="product-form-actions"><button type="button" class="product-text-button" id="project-quick">Utwórz pusty projekt</button><button class="btn btn-primary" type="submit">${relocating ? "Zapisz lokalizację" : "Otwórz projekt"}</button></div></form><div id="project-manager-list"></div>`
+			body.innerHTML = `<form class="project-path-form"><label for="project-path-input">${t("projectFolderLabel", "Project folder")}</label><div class="product-input-action"><input id="project-path-input" placeholder="C:\\Projects\\my-project" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-secondary" id="project-browse">${t("chooseFolder", "Browse…")}</button></div><p class="product-inline-error" role="alert"></p><div class="product-form-actions"><button type="button" class="product-text-button" id="project-quick">${t("createEmptyProject", "Create empty project")}</button><button class="btn btn-primary" type="submit">${relocating ? t("saveLocation", "Save location") : t("openProject", "Open project")}</button></div></form><div id="project-manager-list"></div>`
 			const input = body.querySelector("input")
 			input.value = relocating ? current : ""
 			body.querySelector("#project-browse").onclick = () => pickFolder(input)
@@ -123,7 +132,7 @@ window.ProductWorkspace = {
 				button.disabled = true
 				errorEl.textContent = ""
 				try {
-					if (!input.value.trim()) throw new Error("Wpisz ścieżkę lub wybierz folder.")
+					if (!input.value.trim()) throw new Error(t("projectPathRequired", "Enter a path or select a folder."))
 					if (relocating) {
 						const response = await fetch("/api/project/relocate", {
 							method: "POST",
@@ -135,13 +144,13 @@ window.ProductWorkspace = {
 					}
 					if (!(await api.selectProject(input.value.trim())))
 						throw new Error(
-							"Nie udało się otworzyć projektu. Sprawdź, czy folder istnieje i jest dostępny.",
+							t("openProjectError", "Failed to open project. Check if folder exists and is accessible."),
 						)
 					await api.refresh()
 					close()
-					notify(relocating ? "Zapisano nową lokalizację projektu" : "Projekt otwarty")
+					notify(relocating ? t("relocateSuccess", "Saved new project location") : t("projectOpened", "Project opened"))
 				} catch (error) {
-					errorEl.textContent = error.message || "Nie udało się zapisać projektu."
+					errorEl.textContent = error.message || t("renameConversationError", "Failed to save project.")
 					button.disabled = false
 				}
 			}
@@ -164,7 +173,7 @@ window.ProductWorkspace = {
 					manage.type = "button"
 					manage.className = "product-icon-button"
 					manage.textContent = "…"
-					manage.setAttribute("aria-label", `Zarządzaj projektem ${api.projectName(value)}`)
+					manage.setAttribute("aria-label", t("manageProjectNamed", `Manage project ${api.projectName(value)}`, api.projectName(value)))
 					manage.onclick = (event) => {
 						close()
 						api.projectMenu(event, value, manage)
@@ -176,7 +185,7 @@ window.ProductWorkspace = {
 					const leave = document.createElement("button")
 					leave.type = "button"
 					leave.className = "product-text-button project-close-current"
-					leave.textContent = "Zamknij bieżący projekt"
+					leave.textContent = t("closeCurrentProject", "Close current project")
 					leave.onclick = async () => {
 						if (await api.selectProject("")) {
 							close()
@@ -199,7 +208,7 @@ window.ProductWorkspace = {
 				type: "insertTextIntoTextarea",
 				text: "@/" + path.replace(/\\/g, "/").replace(/ /g, "\\ ") + " ",
 			})
-			notify("Dodano plik do wiadomości")
+			notify(t("fileAddedToChat", "Added file to message"))
 		}
 		async function guardEditor(restorePreview = true) {
 			if (!editor) return true
@@ -214,12 +223,12 @@ window.ProductWorkspace = {
 			}
 			return new Promise((resolve) => {
 				const body = dialog(
-					"Niezapisane zmiany",
-					"Zapisz plik przed przejściem dalej albo odrzuć zmiany w edytorze.",
+					t("unsavedChanges", "Unsaved changes"),
+					t("unsavedChangesDesc", "Save file before continuing or discard changes in editor."),
 				)
 				cancelGuard = () => resolve(false)
 				body.innerHTML =
-					'<div class="product-form-actions"><button class="btn btn-secondary" id="editor-stay">Wróć do edycji</button><button class="btn btn-secondary" id="editor-discard">Odrzuć zmiany</button><button class="btn btn-primary" id="editor-save-prompt">Zapisz plik</button></div><p class="product-inline-error" role="alert"></p>'
+					`<div class="product-form-actions"><button class="btn btn-secondary" id="editor-stay">${t("returnToEditing", "Return to editing")}</button><button class="btn btn-secondary" id="editor-discard">${t("discardChanges", "Discard changes")}</button><button class="btn btn-primary" id="editor-save-prompt">${t("saveChanges", "Save file")}</button></div><p class="product-inline-error" role="alert"></p>`
 				const dismiss = modal.querySelector("header button")
 				const stay = () => {
 					close()
@@ -251,7 +260,7 @@ window.ProductWorkspace = {
 						resolve(true)
 					} else
 						body.querySelector('[role="alert"]').textContent =
-							"Nie udało się zapisać całej wersji. Sprawdź informację przy edytorze."
+							t("editorSaveFailed", "Failed to save full version. Check editor details.")
 				}
 			})
 		}
@@ -270,14 +279,14 @@ window.ProductWorkspace = {
 				}
 				const area = $("preview-content-area")
 				area.innerHTML =
-					'<div class="project-editor"><div class="project-editor-toolbar"><span id="editor-state">Zapisano</span><button class="product-text-button" id="editor-save">Zapisz <kbd>Ctrl+S</kbd></button><button class="product-text-button" id="editor-close">Zamknij edytor</button></div><p id="editor-error" role="alert"></p><textarea id="project-file-editor" aria-label="Edytuj plik" spellcheck="false"></textarea></div>'
+					`<div class="project-editor"><div class="project-editor-toolbar"><span id="editor-state">${t("saved", "Saved")}</span><button class="product-text-button" id="editor-save">${t("saveShortcut", "Save")} <kbd>Ctrl+S</kbd></button><button class="product-text-button" id="editor-close">${t("closeEditor", "Close editor")}</button></div><p id="editor-error" role="alert"></p><textarea id="project-file-editor" aria-label="${t("editFile", "Edit file")}" spellcheck="false"></textarea></div>`
 				const textarea = $("project-file-editor")
 				textarea.value = editor.content
 				textarea.oninput = () => {
 					if (!editor || editor.path !== filePath) return
 					editor.content = textarea.value
 					$("editor-state").textContent =
-						editor.content === editor.original ? "Zapisano" : "Niezapisane zmiany"
+						editor.content === editor.original ? t("saved", "Saved") : t("unsavedChanges", "Unsaved changes")
 				}
 				$("editor-save").onclick = saveEditor
 				$("editor-close").onclick = async () => {
@@ -300,7 +309,7 @@ window.ProductWorkspace = {
 			if (errorEl) errorEl.textContent = ""
 			try {
 				if (api.workspace().path !== editor.workspace)
-					throw new Error("Projekt został zmieniony. Otwórz plik ponownie.")
+					throw new Error(t("editorProjectChanged", "Project has changed. Reopen file."))
 				const response = await fetch("/api/editor?path=" + encodeURIComponent(saving.path), {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
@@ -309,14 +318,14 @@ window.ProductWorkspace = {
 				const data = await response.json()
 				if (response.status === 409)
 					throw new Error(
-						"Plik został zmieniony na dysku. Skopiuj swoje zmiany, zamknij edytor i otwórz plik ponownie. Twoja wersja pozostaje w edytorze.",
+						t("editorConflict", "File was changed on disk. Copy your changes, close the editor, and reopen the file."),
 					)
 				if (!response.ok) throw new Error(data.error)
 				saving.original = content
 				saving.revision = data.revision
 				if ($("editor-state"))
-					$("editor-state").textContent = saving.content === content ? "Zapisano" : "Niezapisane zmiany"
-				notify("Zapisano plik")
+					$("editor-state").textContent = saving.content === content ? t("saved", "Saved") : t("unsavedChanges", "Unsaved changes")
+				notify(t("fileSaved", "File saved"))
 				return true
 			} catch (error) {
 				if (errorEl) errorEl.textContent = error.message
@@ -325,21 +334,21 @@ window.ProductWorkspace = {
 			}
 		}
 		function palette() {
-			const body = dialog("Przejdź do…", "Wyszukaj działanie, projekt lub plik.")
+			const body = dialog(t("goTo", "Go to…"), t("paletteDesc", "Search for an action, project, or file."))
 			body.classList.add("product-palette")
 			body.innerHTML =
-				'<input id="product-command-search" placeholder="Szukaj działań, projektów i plików…" aria-label="Szukaj działań, projektów i plików"><div class="product-command-list" role="listbox"></div>'
+				`<input id="product-command-search" placeholder="${t("paletteSearchPlaceholder", "Search actions, projects, and files…")}" aria-label="${t("paletteSearchPlaceholder", "Search actions, projects, and files…")}"><div class="product-command-list" role="listbox"></div>`
 			const commands = [
-				["Nowa rozmowa", "Rozmowy", () => api.newChat(api.workspace()?.path)],
-				["Otwórz projekt", "Projekty", projects],
-				["Pliki projektu", "Widoki", () => api.tab("files")],
-				["Przejrzyj zmiany", "Widoki", () => api.tab("diffs")],
-				["Terminal", "Widoki", () => api.tab("terminal")],
-				["Ustawienia", "Konfiguracja", () => api.settings()],
+				[t("newChat", "New chat"), t("conversationsCategory", "Chats"), () => api.newChat(api.workspace()?.path)],
+				[t("openProject", "Open project"), t("projectsCategory", "Projects"), projects],
+				[t("projectFiles", "Project files"), t("viewsCategory", "Views"), () => api.tab("files")],
+				[t("reviewDiffs", "Review changes"), t("viewsCategory", "Views"), () => api.tab("diffs")],
+				[t("terminal", "Terminal"), t("viewsCategory", "Views"), () => api.tab("terminal")],
+				[t("settings", "Settings"), t("configCategory", "Settings"), () => api.settings()],
 				...api.projectPaths().map((path) => [api.projectName(path), path, () => api.selectProject(path)]),
 				...(api.workspace()?.files || []).map((path) => [
 					path,
-					"Pliki",
+					t("filesCategory", "Files"),
 					() => {
 						api.tab("files")
 						api.preview(path)
@@ -359,7 +368,7 @@ window.ProductWorkspace = {
 				list.replaceChildren()
 				selected = Math.min(selected, Math.max(0, matches.length - 1))
 				if (!matches.length) {
-					list.textContent = "Brak wyników. Spróbuj innej nazwy."
+					list.textContent = t("noResults", "No results. Try another name.")
 					return
 				}
 				matches.forEach(([title, detail, action], index) => {
@@ -405,7 +414,9 @@ window.ProductWorkspace = {
 			if (await guardEditor()) await api.newChat(api.workspace()?.path)
 		})
 		$("workspace-command-button")?.addEventListener("click", palette)
-		$("workspace-settings-button")?.addEventListener("click", () => api.settings())
+		$("workspace-settings-button")?.addEventListener("click", async () => {
+			if (await guardEditor()) api.settings()
+		})
 		$("workspace-project-search")?.addEventListener("input", (event) => api.searchSidebar(event.target.value))
 		$("preview-add-context-btn")?.addEventListener("click", () => {
 			const file = api.selectedFile()
@@ -451,9 +462,9 @@ window.ProductWorkspace = {
 				if (!button) return
 				button.querySelector("strong").textContent = workspace?.path
 					? api.projectName(workspace.path)
-					: "Wybierz projekt"
-				button.querySelector("small").textContent = workspace?.path || "Otwórz folder, aby rozpocząć pracę"
-				button.title = workspace?.path || "Otwórz projekt"
+					: t("selectProject", "Select project")
+				button.querySelector("small").textContent = workspace?.path || t("openFolderToStart", "Open a folder to start working")
+				button.title = workspace?.path || t("openProject", "Open project")
 				$("workspace-new-chat").disabled = !workspace?.path && !api.isNativeChat()
 			},
 		}

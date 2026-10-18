@@ -50,21 +50,20 @@ export function buildAgentFeed(
 	const lastAskIndex = messages.findLastIndex((message) => message.type === "ask")
 	for (const [index, message] of messages.entries()) {
 		const type = message.type === "ask" ? message.ask : message.say
+		const isLastAsk = index === lastAskIndex
+		const hasResumedWork = messages
+			.slice(index + 1)
+			.some(
+				(next) =>
+					next.say !== "command_safety_warning" &&
+					next.say !== "api_req_retry_delayed" &&
+					next.say !== "api_req_rate_limit_wait",
+			)
 		const requiresDecision =
 			message.type === "ask" &&
 			!message.isAnswered &&
 			!["AUTO_APPROVED", "EVALUATING", "DENIED"].includes(message.approvalState || "") &&
-			(message.ts === pendingAskTs ||
-				(message.approvalState === "USER_DECISION_REQUIRED" &&
-					index === lastAskIndex &&
-					messages
-						.slice(index + 1)
-						.every(
-							(next) =>
-								next.say === "command_safety_warning" ||
-								next.say === "api_req_retry_delayed" ||
-								next.say === "api_req_rate_limit_wait",
-						)))
+			(message.ts === pendingAskTs || (isLastAsk && !hasResumedWork))
 		const unresolvedProblem =
 			index === messages.length - 1 &&
 			(type === "error" ||
@@ -102,23 +101,43 @@ export function buildAgentFeed(
 }
 
 /** Describe only the observed action, without inventing findings or a successful result. */
-export function getAgentActivityLabel(messages: ClineMessage[]): string {
+export function getAgentActivityLabel(
+	messages: ClineMessage[],
+	t?: (key: string, defaultValue?: string) => string,
+): string {
+	const translate = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 	const latest = messages.at(-1)
-	if (latest?.say === "api_req_rate_limit_wait") return "Czekam na dostępność modelu"
-	if (latest?.say === "api_req_retry_delayed") return "Czekam na ponowienie zapytania"
-	if (latest?.say === "api_req_started" || latest?.say === "reasoning") return "Pracuję nad zadaniem"
+	if (latest?.say === "api_req_rate_limit_wait") {
+		return translate("chat:agentActivity.rateLimitWait", "Waiting for model availability")
+	}
+	if (latest?.say === "api_req_retry_delayed") {
+		return translate("chat:agentActivity.retryDelayed", "Waiting to retry request")
+	}
+	if (latest?.say === "api_req_started" || latest?.say === "reasoning") {
+		return translate("chat:agentActivity.working", "Working on task")
+	}
 	for (const message of [...messages].reverse()) {
-		if (message.ask === "command" || message.say === "command_output") return "Pracuję w terminalu"
-		if (message.ask === "use_mcp_server") return "Korzystam z narzędzi projektu"
-		if (message.say === "condense_context" && message.partial) return "Porządkuję kontekst rozmowy"
+		if (message.ask === "command" || message.say === "command_output") {
+			return translate("chat:agentActivity.terminal", "Working in terminal")
+		}
+		if (message.ask === "use_mcp_server") {
+			return translate("chat:agentActivity.mcpTools", "Using project tools")
+		}
+		if (message.say === "condense_context" && message.partial) {
+			return translate("chat:agentActivity.condenseContext", "Organizing conversation context")
+		}
 		if (message.ask !== "tool" && message.say !== ("tool" as any)) continue
 		try {
 			const tool = JSON.parse(message.text || "{}")
-			if (/edit|diff|newFile|insert|replace/i.test(tool.tool)) return "Wprowadzam zmiany w projekcie"
-			if (/read|list|search/i.test(tool.tool)) return "Przeglądam pliki projektu"
+			if (/edit|diff|newFile|insert|replace/i.test(tool.tool)) {
+				return translate("chat:agentActivity.editingFiles", "Applying changes to project")
+			}
+			if (/read|list|search/i.test(tool.tool)) {
+				return translate("chat:agentActivity.readingFiles", "Browsing project files")
+			}
 		} catch {
 			/* An incomplete streamed tool payload is not a user-facing finding. */
 		}
 	}
-	return "Pracuję nad zadaniem"
+	return translate("chat:agentActivity.working", "Working on task")
 }

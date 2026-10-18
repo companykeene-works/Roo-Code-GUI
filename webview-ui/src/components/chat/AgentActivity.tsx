@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react"
 import { ChevronRight } from "lucide-react"
 import type { ClineMessage } from "@roo-code/types"
+import { useAppTranslation } from "@/i18n/TranslationContext"
 import { getAgentActivityLabel } from "./agent-feed"
 
 interface AgentActivityProps {
@@ -22,6 +23,7 @@ export function AgentActivity({
 	renderMessage,
 	focusMessageTs,
 }: AgentActivityProps) {
+	const { t } = useAppTranslation()
 	const id = useId()
 	const rootRef = useRef<HTMLDivElement>(null)
 	// Keep the current execution subscribed to live terminal/MCP events while
@@ -59,7 +61,7 @@ export function AgentActivity({
 				aria-controls={id}
 				onClick={onToggle}>
 				{active && <span className="agent-working-dot" aria-hidden="true" />}
-				<span>{active ? getAgentActivityLabel(messages) : "Szczegóły pracy"}</span>
+				<span>{active ? getAgentActivityLabel(messages, t) : t("chat:agentActivity.details", "Work details")}</span>
 				<ChevronRight size={13} aria-hidden="true" className={open ? "rotate-90" : ""} />
 			</button>
 			{(open || liveMessage) && (

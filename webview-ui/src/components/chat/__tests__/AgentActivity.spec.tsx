@@ -34,7 +34,7 @@ describe("AgentActivity disclosure", () => {
 		const props = { messages, active: false, open: false, onToggle, onHeightChange: vi.fn(), renderMessage }
 		const { rerender } = render(<AgentActivity {...props} />)
 		expect(renderMessage).not.toHaveBeenCalled()
-		expect(screen.getByRole("button", { name: "Szczegóły pracy" })).toHaveAttribute("aria-expanded", "false")
+		expect(screen.getByRole("button", { name: /Work details|Szczegóły pracy/ })).toHaveAttribute("aria-expanded", "false")
 		fireEvent.click(screen.getByRole("button"))
 		expect(onToggle).toHaveBeenCalledTimes(1)
 		rerender(<AgentActivity {...props} open />)
@@ -52,7 +52,7 @@ describe("AgentActivity disclosure", () => {
 				renderMessage={() => null}
 			/>,
 		)
-		expect(screen.getByRole("button")).toHaveTextContent("Pracuję w terminalu")
+		expect(screen.getByRole("button")).toHaveTextContent(/Working in terminal|Pracuję w terminalu/)
 		expect(screen.queryByText("technical output")).not.toBeInTheDocument()
 	})
 })

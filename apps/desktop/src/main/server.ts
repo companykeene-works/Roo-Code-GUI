@@ -147,15 +147,12 @@ export function validatePathWithinRoot(
 			return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative)
 		}
 
-		// Verify containment against both realRoot and resolvedRoot
-		// to properly support subst virtual drives and physical drive mappings
-		const isInside =
-			checkInside(realRoot, realTarget) ||
-			checkInside(resolvedRoot, realTarget) ||
-			checkInside(realRoot, absoluteTarget) ||
-			checkInside(resolvedRoot, absoluteTarget)
+		// The real canonical target on disk MUST resolve within the allowed root (either realRoot or resolvedRoot).
+		// Never allow an external target just because the symlink itself is inside the root.
+		const isRealInside = checkInside(realRoot, realTarget) || checkInside(resolvedRoot, realTarget)
+		const isAbsoluteInside = checkInside(realRoot, absoluteTarget) || checkInside(resolvedRoot, absoluteTarget)
 
-		if (!isInside) {
+		if (!isRealInside || !isAbsoluteInside) {
 			return { safe: false, error: "Access outside allowed directory forbidden" }
 		}
 
@@ -983,11 +980,21 @@ export function createDesktopServer(options: DesktopServerOptions): {
 			if (req.method === "GET") {
 				try { respond(200, readEditableFile(target)) } catch (error) { respond(400, { error: error instanceof Error ? error.message : String(error) }) }
 			} else if (req.method === "PUT") {
-				let body = ""; let tooLarge = false
-				req.on("data", chunk => { if (body.length > 7 * 1024 * 1024) tooLarge = true; else body += chunk })
+				const chunks: Buffer[] = []
+				let totalLength = 0
+				let tooLarge = false
+				req.on("data", (chunk: Buffer) => {
+					totalLength += chunk.length
+					if (totalLength > 7 * 1024 * 1024) {
+						tooLarge = true
+					} else {
+						chunks.push(chunk)
+					}
+				})
 				req.on("end", () => {
 					try {
 						if (tooLarge) throw new Error("Plik jest za duży.")
+						const body = Buffer.concat(chunks).toString("utf8")
 						const data = JSON.parse(body)
 						const currentTarget = validatePathWithinRoot(requested, agentHost.getWorkspace())
 						if (!currentTarget.safe || currentTarget.resolvedPath !== target) throw new Error("Projekt został zmieniony. Otwórz plik ponownie.")

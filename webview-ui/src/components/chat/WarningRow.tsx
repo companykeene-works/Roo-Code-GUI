@@ -72,7 +72,7 @@ export const WarningRow: React.FC<WarningRowProps> = ({ title, message, docsURL,
 				</p>
 				{details && (
 					<details className="agent-notice-details">
-						<summary>Szczegóły techniczne</summary>
+						<summary>{t("chat:warningRow.technicalDetails", "Technical details")}</summary>
 						<pre>{details}</pre>
 					</details>
 				)}

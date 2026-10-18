@@ -979,7 +979,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			vscode.postMessage({ type: "stopTts" })
 		}, [])
 
-		const placeholderBottomText = "Enter — wyślij · Shift+Enter — nowy wiersz"
+		const placeholderBottomText = t("chat:composerHint", { defaultValue: "Enter — send · Shift+Enter — new line" })
 
 		// Common mode selector handler
 		const handleModeChange = useCallback(

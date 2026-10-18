@@ -38,4 +38,30 @@ describe("project file editing", () => {
 			expect(fs.readFileSync(file)).toEqual(data)
 		}
 	})
+	it("blocks path traversal and symlinks escaping allowed root", async () => {
+		const { validatePathWithinRoot } = await import("../src/main/server.js")
+		const outsideFolder = fs.mkdtempSync(path.join(os.tmpdir(), "roo-outside-"))
+		const secretFile = path.join(outsideFolder, "secret.txt")
+		fs.writeFileSync(secretFile, "sensitive data", "utf8")
+
+		try {
+			// 1. Direct path traversal
+			const escapeResult = validatePathWithinRoot(path.join(folder, "..", "other.txt"), folder)
+			expect(escapeResult.safe).toBe(false)
+
+			// 2. In-workspace symlink pointing outside allowed root
+			const symlinkPath = path.join(folder, "symlink-to-secret.txt")
+			try {
+				fs.symlinkSync(secretFile, symlinkPath)
+				const symlinkResult = validatePathWithinRoot(symlinkPath, folder)
+				expect(symlinkResult.safe).toBe(false)
+				expect(symlinkResult.error).toMatch(/Access outside allowed directory/i)
+			} catch (err: any) {
+				// Windows may require elevated privileges for symlinks in some environments
+				if (err?.code !== "EPERM") throw err
+			}
+		} finally {
+			fs.rmSync(outsideFolder, { recursive: true, force: true })
+		}
+	})
 })

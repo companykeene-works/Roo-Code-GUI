@@ -23,7 +23,7 @@ describe("agent conversation projection", () => {
 	})
 	it("describes a provider wait without pretending that project work is progressing", () => {
 		expect(getAgentActivityLabel([ask(1, "command"), say(2, "api_req_rate_limit_wait")])).toBe(
-			"Czekam na dostępność modelu",
+			"Waiting for model availability",
 		)
 	})
 	it("keeps original messages, ordering and milestones while grouping consecutive technical events", () => {
@@ -87,13 +87,13 @@ describe("agent conversation projection", () => {
 		expect(buildAgentFeed([first])[0].ts).toBe(buildAgentFeed([first, say(2, "reasoning")])[0].ts)
 	})
 	it("labels the observed operation without claiming tests or edits succeeded", () => {
-		expect(getAgentActivityLabel([ask(1, "command", { text: "pnpm test" })])).toBe("Pracuję w terminalu")
+		expect(getAgentActivityLabel([ask(1, "command", { text: "pnpm test" })])).toBe("Working in terminal")
 		expect(getAgentActivityLabel([ask(2, "tool", { text: JSON.stringify({ tool: "readFile" }) })])).toBe(
-			"Przeglądam pliki projektu",
+			"Browsing project files",
 		)
 		expect(getAgentActivityLabel([ask(3, "tool", { text: JSON.stringify({ tool: "appliedDiff" }) })])).toBe(
-			"Wprowadzam zmiany w projekcie",
+			"Applying changes to project",
 		)
-		expect(getAgentActivityLabel([say(4, "reasoning", "secret reasoning")])).toBe("Pracuję nad zadaniem")
+		expect(getAgentActivityLabel([say(4, "reasoning", "secret reasoning")])).toBe("Working on task")
 	})
 })
