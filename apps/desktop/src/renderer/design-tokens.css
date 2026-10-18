@@ -62,6 +62,8 @@
 }
 /* Fallback --vscode-* definitions for standalone desktop shell */
 [data-desktop-shell],
+:root[data-roo-desktop-webview],
+:root[data-roo-desktop-webview] body[data-theme],
 [data-desktop-shell] [data-theme],
 body.standalone-desktop,
 body.standalone-desktop [data-theme],

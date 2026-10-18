@@ -115,6 +115,20 @@ try {
 	}
 	const capture = async (name) => {
 		assert.equal(await agent.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+		const palette = await agent.evaluate(() => {
+			const style = getComputedStyle(document.body)
+			return {
+				canvas: style.getPropertyValue("--bg-canvas").trim(),
+				badge: style.getPropertyValue("--vscode-badge-background").trim(),
+				active: style.getPropertyValue("--bg-active").trim(),
+			}
+		})
+		assert.equal(
+			palette.canvas,
+			theme === "clean-light" ? "#ffffff" : "#202123",
+			"Desktop palette stays independent of injected VS Code colours",
+		)
+		assert.equal(palette.badge, palette.active)
 		await page.screenshot({ path: `.design-qa/${prefix}-${name}.png` })
 	}
 	await inject(history)

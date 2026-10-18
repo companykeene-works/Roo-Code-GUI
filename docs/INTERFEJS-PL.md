@@ -48,7 +48,7 @@ Audyt sprawdza kompletność 1819 kluczy zasobów polskich w interfejsie i silni
 
 `scripts/launch-design-preview.mjs` uruchamia aplikację na porcie 5993 z osobnymi danymi w `.design-qa/`. Opcja `--packaged` wybiera plik z `release/win-unpacked`. `scripts/test-design-runtime.mjs` sprawdza za pomocą protokołu testowego Electron ekran startowy, podpowiedzi, pliki, widoki zmian i terminala, czat, motywy oraz węższy układ. Zapisuje wyniki i zrzuty w `.design-qa/`.
 
-Opcja `--portable` uruchamia gotowy plik `Roo-Code-PL-Portable-1.0.0-x64.exe`. Aktualna weryfikacja obejmuje 199 testów desktopowych, 146 wybranych testów UI i 5 testów wskazówek komunikacji agenta. Kompilacja produkcyjna obejmuje kontrolę typów interfejsu.
+Opcja `--portable` uruchamia gotowy plik `Roo-Code-PL-Portable-1.0.0-x64.exe`. Aktualna weryfikacja obejmuje 199 testów desktopowych, 195 wybranych testów UI i 5 testów wskazówek komunikacji agenta. Kompilacja produkcyjna obejmuje kontrolę typów interfejsu.
 
 Testy interfejsu nie wysyłają płatnych zapytań do zewnętrznych modeli. Rozmowy z wybranym dostawcą wymagają skonfigurowania jego klucza API, tak jak przed przebudową.
 

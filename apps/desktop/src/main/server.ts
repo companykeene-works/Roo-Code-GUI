@@ -1689,6 +1689,7 @@ window.addEventListener("keydown", function(e) {
 })();
 </script>
 `
+					html = html.replace("<html", '<html data-roo-desktop-webview="true"')
 					html = html.replace("<head>", `<head>${polyfillAndTheme}`)
 					html = html.replace("<body>", `<body class="vscode-dark" data-vscode-theme-kind="vscode-dark">`)
 					res.writeHead(200, { "Content-Type": contentType })

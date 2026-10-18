@@ -1,4 +1,23 @@
 /* The conversation is the primary surface; the execution log is an opt-in detail. */
+.agent-work-view [data-composer-stop="true"] {
+	background: var(--text-primary);
+	color: var(--bg-canvas);
+}
+.agent-work-view [data-composer-stop="true"] svg {
+	fill: currentColor;
+	color: inherit;
+}
+.agent-work-view .agent-composer-hint {
+	font: 11px/1.4 var(--font-sans);
+	color: var(--text-muted);
+	max-width: calc(100% - 72px);
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	display: block;
+	height: auto;
+	padding-left: 8px;
+}
 .agent-activity-details[hidden] {
 	display: none !important;
 }

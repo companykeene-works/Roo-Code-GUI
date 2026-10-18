@@ -1303,6 +1303,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 												}
 												disabled={isStopping}
 												onClick={isStopMode ? onStop : onSend}
+												data-composer-stop={isStopMode}
 												className={cn(
 													"relative inline-flex items-center justify-center",
 													"w-7 h-7 p-1.5 rounded-md",
@@ -1335,7 +1336,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							{!inputValue && (
 								<div
 									className={cn(
-										"absolute left-2 z-30 flex items-center h-8 font-display text-base leading-normal",
+										"agent-composer-hint absolute left-2 z-30 flex items-center h-8 font-display text-base leading-normal",
 										isEditMode ? "pr-20" : "pr-24",
 									)}
 									style={{
