@@ -105,7 +105,7 @@ describe("Renderer Startup Script Integrity & Syntax Regression Guard (P0)", () 
 			dataset: {},
 			setAttribute: () => {},
 			getAttribute: () => null,
-			querySelector: () => null,
+			querySelector: () => createEl(),
 			querySelectorAll: () => [],
 		})
 
@@ -172,6 +172,7 @@ describe("Renderer Startup Script Integrity & Syntax Regression Guard (P0)", () 
 		const context = vm.createContext(mockDom)
 
 		expect(() => {
+			vm.runInContext(fs.readFileSync(path.join(desktopRendererDir, "product-workspace.js"), "utf-8"), context, { filename: "product-workspace.js" })
 			vm.runInContext(appJsCode, context, { filename: "app.js" })
 		}).not.toThrow()
 	})

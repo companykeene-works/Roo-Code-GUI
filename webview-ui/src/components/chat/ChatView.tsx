@@ -1142,6 +1142,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	 */
 	const handleSendMessage = useCallback(
 		(text: string, images: string[]) => {
+			if (!cwd && Boolean((window as any).__ROO_DESKTOP__)) {
+				window.parent.postMessage({ type: "openProjectManager" }, "*")
+				return
+			}
 			text = text.trim()
 
 			if (text === "/compact") {
@@ -2580,6 +2584,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					<div className="agent-home-inner">
 						<div>
 							<RooHero />
+							{!cwd && <div className="agent-project-empty"><p>Wybierz folder projektu. Agent będzie pracować na jego plikach, a rozmowy znajdziesz w panelu po lewej.</p><button type="button" onClick={()=>window.parent.postMessage({type:"openProjectManager"},"*")}>Otwórz projekt</button></div>}
 							{taskHistory.length < 6 && (
 								<div data-testid="roo-tips">
 									<AgentStarters onSelect={(prompt) => { setInputValue(prompt); textAreaRef.current?.focus() }} />

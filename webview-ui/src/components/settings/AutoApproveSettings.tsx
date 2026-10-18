@@ -364,7 +364,7 @@ export const AutoApproveSettings = ({
 							</VSCodeCheckbox>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								<p>{t("settings:autoApprove.description")}</p>
-								<p>
+								<p className="extension-only-setting">
 									<Trans
 										i18nKey="settings:autoApprove.toggleShortcut"
 										components={{

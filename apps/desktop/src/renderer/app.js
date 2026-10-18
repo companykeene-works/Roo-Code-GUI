@@ -19,6 +19,8 @@
 	let isSvgSourceView = false
 	let currentDesktopTab = "chat"
 	let latestExtensionState = null
+	// A saved UI preference wins over older state broadcasts still in flight.
+	let preferredTheme = null
 
 	// Platform-neutral DesktopBridge (Tauri 2 / Electron / Web)
 	const desktopBridge = (typeof window !== "undefined" && window.DesktopBridgeModule?.getDesktopBridge)
@@ -638,6 +640,7 @@
 		}
 
 		const switchDur = performance.now() - t0
+		queueMicrotask(()=>productWorkspace?.update())
 		console.debug(`[TabPerf] Switched from ${prevTab || "none"} to ${targetTab} in ${switchDur.toFixed(2)}ms`)
 	}
 
@@ -797,67 +800,17 @@
 			}
 		} catch (err) {
 			console.error("Failed to create Quick Project:", err)
-			window.alert((tDesktop("quickProjectError") || "Failed to create Quick Project") + ": " + (err.message || err))
+			productWorkspace.notify(tDesktop("quickProjectError") + ": " + (err.message || err))
 		}
 	}
 
-	async function openFolderDialog() {
-		if (desktopBridge?.shell?.selectFolder) {
-			try {
-				const newPath = await desktopBridge.shell.selectFolder()
-				if (newPath) {
-					const normNew = pathNormalize(newPath)
-					const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
-					if (normNew === curWsNorm) {
-						projectExpansions.add(newPath)
-						renderSidebar()
-						return
-					}
-					await selectWorkspaceFolder(newPath)
-					fetchSidebarData()
-				}
-			} catch (err) {
-				console.error("Failed to select folder via DesktopBridge:", err)
-			}
-			return
-		}
-		if (window.__desktopAPI?.selectFolder) {
-			try {
-				const newPath = await window.__desktopAPI.selectFolder()
-				if (newPath) {
-					const normNew = pathNormalize(newPath)
-					const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
-					if (normNew === curWsNorm) {
-						projectExpansions.add(newPath)
-						renderSidebar()
-						return
-					}
-					await selectWorkspaceFolder(newPath)
-					fetchSidebarData()
-				}
-			} catch (err) {
-				console.error("Failed to select folder via Electron dialog:", err)
-			}
-		} else {
-			const newPath = prompt("Enter full path of folder to open:", currentWorkspace?.path || "")
-			if (newPath && newPath.trim()) {
-				const trimmed = newPath.trim()
-				const normNew = pathNormalize(trimmed)
-				const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
-				if (normNew === curWsNorm) {
-					projectExpansions.add(trimmed)
-					renderSidebar()
-					return
-				}
-				await selectWorkspaceFolder(trimmed)
-				fetchSidebarData()
-			}
-		}
-	}
+	async function openFolderDialog() { return productWorkspace?.projects() }
 
 	async function startNewChat(workspacePath) {
+		if (!workspacePath && !currentWorkspace?.path) { await productWorkspace.projects(); return }
+		if (!await productWorkspace.guardEditor()) return
 		if (workspacePath && (!currentWorkspace?.path || pathNormalize(workspacePath) !== pathNormalize(currentWorkspace.path))) {
-			await selectWorkspaceFolder(workspacePath)
+			if (!await selectWorkspaceFolder(workspacePath)) return
 		}
 		activeTaskId = null
 		if (latestExtensionState) {
@@ -971,6 +924,7 @@
 
 	async function switchChat(taskId, wsPath) {
 		if (!taskId) return
+		if (!await productWorkspace.guardEditor()) return
 		const webviewTaskId = latestExtensionState?.currentTaskId
 		if (taskId === activeTaskId && webviewTaskId === taskId) return
 		const thisEpoch = ++currentSelectionEpoch
@@ -1017,27 +971,25 @@
 		}
 	}
 
+	let selectingProject = false
 	async function selectWorkspaceFolder(wsPath) {
-		if (!wsPath) return
-		activeTaskId = null
-		projectExpansions.add(wsPath)
-		forwardToWebview({ type: "action", action: "switchWorkspace", workspacePath: wsPath })
-		forwardToWebview({ type: "action", action: "clearTask" })
+		if (typeof wsPath !== "string" || selectingProject) return false
+		if (!await productWorkspace.guardEditor()) return false
+		selectingProject = true
 		try {
-			const resp = await fetch("/api/workspace", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ path: wsPath }),
-			})
-			if (resp.ok) {
-				const data = await resp.json()
-				renderWorkspaceInfo(data)
-			} else {
-				sendToServer({ type: "selectFolder", path: wsPath })
-			}
-		} catch (err) {
-			sendToServer({ type: "selectFolder", path: wsPath })
-		}
+			const resp = await fetch("/api/workspace", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:wsPath})})
+			if (!resp.ok) return false
+			const data = await resp.json()
+			activeTaskId = null
+			currentWorkspace = data
+			if (wsPath) projectExpansions.add(data.path)
+			forwardToWebview({type:"action",action:"switchWorkspace",workspacePath:data.path})
+			forwardToWebview({type:"action",action:"clearTask"})
+			renderWorkspaceInfo(data)
+			await fetchSidebarData()
+			return true
+		} catch (error) { console.error("Nie udało się otworzyć projektu",error);return false }
+		finally { selectingProject = false }
 	}
 
 	function formatChatTitle(task, title, maxLength = 80) {
@@ -1096,7 +1048,7 @@
 			confirmationModalSubtitle.title =
 				(typeof subtitle === "string" ? subtitle.replace(/\s+/g, " ").trim() : "") || cleanSubtitle
 		}
-		if (confirmationModalIcon) confirmationModalIcon.textContent = icon || "⚠️"
+		if (confirmationModalIcon) confirmationModalIcon.innerHTML = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg>'
 		if (confirmationModalBody) confirmationModalBody.textContent = message || ""
 		if (confirmationModalConfirmBtn) {
 			confirmationModalConfirmBtn.textContent = confirmText || tDesktop("confirm") || "Confirm"
@@ -1256,7 +1208,8 @@
 		})
 	}
 
-	function selectChatSession(sessionId) {
+	async function selectChatSession(sessionId) {
+		if (!await productWorkspace.guardEditor()) return
 		activeChatSessionId = sessionId
 		renderChatSidebar()
 		forwardToWebview({
@@ -1266,6 +1219,7 @@
 	}
 
 	async function createNewChatSession() {
+		if (!await productWorkspace.guardEditor()) return
 		try {
 			const res = await fetch("/api/chat-sessions/create", {
 				method: "POST",
@@ -1288,16 +1242,15 @@
 	function renameChatSession(sessionId) {
 		const session = chatSessionsList.find((s) => s.id === sessionId)
 		const currentTitle = session ? session.title : ""
-		const newTitle = prompt("Podaj nowy tytuł rozmowy:", currentTitle)
-		if (newTitle !== null && newTitle.trim()) {
-			fetch("/api/chat-sessions/rename", {
+		productWorkspace.renameConversation(currentTitle, async newTitle => {
+			const response = await fetch("/api/chat-sessions/rename", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ id: sessionId, title: newTitle.trim() }),
-			}).then(() => {
-				fetchChatSessions()
+				body: JSON.stringify({ id: sessionId, title: newTitle }),
 			})
-		}
+			if (!response.ok) throw new Error("Nie udało się zmienić nazwy rozmowy.")
+			await fetchChatSessions()
+		})
 	}
 
 	function deleteChatSession(sessionId) {
@@ -1599,6 +1552,7 @@
 		}
 
 		const items = [
+			{label:"Zmień lokalizację…", action:()=>productWorkspace.projects(ws,true)},
 			{
 				label: tDesktop("renameProject"),
 				icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16 4a2 2 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>`,
@@ -2243,6 +2197,7 @@
 
 	function renderSidebar() {
 		if (!sidebarProjectsListEl) return
+		queueMicrotask(applySidebarSearch)
 		if (isDraggingProject) return
 
 		const curWsNorm = pathNormalize(sidebarData.currentWorkspace || currentWorkspace?.path || "")
@@ -2345,7 +2300,7 @@
 
 		// Attach event delegations for dynamically generated items
 		sidebarProjectsListEl.querySelectorAll(".sidebar-chat-item").forEach((el) => {
-			const onActivate = (e) => {
+			const onActivate = async (e) => {
 				if (e.target.closest("[data-action='chat-menu']")) return
 				const taskId = el.getAttribute("data-task-id")
 				const ws = el.getAttribute("data-workspace")
@@ -2852,6 +2807,20 @@
 		if (isFromMainWebview || isFromSettingsWebview) {
 			const data = event.data
 			if (data) {
+				if (isFromSettingsWebview && data.type === "updateSettings" && data.updatedSettings?.theme) {
+					preferredTheme = data.updatedSettings.theme
+					applyDesktopTheme(data.updatedSettings.theme, true)
+					if (latestExtensionState) latestExtensionState = {...latestExtensionState, theme:data.updatedSettings.theme}
+				}
+				if (isFromMainWebview && data.type === "desktopShortcut") {
+					if (data.key === "k") productWorkspace.palette()
+					if (data.key === "o") productWorkspace.projects()
+					if (data.key === "n") createConversation(currentWorkspace?.path)
+					if (data.key === ",") openSettingsModal()
+					if (data.key === "b") toggleSidebar()
+					return
+				}
+				if (isFromMainWebview && data.type === "openProjectManager") { productWorkspace.projects(); return }
 				if (isFromSettingsWebview && data.type === "webviewDidLaunch") {
 					const theme = localStorage.getItem("roo-theme") || "linear-dark"
 					settingsWebviewFrame.contentWindow?.postMessage({ type: "themeChange", theme }, "*")
@@ -2881,6 +2850,7 @@
 					}
 				}
 				if (data.type === "state" && data.state) {
+					if (preferredTheme) data.state = {...data.state, theme:preferredTheme}
 					latestExtensionState = { ...(latestExtensionState || {}), ...data.state }
 					if (data.state.theme) {
 						applyDesktopTheme(data.state.theme, true)
@@ -2904,7 +2874,7 @@
 				}
 				if (data.type === "switchTab" && data.tab) {
 					if (isFromSettingsWebview && (data.tab === "chat" || data.tab === "nativeChat")) {
-						closeSettingsModal()
+						closeSettingsModal(true)
 						return
 					}
 					if (data.tab === "settings") {
@@ -2930,7 +2900,7 @@
 				if (data.type === "action" && data.action) {
 					if (data.action === "chatButtonClicked" || (data.action === "switchTab" && data.tab === "chat")) {
 						if (isFromSettingsWebview) {
-							closeSettingsModal()
+							closeSettingsModal(true)
 							return
 						}
 						switchDesktopTab("chat", "sync")
@@ -3113,7 +3083,7 @@
 						if (save) save.disabled = false
 					}
 				} else if (!msg.success) {
-					window.alert(msg.error || tDesktop("projectNameInvalid"))
+					productWorkspace.notify(msg.error || tDesktop("projectNameInvalid"))
 				}
 				break
 
@@ -3133,7 +3103,9 @@
 					renderDiffs()
 				}
 				if (msg.message?.type === "state" && msg.message.state) {
+					if (preferredTheme) msg.message = {...msg.message, state:{...msg.message.state, theme:preferredTheme}}
 					latestExtensionState = { ...(latestExtensionState || {}), ...msg.message.state }
+					if (msg.message.state.theme) localStorage.setItem("roo-theme", msg.message.state.theme)
 					if (settingsWebviewFrame?.contentWindow && settingsWebviewFrame.getAttribute("src")) {
 						settingsWebviewFrame.contentWindow.postMessage({ type: "state", state: latestExtensionState }, "*")
 					}
@@ -3395,11 +3367,18 @@
 
 	function renderWorkspaceInfo(ws) {
 		if (!ws) return
-		if (ws.path && ws.path !== lastRenderedWorkspacePath) {
+		productWorkspace?.update()
+		if (ws.path !== lastRenderedWorkspacePath) {
 			lastRenderedWorkspacePath = ws.path
 			expandedFolders.clear()
 			hasUserToggledFolders = false
 			selectedPreviewFile = null
+			currentPreviewMsg = null
+			if (previewFilenameEl) previewFilenameEl.textContent = "Wybierz plik"
+			if (previewHeaderActionsEl) previewHeaderActionsEl.style.display = "none"
+			if (previewFileBadgeEl) previewFileBadgeEl.style.display = "none"
+			if (previewFileSizeEl) previewFileSizeEl.textContent = ""
+			if (previewContentAreaEl) previewContentAreaEl.innerHTML = '<div class="preview-placeholder"><div class="empty-title">Pliki projektu</div><p class="empty-subtitle">Wybierz plik, aby zobaczyć jego zawartość, edytować go lub dodać do rozmowy.</p></div>'
 			try {
 				sessionStorage.removeItem("roo-expanded-folders")
 			} catch (e) {}
@@ -3409,7 +3388,7 @@
 			workspaceNameEl.title = ws.path
 		}
 		if (footerWorkspaceEl) {
-			footerWorkspaceEl.textContent = "Projekt: " + ws.path
+			footerWorkspaceEl.textContent = ws.path ? "Projekt: " + ws.path : "Nie wybrano projektu"
 		}
 
 		if (ws.branch) {
@@ -3703,8 +3682,8 @@
 		if (file.contentUnavailable) {
 			diffContentEl.innerHTML = `
 				<div class="diff-content-unavailable">
-					<h4>File content not available</h4>
-					<p>${escapeHtml(file.reason || "Unable to display file content.")}</p>
+					<h4>Nie można wyświetlić pliku</h4>
+					<p>${escapeHtml(file.reason || "Zawartość pliku jest niedostępna.")}</p>
 				</div>
 			`
 			return
@@ -3726,11 +3705,11 @@
 				for (const line of lines) {
 					if (line.startsWith("<<<<<<< SEARCH")) {
 						mode = "search"
-						html += `<div class="diff-line hunk-header"><span class="diff-gutter"></span><span class="diff-prefix"></span><span class="diff-text">Original (Search Block)</span></div>`
+						html += `<div class="diff-line hunk-header"><span class="diff-gutter"></span><span class="diff-prefix"></span><span class="diff-text">Przed zmianą</span></div>`
 						continue
 					} else if (line.startsWith("=======")) {
 						mode = "replace"
-						html += `<div class="diff-line hunk-header"><span class="diff-gutter"></span><span class="diff-prefix"></span><span class="diff-text">Replacement</span></div>`
+						html += `<div class="diff-line hunk-header"><span class="diff-gutter"></span><span class="diff-prefix"></span><span class="diff-text">Po zmianie</span></div>`
 						continue
 					} else if (line.startsWith(">>>>>>>")) {
 						mode = "outside"
@@ -4477,7 +4456,7 @@
 				const iconInfo = getFileIconInfo(node.path)
 				const paddingLeft = 8 + depth * 14 + 19
 				html += `
-					<div class="file-node ${isSelected}" data-path="${escapeHtml(node.path)}" title="${escapeHtml(node.path)}" style="padding-left: ${paddingLeft}px;">
+					<div class="file-node ${isSelected}" tabindex="0" role="button" data-path="${escapeHtml(node.path)}" title="${escapeHtml(node.path)}" style="padding-left: ${paddingLeft}px;">
 						${iconInfo.icon}
 						<span class="file-name">${escapeHtml(node.name)}</span>
 					</div>
@@ -4587,7 +4566,8 @@
 		filesTreeEl.innerHTML = renderTreeNodes(treeRoot.children, 0, isSearchActive)
 	}
 
-	filesTreeEl?.addEventListener("click", (e) => {
+	filesTreeEl?.addEventListener("click", async (e) => {
+		if (e.target.closest(".file-node") && !await productWorkspace.guardEditor(false)) return
 		// 1. Check folder header click
 		const folderHeader = e.target.closest(".folder-header")
 		if (folderHeader) {
@@ -4633,6 +4613,7 @@
 		previewFileBadgeEl.style.display = "inline-block"
 		previewFileSizeEl.textContent = msg.size !== undefined ? `• ${formatBytes(msg.size)}` : ""
 		previewHeaderActionsEl.style.display = "flex"
+		document.getElementById("preview-edit-btn").hidden = !["text","markdown","json","svg"].includes(msg.fileType)
 
 		// Reset view toggles
 		previewToggleViewBtn.style.display = msg.fileType === "svg" ? "inline-flex" : "none"
@@ -5141,7 +5122,8 @@
 		}
 	}
 
-	function closeSettingsModal() {
+	function closeSettingsModal(confirmed = false) {
+		if (confirmed !== true && settingsWebviewFrame?.contentWindow && !settingsModalBackdrop?.classList.contains("hidden")) { settingsWebviewFrame.contentWindow.postMessage({type:"productCloseSettings"},"*"); return }
 		if (!settingsModalBackdrop) return
 		settingsModalBackdrop.classList.add("hidden")
 		const savedTheme = localStorage.getItem("roo-theme") || "linear-dark"
@@ -5435,6 +5417,39 @@
 	// Initial pill sync
 	updateApiPill(currentApiConfig)
 
+
+	function applySidebarSearch() {
+		const query = document.getElementById("workspace-project-search")?.value.trim().toLocaleLowerCase() || ""
+		chatSearchFilter = query
+		renderChatSidebar()
+		sidebarProjectsListEl?.classList.toggle("is-searching", !!query)
+		for (const project of sidebarProjectsListEl?.querySelectorAll(".sidebar-project-item") || []) {
+			const heading = (project.querySelector(".project-header")?.textContent || "") + " " + (project.dataset.workspace || "")
+			const projectMatches = heading.toLocaleLowerCase().includes(query)
+			let matchingChats = 0
+			for (const chat of project.querySelectorAll(".sidebar-chat-item")) { const match = !query || projectMatches || chat.textContent.toLocaleLowerCase().includes(query); chat.hidden = !match; if(match) matchingChats++ }
+			project.hidden = !!query && !projectMatches && !matchingChats
+		}
+	}
+	function createConversation(workspace) { return currentDesktopTab === "native-chat" ? createNewChatSession() : startNewChat(workspace) }
+	const productWorkspace = window.ProductWorkspace.install({
+		workspace:()=>currentWorkspace, sidebar:()=>sidebarData, projectPaths:getAuthoritativeWorkspacesList, projectName:getProjectDisplayName,
+		projectMenu:openProjectContextMenu, selectProject:selectWorkspaceFolder, refresh:fetchSidebarData,
+		quickProject:handleCreateQuickProject, newChat:createConversation, isNativeChat:()=>currentDesktopTab === "native-chat", tab:switchDesktopTab,
+		settings:()=>openSettingsModal("providers"), forward:forwardToWebview,
+		selectedFile:()=>selectedPreviewFile, searchSidebar:applySidebarSearch,
+		preview:file=>{selectedPreviewFile=file;sendToServer({type:"readFile",filePath:file})},
+		refreshFiles:loadWorkspaceFiles,
+	})
+	productWorkspace.update()
+	filesTreeEl?.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){const row=event.target.closest(".file-node");if(row){event.preventDefault();row.click()}}})
+	document.addEventListener("keydown",async event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="n"){event.preventDefault();if(await productWorkspace.guardEditor()) await createConversation(currentWorkspace?.path)}})
+	// Protect project switches and window tools while editing.
+	for (const tab of document.querySelectorAll(".nav-tab")) tab.addEventListener("click", async event=>{
+		if(!productWorkspace.isEditing())return
+		event.stopImmediatePropagation();event.preventDefault()
+		if(await productWorkspace.guardEditor())switchDesktopTab(tab.dataset.tab)
+	},true)
 
 	// Initialize
 	connectWebSocket()

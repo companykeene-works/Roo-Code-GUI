@@ -8,6 +8,7 @@
 	<link rel="stylesheet" href="styles.css">
 	<link rel="stylesheet" href="design-tokens.css">
 	<link rel="stylesheet" href="workspace.css">
+	<link rel="stylesheet" href="product.css">
 </head>
 <body class="dark-theme standalone-desktop" data-theme="linear-dark" data-desktop-shell="true">
 	<div id="desktop-app">
@@ -21,6 +22,7 @@
 					</svg>
 				</button>
 
+				<button id="project-switcher" class="project-switcher" aria-label="Wybierz lub zmień projekt"><strong>Wybierz projekt</strong><small>Otwórz folder projektu</small></button>
 				<div class="brand">
 					<img src="icon.png" class="brand-logo" alt="Roo Code" width="22" height="22" />
 					<span class="brand-title">Roo Code</span>
@@ -124,6 +126,7 @@
 					</div>
 				</div>
 
+				<div class="workspace-primary-actions"><button id="workspace-new-chat" type="button"><span>＋</span> Nowa rozmowa <kbd>Ctrl+N</kbd></button><button id="workspace-command-button" type="button"><span>⌕</span> Przejdź do… <kbd>Ctrl+K</kbd></button></div><label class="workspace-search"><input id="workspace-project-search" placeholder="Szukaj projektów i rozmów…" aria-label="Szukaj projektów i rozmów"></label>
 				<div class="sidebar-scroll-content" id="sidebar-scroll-content">
 					<!-- Agent Mode Sidebar View -->
 					<div id="agent-sidebar-view" class="sidebar-view-mode">
@@ -170,6 +173,7 @@
 				</div>
 
 				<div class="sidebar-footer">
+					<button type="button" id="project-manager-button">Zarządzaj projektami</button><button type="button" id="workspace-settings-button">Ustawienia <kbd>Ctrl+,</kbd></button>
 					<div class="sidebar-footer-hint">
 						<kbd>Ctrl+B</kbd> <span id="sidebar-hint-text">panel boczny</span>
 					</div>
@@ -297,7 +301,7 @@
 				<div class="files-view">
 					<aside class="files-sidebar">
 						<div class="sidebar-header">
-							<span class="sidebar-title" id="files-sidebar-title">Pliki projektu</span>
+							<span class="sidebar-title" id="files-sidebar-title">Pliki projektu</span><button type="button" id="files-refresh-btn" class="product-icon-button" aria-label="Odśwież pliki">↻</button>
 						</div>
 						<input type="text" id="files-search" class="files-search-input" placeholder="Szukaj plików…">
 						<div class="files-tree" id="files-tree">
@@ -312,7 +316,7 @@
 								<span class="preview-badge" id="preview-file-badge" style="display: none;"></span>
 								<span class="preview-size" id="preview-file-size"></span>
 							</div>
-							<div class="preview-header-actions" id="preview-header-actions" style="display: none;">
+							<div class="preview-header-actions" id="preview-header-actions" style="display: none;"><button type="button" class="preview-action-btn" id="preview-add-context-btn">Dodaj do rozmowy</button><button type="button" class="preview-action-btn" id="preview-edit-btn">Edytuj</button>
 								<button class="preview-action-btn" id="preview-copy-btn" title="Copy content or path">
 									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 										<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -505,6 +509,7 @@
 
 	<script src="highlight.bundle.js"></script>
 	<script src="bridge.bundle.js"></script>
+	<script src="product-workspace.js"></script>
 	<script src="app.js"></script>
 </body>
 </html>
